@@ -10,6 +10,14 @@ NUM_CARDS = 52
 HAND_SIZE = 5
 FULL_DECK_MASK = (1 << NUM_CARDS) - 1
 
+# These aliases document intent without wrapping integers or adding hot-path
+# allocations. CardMask represents any subset of the deck, including a hand.
+# Construct values through make_card/cards_to_mask/make_hand_mask when
+# validation is required at an API boundary.
+Card = int
+CardMask = int
+HandRank = int
+
 RANK_CHARS = "23456789TJQKA"
 SUIT_CHARS = "cdhs"
 CARD_RANK = tuple(i % 13 for i in range(NUM_CARDS))
@@ -36,6 +44,46 @@ CATEGORY_NAMES = (
     "full house",
     "four of a kind",
     "straight flush",
+)
+
+__all__ = (
+    "Card",
+    "CardMask",
+    "HandRank",
+    "NUM_CARDS",
+    "HAND_SIZE",
+    "FULL_DECK_MASK",
+    "CARD_RANK",
+    "CARD_SUIT",
+    "CARD_MASKS",
+    "HIGH_CARD",
+    "ONE_PAIR",
+    "TWO_PAIR",
+    "THREE_OF_A_KIND",
+    "STRAIGHT",
+    "FLUSH",
+    "FULL_HOUSE",
+    "FOUR_OF_A_KIND",
+    "STRAIGHT_FLUSH",
+    "CATEGORY_NAMES",
+    "make_card",
+    "parse_card",
+    "format_card",
+    "card_rank",
+    "card_suit",
+    "card_mask",
+    "cards_to_mask",
+    "make_hand_mask",
+    "mask_contains",
+    "mask_popcount",
+    "iter_mask",
+    "remove_cards",
+    "legal_cards_mask",
+    "rank_sum",
+    "generate_legal_hands",
+    "evaluate_mask",
+    "evaluate_five",
+    "category_of_rank",
 )
 
 
@@ -75,7 +123,7 @@ def _validate_mask(mask: object, name: str = "mask") -> int:
     return value
 
 
-def make_card(rank: int, suit: int) -> int:
+def make_card(rank: int, suit: int) -> Card:
     """Return the compact card ID for integer rank 0..12 and suit 0..3."""
     rank = _require_int(rank, "rank")
     suit = _require_int(suit, "suit")
@@ -84,7 +132,7 @@ def make_card(rank: int, suit: int) -> int:
     return suit * 13 + rank
 
 
-def parse_card(text: str) -> int:
+def parse_card(text: str) -> Card:
     """Parse exactly two characters such as ``Ac``; ambiguous forms are rejected."""
     if type(text) is not str:
         raise TypeError("text must be a str")
@@ -98,17 +146,27 @@ def parse_card(text: str) -> int:
     return suit * 13 + rank
 
 
-def format_card(card_id: int) -> str:
+def format_card(card_id: Card) -> str:
     """Format a compact card ID using the Rust spelling, for example ``Th``."""
     card = _validate_card(card_id)
     return RANK_CHARS[CARD_RANK[card]] + SUIT_CHARS[CARD_SUIT[card]]
 
 
-def card_mask(card_id: int) -> int:
+def card_rank(card_id: Card) -> int:
+    """Return rank 0..12 (2..A) for a validated compact card ID."""
+    return CARD_RANK[_validate_card(card_id)]
+
+
+def card_suit(card_id: Card) -> int:
+    """Return suit 0..3 (clubs, diamonds, hearts, spades)."""
+    return CARD_SUIT[_validate_card(card_id)]
+
+
+def card_mask(card_id: Card) -> CardMask:
     return CARD_MASKS[_validate_card(card_id)]
 
 
-def cards_to_mask(cards) -> int:
+def cards_to_mask(cards) -> CardMask:
     """Build a mask from card IDs, rejecting strings and duplicate cards."""
     if isinstance(cards, (str, bytes, bytearray)):
         raise TypeError("cards must be an iterable of integer card IDs")
@@ -125,7 +183,7 @@ def cards_to_mask(cards) -> int:
     return mask
 
 
-def make_hand_mask(cards) -> int:
+def make_hand_mask(cards) -> CardMask:
     """Build the game's legal hand representation: exactly five distinct cards."""
     mask = cards_to_mask(cards)
     if mask.bit_count() != HAND_SIZE:
@@ -133,15 +191,15 @@ def make_hand_mask(cards) -> int:
     return mask
 
 
-def mask_contains(mask: int, card_id: int) -> bool:
+def mask_contains(mask: CardMask, card_id: Card) -> bool:
     return bool(_validate_mask(mask) & CARD_MASKS[_validate_card(card_id)])
 
 
-def mask_popcount(mask: int) -> int:
+def mask_popcount(mask: CardMask) -> int:
     return _validate_mask(mask).bit_count()
 
 
-def iter_mask(mask: int):
+def iter_mask(mask: CardMask):
     """Yield contained card IDs in ascending Rust card-index order."""
     bits = _validate_mask(mask)
     while bits:
@@ -150,7 +208,7 @@ def iter_mask(mask: int):
         bits ^= low
 
 
-def remove_cards(mask: int, cards_or_mask) -> int:
+def remove_cards(mask: CardMask, cards_or_mask) -> CardMask:
     """Remove either a validated integer mask or an iterable of card IDs."""
     mask = _validate_mask(mask)
     if type(cards_or_mask) is int:
@@ -160,13 +218,86 @@ def remove_cards(mask: int, cards_or_mask) -> int:
     return mask & ~removed & FULL_DECK_MASK
 
 
-def legal_cards_mask(used_mask: int, forbidden_mask: int = 0) -> int:
+def legal_cards_mask(used_mask: CardMask, forbidden_mask: CardMask = 0) -> CardMask:
     used = _validate_mask(used_mask, "used_mask")
     forbidden = _validate_mask(forbidden_mask, "forbidden_mask")
     return FULL_DECK_MASK & ~(used | forbidden)
 
 
-def _evaluate_five_unchecked(mask: int) -> int:
+def rank_sum(mask: CardMask) -> int:
+    """Sum Air Poker values in a card set: ace is 1 and king is 13."""
+    total = 0
+    for card in iter_mask(mask):
+        rank = CARD_RANK[card]
+        total += 1 if rank == 12 else rank + 2
+    return total
+
+
+def generate_legal_hands(target: int, available_mask: CardMask) -> tuple[CardMask, ...]:
+    """Generate every legal five-card hand for an Air Poker number.
+
+    Given integer ``target`` and the mask of cards still available in the shared
+    deck, return every five-card ``CardMask`` satisfying
+    ``sum(value(card) for card in hand) == target``, where ace is 1 and jack,
+    queen, and king are 11, 12, and 13. Suits do not alter the numerical sum,
+    but they distinguish exact cards and determine flushes and straight flushes.
+    Every returned hand is a subset of ``available_mask``; an impossible target
+    returns an empty tuple.
+    """
+    target = _require_int(target, "target")
+    available_mask = _validate_mask(available_mask, "available_mask")
+    if not 6 <= target <= 64 or available_mask.bit_count() < HAND_SIZE:
+        return ()
+
+    cards = tuple(iter_mask(available_mask))
+    values = tuple(1 if CARD_RANK[card] == 12 else CARD_RANK[card] + 2 for card in cards)
+    count = len(cards)
+    impossible_low = 10**9
+    impossible_high = -10**9
+    minimum = [[impossible_low] * (HAND_SIZE + 1) for _ in range(count + 1)]
+    maximum = [[impossible_high] * (HAND_SIZE + 1) for _ in range(count + 1)]
+    for start in range(count + 1):
+        minimum[start][0] = maximum[start][0] = 0
+
+    for start in range(count - 1, -1, -1):
+        for needed in range(1, HAND_SIZE + 1):
+            minimum[start][needed] = minimum[start + 1][needed]
+            maximum[start][needed] = maximum[start + 1][needed]
+            if minimum[start + 1][needed - 1] != impossible_low:
+                minimum[start][needed] = min(
+                    minimum[start][needed],
+                    values[start] + minimum[start + 1][needed - 1],
+                )
+                maximum[start][needed] = max(
+                    maximum[start][needed],
+                    values[start] + maximum[start + 1][needed - 1],
+                )
+
+    hands: list[CardMask] = []
+
+    def search(start: int, needed: int, subtotal: int, mask: CardMask) -> None:
+        if needed == 0:
+            if subtotal == target:
+                hands.append(mask)
+            return
+        if count - start < needed:
+            return
+        remainder = target - subtotal
+        if remainder < minimum[start][needed] or remainder > maximum[start][needed]:
+            return
+        for index in range(start, count - needed + 1):
+            search(
+                index + 1,
+                needed - 1,
+                subtotal + values[index],
+                mask | CARD_MASKS[cards[index]],
+            )
+
+    search(0, HAND_SIZE, 0, 0)
+    return tuple(hands)
+
+
+def _evaluate_five_unchecked(mask: CardMask) -> HandRank:
     """Evaluate a trusted five-bit in-deck mask using Rust HandRank packing."""
     bits = mask
     rank_counts = 0  # thirteen independent four-bit counters
@@ -251,7 +382,7 @@ def _evaluate_five_unchecked(mask: int) -> int:
     return kickers
 
 
-def evaluate_mask(mask: int) -> int:
+def evaluate_mask(mask: CardMask) -> HandRank:
     """Evaluate exactly five cards; larger comparable integers are stronger."""
     mask = _validate_mask(mask)
     if mask.bit_count() != HAND_SIZE:
@@ -263,7 +394,7 @@ def evaluate_mask(mask: int) -> int:
 evaluate_five = evaluate_mask
 
 
-def category_of_rank(hand_rank: int) -> int:
+def category_of_rank(hand_rank: HandRank) -> int:
     rank = _require_int(hand_rank, "hand_rank")
     category = rank >> 24
     if rank < 0 or category > STRAIGHT_FLUSH or rank & 0xF:
@@ -271,7 +402,7 @@ def category_of_rank(hand_rank: int) -> int:
     return category
 
 
-def _hand(*names: str) -> int:
+def _hand(*names: str) -> CardMask:
     return make_hand_mask(parse_card(name) for name in names)
 
 
@@ -285,6 +416,9 @@ def _smoke_test() -> None:
     assert mask_contains(sample, 18) and not mask_contains(sample, 19)
     assert remove_cards(sample, card_mask(18)) == cards_to_mask((0, 51))
     assert legal_cards_mask(sample, card_mask(19)) == FULL_DECK_MASK & ~(sample | card_mask(19))
+    summed_hand = _hand("Ac", "2d", "3h", "4s", "5c")
+    assert rank_sum(summed_hand) == 15
+    assert generate_legal_hands(15, summed_hand) == (summed_hand,)
 
     hands = (
         _hand("Ac", "Kd", "Qh", "9s", "3c"),
@@ -344,4 +478,3 @@ if __name__ == "__main__":
     print("smoke tests: ok")
     print(f"mask iteration: {iteration_rate:,.0f} hands/s")
     print(f"five-card evaluation: {evaluation_rate:,.0f} hands/s")
-
