@@ -136,8 +136,9 @@ def initial_state(
     if len(set(metal_cards[0] + metal_cards[1])) != 10:
         raise ValueError("all ten metal cards must be distinct")
     if (type(remaining_air_seconds) is not tuple or len(remaining_air_seconds) != 2
-            or any(type(value) is not int or value < 0 for value in remaining_air_seconds)):
-        raise ValueError("remaining_air_seconds must contain two non-negative integers")
+            or any(type(value) is not int or not 0 <= value <= BIO_SECONDS
+                   for value in remaining_air_seconds)):
+        raise ValueError(f"remaining_air_seconds must contain two integers in 0..{BIO_SECONDS}")
     sealed = STARTING_BIOS - 1 - ANTES[0]
     lower = tuple(LowerPlayerState(sealed, remaining_air_seconds[i], metal_cards[i])
                   for i in range(2))

@@ -24,13 +24,14 @@ Rules are grounded in Toshio Sako's *Usogui*:
 | 448-456 | No-rank hands, a double-no-rank retry, Witch Pain, and the invalid Round 4 construction are shown. |
 | 466-467 | The fifth poker round is followed by the physical endurance result; Lalo drowns and Baku wins. |
 
-The core makes four explicit solver abstractions:
+The core makes five explicit solver abstractions:
 
 1. Upper decisions are chance, governed by caller-supplied fixed policies.
 2. Both upper hands are resolved and committed before lower betting, but remain
    hidden from the lower players. This removes real-time interleaving.
 3. Continuous breathing is not simulated. `remaining_air_seconds` is a private,
-   caller-supplied value, and the model compares total remaining air after Round 5.
+   caller-supplied value in `0..300`, does not change inside the core, and is used
+   in the modeled total-air comparison after Round 5.
 4. On a retry, stationary upper policies are conditioned on producing something
    other than another double no-rank. This exactly collapses repeated identical
    retries when eventual resolution has nonzero probability.
@@ -135,9 +136,15 @@ Derived values are intentionally absent:
 ```text
 round number = len(history) + 1
 ante         = (1, 2, 3, 4, 5)[len(history)]
-pot          = sum(round.betting.contributions)
+pot          = 2 * ante before betting exists; otherwise sum(contributions)
 actor        = the choice phase or round.betting.actor
 ```
+
+Before upper chance resolves, `round.betting` does not yet exist even though the
+ante has been paid. During `NUMBER_CHOICE_0`, `NUMBER_CHOICE_1`, and
+`UPPER_CHANCE`, the committed pot is therefore derived as `2 * ante`. When upper
+chance resolves, `BettingState.contributions` begins as `(ante, ante)` and becomes
+the source of the pot.
 
 The canonical metal cards are:
 
@@ -148,7 +155,10 @@ TEAM_1_METAL_CARDS = (8, 15, 44, 47, 63)
 
 `initial_state` starts after each lower player has opened the first of 25 BIOS and
 paid the Round 1 ante: 23 sealed BIOS remain, plus the supplied residual air in
-the open BIOS.
+the open BIOS. Each residual value must be an integer in `0..300`. Custom starting
+metal-card sets must contain five cards per team, use values in `6..64`, and have
+no duplicate value among all ten cards. Distinct values also make the Round-1
+first-bettor comparison unambiguous.
 
 ## 4. Round transition
 
@@ -177,8 +187,11 @@ available_deck_mask & ~(hand_0 | hand_1)
 ```
 
 The required baseline upper policy is uniform over every legal exact hand. If no
-legal hand exists, it returns no-rank with probability one. Calamity is never an
-independent random event; it is derived from the sampled hand pair.
+legal hand exists, it returns no-rank with probability one. A supplied policy must
+return unique outcomes with finite, positive probabilities summing to one. On a
+retry, the two policies must have nonzero probability of something other than
+double no-rank. Calamity is never an independent random event; it is derived from
+the sampled hand pair.
 
 ## 5. Betting and settlement
 
@@ -242,37 +255,63 @@ cannot inspect the opponent's current number or sampled hand.
 
 ## 7. Solver-facing engine
 
-`game.py` exports exactly these mechanical operations:
+`game.py` exposes these public mechanical operations:
 
 ```python
 initial_state(...) -> GameState
 current_actor(state) -> Team | None
 legal_actions(state) -> tuple[MetalCard | BettingAction, ...]
 uniform_upper_policy(deck, target, opposing_target) -> outcomes
-iter_chance_outcomes(state, upper_policies) -> (HandPair, probability)
+iter_chance_outcomes(state, upper_policies) -> Iterator[(HandPair, probability)]
 apply(state, action) -> GameState
 information_state(state, team) -> InformationState
 terminal_returns(state) -> tuple[float, float]
 ```
 
-`apply` is deterministic and rejects actions not produced by the applicable
-legal/chance interface. Upper policy probabilities must be finite, positive, and
-sum to one. Terminal returns are `(1, -1)`, `(-1, 1)`, or `(0, 0)`.
+`apply` is deterministic. At lower decisions it rejects actions outside
+`legal_actions`. At upper chance it validates the selected pair mechanically--card
+count, target sum, availability, and retry rules--but does not receive a policy
+and therefore cannot verify policy support. A solver must choose chance outcomes
+from `iter_chance_outcomes`. Terminal returns are `(1, -1)`, `(-1, 1)`, or
+`(0, 0)`.
 
 ## 8. Non-negotiable invariants
 
-- BIOS counts, residual air, and betting contributions are never negative.
+- BIOS counts and betting contributions are never negative; residual air is in
+  `0..300`.
 - Exactly one unused metal card is removed per team per round.
 - Both upper hands are validated against the same pre-round deck.
 - A valid hand has five cards, is available, and sums to its target.
 - Deck consumption is the union of valid hands; no-rank consumes nothing.
+- The available-deck mask only loses cards and never gains them.
+- Antes and wagers move between sealed stacks and the pot; calamity is the only
+  core transition that destroys BIOS.
 - Check is legal exactly at parity; call and fold exactly while behind.
 - A raise is affordable, callable by the opponent, and no more than half-pot.
 - Lower information never exposes hidden upper or opponent-private state.
-- `TERMINAL` has no actor or legal actions; every other strategic phase has one.
+- Lower decision phases have exactly one actor. `UPPER_CHANCE` and `TERMINAL` have
+  no lower actor, and `TERMINAL` has no legal actions or transitions.
 - All transitions are immutable and all engine actions and states are hashable.
 
 This shape is deliberately small because every stored field either changes a
 legal action, a transition, an observation, or terminal utility. Removing any of
 them loses game information; adding derived facts duplicates it. That is the
 foundation future solver architecture should trust.
+
+## 9. Verification boundary
+
+The standard-library tests in `code/test` are the executable regression contract:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m unittest discover -s code/test -v
+```
+
+They exhaustively classify all 2,598,960 five-card hands, verify the 7,462 poker
+strength classes, brute-force-check legal-hand generation on a reduced deck, and
+exercise the state, information, betting, shared-deck, calamity, retry, ante, and
+termination rules above.
+
+Passing tests establishes that the implementation conforms to this document. It
+does not independently prove the chapter interpretations. In particular, upper
+policy choice, pre-betting hand commitment, retry conditioning, fold settlement,
+and final modeled-air comparison remain the explicit abstractions in section 1.

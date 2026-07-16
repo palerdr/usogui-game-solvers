@@ -1,4 +1,21 @@
-"""Compact pure-Python card masks and exact five-card poker evaluation.
+"""Compact card masks and exact five-card poker evaluation.
+
+Card IDs use ``card_id = suit * 13 + poker_rank``. ``poker_rank`` is ordered
+``2=0, 3=1, ..., K=11, A=12`` so larger indices are stronger for ordinary
+poker comparison. Suits are ``clubs=0, diamonds=1, hearts=2, spades=3``.
+Consequently IDs 0..12 are clubs, 13..25 diamonds, 26..38 hearts, and 39..51
+spades. A ``CardMask`` stores card ``c`` in bit ``1 << c``; the full deck is the
+low 52 bits set.
+
+Air Poker's arithmetic is deliberately separate from poker ordering. Its card
+values are ``A=1, 2=2, ..., K=13`` and are computed by :func:`rank_sum`.
+Keeping the two mappings explicit prevents an ace from accidentally becoming 13
+in the number-sum game merely because it is poker's highest rank.
+
+Five-card evaluations are packed into integers. Higher categories occupy higher
+bits, followed by tie-breaking ranks from most to least significant, so ordinary
+integer comparison is exact poker comparison: ``evaluate_mask(a) >
+evaluate_mask(b)`` precisely when hand ``a`` beats hand ``b``.
 """
 
 from __future__ import annotations
@@ -18,6 +35,7 @@ Card = int
 CardMask = int
 HandRank = int
 
+# Index order makes both card IDs and packed poker ranks lexically comparable.
 RANK_CHARS = "23456789TJQKA"
 SUIT_CHARS = "cdhs"
 CARD_RANK = tuple(i % 13 for i in range(NUM_CARDS))
@@ -88,6 +106,16 @@ __all__ = (
 
 
 def _build_straight_table() -> tuple[int, ...]:
+    """Precompute the straight high card for every 13-bit rank-presence mask.
+
+    Bit ``r`` means poker rank index ``r`` is present. Five consecutive one-bits
+    are detected with ``(rank_mask >> (high - 4)) & 0b11111``. The wheel is the
+    exceptional set ``A,2,3,4,5``: bits 12 and 0..3, hexadecimal ``0x100F``.
+
+    Table entries store ``high_rank + 1`` so zero can mean "not a straight".
+    Thus a wheel stores 4 and later decodes to poker rank index 3 (the five),
+    while an ace-high straight stores 13 and decodes to index 12.
+    """
     out = [0] * (1 << 13)
     for rank_mask in range(1 << 13):
         if rank_mask & 0x100F == 0x100F:  # A-2-3-4-5
@@ -124,7 +152,12 @@ def _validate_mask(mask: object, name: str = "mask") -> int:
 
 
 def make_card(rank: int, suit: int) -> Card:
-    """Return the compact card ID for integer rank 0..12 and suit 0..3."""
+    """Encode ``rank`` and ``suit`` as ``suit * 13 + rank``.
+
+    Rank indices are ``2=0, ..., K=11, A=12`` and suits are clubs, diamonds,
+    hearts, spades as 0..3. Grouping each suit into 13 consecutive IDs makes
+    ``card_id % 13`` recover the rank and ``card_id // 13`` recover the suit.
+    """
     rank = _require_int(rank, "rank")
     suit = _require_int(suit, "suit")
     if not 0 <= rank < 13 or not 0 <= suit < 4:
@@ -133,7 +166,12 @@ def make_card(rank: int, suit: int) -> Card:
 
 
 def parse_card(text: str) -> Card:
-    """Parse exactly two characters such as ``Ac``; ambiguous forms are rejected."""
+    """Parse a two-character card and encode it with :func:`make_card`'s layout.
+
+    The first character is one of ``23456789TJQKA`` and the second is one of
+    ``cdhs``. Case is normalized, but ambiguous spellings such as ``10h`` are
+    rejected so every formatted card has one canonical two-character form.
+    """
     if type(text) is not str:
         raise TypeError("text must be a str")
     if len(text) != 2:
@@ -147,27 +185,43 @@ def parse_card(text: str) -> Card:
 
 
 def format_card(card_id: Card) -> str:
-    """Format a compact card ID using the Rust spelling, for example ``Th``."""
+    """Invert the compact card index into canonical text such as ``Th``.
+
+    ``CARD_RANK[card_id]`` is ``card_id % 13`` and ``CARD_SUIT[card_id]`` is
+    ``card_id // 13``; those indices select from ``RANK_CHARS`` and
+    ``SUIT_CHARS`` respectively.
+    """
     card = _validate_card(card_id)
     return RANK_CHARS[CARD_RANK[card]] + SUIT_CHARS[CARD_SUIT[card]]
 
 
 def card_rank(card_id: Card) -> int:
-    """Return rank 0..12 (2..A) for a validated compact card ID."""
+    """Return ``card_id % 13``: poker rank index 0..12 for 2 through ace.
+
+    This is a poker-ordering index, not the Air Poker numerical value. Use
+    :func:`rank_sum` for the latter because ace maps to 1 there, not 12 or 14.
+    """
     return CARD_RANK[_validate_card(card_id)]
 
 
 def card_suit(card_id: Card) -> int:
-    """Return suit 0..3 (clubs, diamonds, hearts, spades)."""
+    """Return ``card_id // 13``: clubs, diamonds, hearts, or spades as 0..3."""
     return CARD_SUIT[_validate_card(card_id)]
 
 
 def card_mask(card_id: Card) -> CardMask:
+    """Return the singleton set for a card, represented by ``1 << card_id``."""
     return CARD_MASKS[_validate_card(card_id)]
 
 
 def cards_to_mask(cards) -> CardMask:
-    """Build a mask from card IDs, rejecting strings and duplicate cards."""
+    """Build the set union ``sum(1 << card for card in cards)``.
+
+    Since each card owns one bit, bitwise OR represents set union, AND represents
+    intersection, and ``mask.bit_count()`` is cardinality. Duplicate input is
+    rejected rather than silently collapsed so malformed five-card hands cannot
+    masquerade as smaller sets. Strings are rejected even though iterable.
+    """
     if isinstance(cards, (str, bytes, bytearray)):
         raise TypeError("cards must be an iterable of integer card IDs")
     mask = 0
@@ -184,7 +238,7 @@ def cards_to_mask(cards) -> CardMask:
 
 
 def make_hand_mask(cards) -> CardMask:
-    """Build the game's legal hand representation: exactly five distinct cards."""
+    """Build a mask and require the poker invariant ``mask.bit_count() == 5``."""
     mask = cards_to_mask(cards)
     if mask.bit_count() != HAND_SIZE:
         raise ValueError("a hand requires exactly 5 distinct cards")
@@ -192,15 +246,23 @@ def make_hand_mask(cards) -> CardMask:
 
 
 def mask_contains(mask: CardMask, card_id: Card) -> bool:
+    """Test set membership with ``bool(mask & (1 << card_id))``."""
     return bool(_validate_mask(mask) & CARD_MASKS[_validate_card(card_id)])
 
 
 def mask_popcount(mask: CardMask) -> int:
+    """Return the card-set cardinality using Python's integer population count."""
     return _validate_mask(mask).bit_count()
 
 
 def iter_mask(mask: CardMask):
-    """Yield contained card IDs in ascending Rust card-index order."""
+    """Yield set bits as ascending card IDs without scanning all 52 positions.
+
+    For a nonzero two's-complement integer, ``bits & -bits`` isolates its least
+    significant set bit. Its index is ``bit_length() - 1``. Removing that bit and
+    repeating costs O(k) for a mask containing k cards and naturally yields the
+    IDs in ascending order.
+    """
     bits = _validate_mask(mask)
     while bits:
         low = bits & -bits
@@ -209,7 +271,12 @@ def iter_mask(mask: CardMask):
 
 
 def remove_cards(mask: CardMask, cards_or_mask) -> CardMask:
-    """Remove either a validated integer mask or an iterable of card IDs."""
+    """Compute card-set difference as ``mask & ~removed & FULL_DECK_MASK``.
+
+    ``cards_or_mask`` may already be a mask or may be an iterable converted by
+    :func:`cards_to_mask`. The final full-deck AND documents and enforces that
+    Python's infinite-width complement cannot introduce bits above card 51.
+    """
     mask = _validate_mask(mask)
     if type(cards_or_mask) is int:
         removed = _validate_mask(cards_or_mask, "cards_or_mask")
@@ -219,13 +286,23 @@ def remove_cards(mask: CardMask, cards_or_mask) -> CardMask:
 
 
 def legal_cards_mask(used_mask: CardMask, forbidden_mask: CardMask = 0) -> CardMask:
+    """Return ``FULL_DECK_MASK & ~(used_mask | forbidden_mask)``.
+
+    This is the complement, within the 52-card universe, of the union of cards
+    already consumed and cards excluded for some caller-specific reason.
+    """
     used = _validate_mask(used_mask, "used_mask")
     forbidden = _validate_mask(forbidden_mask, "forbidden_mask")
     return FULL_DECK_MASK & ~(used | forbidden)
 
 
 def rank_sum(mask: CardMask) -> int:
-    """Sum Air Poker values in a card set: ace is 1 and king is 13."""
+    """Return the Air Poker sum ``Σ value(card)`` for every set bit.
+
+    The stored poker rank is ``r=0..12`` for 2 through ace. Air Poker instead
+    assigns ``value(A)=1`` and ``value(r)=r+2`` for every other rank, producing
+    2 through 13 for deuce through king. Suits contribute nothing to the sum.
+    """
     total = 0
     for card in iter_mask(mask):
         rank = CARD_RANK[card]
@@ -243,6 +320,30 @@ def generate_legal_hands(target: int, available_mask: CardMask) -> tuple[CardMas
     but they distinguish exact cards and determine flushes and straight flushes.
     Every returned hand is a subset of ``available_mask``; an impossible target
     returns an empty tuple.
+
+    The mathematical result is
+
+    ``{H ⊆ available_mask : |H| = 5 and Σ(card ∈ H) value(card) = target}``.
+
+    The smallest possible five-card sum is 6 (four aces and a two); the largest
+    is 64 (four kings and a queen), so targets outside 6..64 can return at once.
+
+    Enumeration uses a depth-first combination search rather than testing all
+    ``C(n, 5)`` hands blindly. Before that search, two dynamic-programming tables
+    are built for every suffix ``cards[start:]`` and remaining choice count
+    ``needed``:
+
+    ``minimum[start][needed]`` = least achievable sum from that suffix
+    ``maximum[start][needed]`` = greatest achievable sum from that suffix
+
+    Each cell considers skipping the current card or taking it, giving the
+    recurrence ``best(start, k) = best(best(start+1, k), value[start] +
+    best(start+1, k-1))`` with min or max as appropriate. During DFS, a branch is
+    discarded whenever ``target - subtotal`` falls outside those bounds. Card
+    indices always advance, so every exact five-card combination is emitted once
+    and no permutation duplicates are produced. Runtime is output-sensitive: the
+    bounds prune impossible branches, but returning many valid hands necessarily
+    costs at least O(number of returned hands).
     """
     target = _require_int(target, "target")
     available_mask = _validate_mask(available_mask, "available_mask")
@@ -298,7 +399,44 @@ def generate_legal_hands(target: int, available_mask: CardMask) -> tuple[CardMas
 
 
 def _evaluate_five_unchecked(mask: CardMask) -> HandRank:
-    """Evaluate a trusted five-bit in-deck mask using Rust HandRank packing."""
+    """Pack a trusted five-card mask into a totally ordered poker integer.
+
+    Layout (most significant fields first)::
+
+        bits 27..24  category: high card=0 through straight flush=8
+        bits 23..20  primary rank or highest kicker
+        bits 19..16  secondary rank or next kicker
+        bits 15..12  tertiary rank or next kicker
+        bits 11..8   fourth kicker when required
+        bits 7..4    fifth kicker when required
+        bits 3..0    always zero
+
+    Rank fields use the poker indices ``2=0, ..., A=12``. Category is compared
+    first because it occupies the highest nibble; within a category, decisive
+    ranks are packed from most to least significant. Consequently normal integer
+    ordering implements the complete five-card tie-break rules without tuples or
+    allocations in the hot path.
+
+    Rank multiplicities are accumulated in one integer containing thirteen
+    independent four-bit counters. Adding ``1 << (rank * 4)`` increments a rank's
+    nibble; a five-card hand can contain at most four of one rank, so no counter
+    carries into its neighbor. ``rank_mask`` separately records presence for the
+    precomputed straight lookup. A flush is true when all hand bits are contained
+    in any one of the four 13-bit suit masks.
+
+    The category-specific packed tie breakers are:
+
+    - straight/straight flush: high card (a wheel is five-high);
+    - four of a kind: quad rank, then kicker;
+    - full house: trip rank, then pair rank;
+    - three of a kind: trip rank, then two descending kickers;
+    - two pair: high pair, low pair, then kicker;
+    - one pair: pair rank, then three descending kickers;
+    - flush/high card: all five ranks descending.
+
+    Validation is intentionally performed by :func:`evaluate_mask`; this private
+    function assumes exactly five in-deck bits.
+    """
     bits = mask
     rank_counts = 0  # thirteen independent four-bit counters
     rank_mask = 0
@@ -383,7 +521,30 @@ def _evaluate_five_unchecked(mask: CardMask) -> HandRank:
 
 
 def evaluate_mask(mask: CardMask) -> HandRank:
-    """Evaluate exactly five cards; larger comparable integers are stronger."""
+    """Evaluate exactly five cards into an integer whose ordering is poker order.
+
+    ``a > b`` means hand ``a`` wins, ``a == b`` means an exact poker-strength tie,
+    and ``a < b`` means ``b`` wins. Suits never break ties: two distinct masks can
+    therefore receive the same ``HandRank``.
+
+    The evaluator makes one pass over the five set bits to build both a 13-bit
+    rank-presence mask and thirteen packed four-bit rank counters. Suit masks test
+    whether all five cards share a suit; the rank-presence mask indexes a table
+    containing the straight high card, including the ace-low wheel exception.
+    Ranks are then scanned from ace down to deuce to collect pairs, trips, quads,
+    and descending kickers.
+
+    The result packs ``category`` into bits 24..27, followed by decisive ranks in
+    descending significance at bits 20, 16, 12, 8, and 4. Those fields encode the
+    standard comparisons: straight high card; quad then kicker; trip then pair;
+    trip then kickers; high pair then low pair then kicker; pair then kickers; or
+    all five descending ranks for a flush/high card. Because the fields appear in
+    comparison order, one integer comparison is equivalent to lexicographically
+    comparing ``(category, tie_breaker_1, tie_breaker_2, ...)``.
+
+    Only exact five-card masks are accepted; this evaluator does not select the
+    best five cards from a larger Hold'em-style set.
+    """
     mask = _validate_mask(mask)
     if mask.bit_count() != HAND_SIZE:
         raise ValueError("evaluate_mask requires exactly 5 distinct cards")
@@ -395,6 +556,13 @@ evaluate_five = evaluate_mask
 
 
 def category_of_rank(hand_rank: HandRank) -> int:
+    """Extract the category nibble from an evaluator-produced ``HandRank``.
+
+    Categories are integers 0..8 in increasing strength from ``HIGH_CARD`` to
+    ``STRAIGHT_FLUSH``. Since the category occupies bits 24..27, extraction is
+    simply ``hand_rank >> 24``. The low nibble is reserved as zero by the packing
+    layout and is checked here as a cheap malformed-value guard.
+    """
     rank = _require_int(hand_rank, "hand_rank")
     category = rank >> 24
     if rank < 0 or category > STRAIGHT_FLUSH or rank & 0xF:
