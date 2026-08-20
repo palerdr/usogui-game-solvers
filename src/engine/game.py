@@ -13,7 +13,7 @@ try:
         Card, CardMask, FULL_DECK_MASK, evaluate_mask, generate_legal_hands,
         mask_popcount, rank_sum, remove_cards,
     )
-except ImportError:  # Allow direct execution from code/engine.
+except ImportError:  # Allow direct execution from src/engine.
     from poker_math import (
         Card, CardMask, FULL_DECK_MASK, evaluate_mask, generate_legal_hands,
         mask_popcount, rank_sum, remove_cards,

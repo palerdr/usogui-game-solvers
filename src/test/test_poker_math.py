@@ -5,7 +5,7 @@ from __future__ import annotations
 from itertools import combinations
 from unittest import TestCase
 
-from code.engine.poker_math import (
+from src.engine.poker_math import (
     CARD_MASKS,
     CATEGORY_NAMES,
     FLUSH,

@@ -1,458 +1,321 @@
-# Air Poker Solver Plan
+# Air Poker Solver Contract
 
-**Status:** scoped implementation contract  
-**Mechanical authority:** [`ENGINE.md`](./ENGINE.md) and `code/engine/game.py`  
-**Current repository state:** the engine and poker math are implemented and tested; `code/solver/` contains no solver yet  
-**Version 1 target:** the canonical `initial_state()` game with two lower strategic players and the engine's uniform upper policies
+## Claim
 
-This document is intentionally an implementation plan, not a catalogue of every plausible solver or behavioral model. It keeps the parts of the previous plan that are required by the engine and the cited regret-minimization papers, moves scale-dependent claims behind measurements, and defers speculative upper-player modeling.
+We solve the game identified in `MODEL.md`, not an informal version of Air
+Poker. The canonical tree is too large for exhaustive equilibrium computation.
+The defensible architecture is therefore:
 
----
+```text
+exact engine
+→ exact reduced-game oracle
+→ exact-distribution chance sampling
+→ external-sampling MCCFR
+→ independent evaluation and response diagnostics
+```
 
-## 1. Audit result
+“Exact” is used only with a named axis:
 
-The previous plan had the right mechanical boundary and literature, but it described a mature solver stack before the repository had its first traversal. It also treated exact traversal as a practical reference for the canonical game without measuring the engine's chance support.
-
-The revised plan makes these decisions:
-
-| Decision | Result |
+| Axis | Meaning |
 |---|---|
-| Engine authority | Retained. The solver never reimplements betting, settlement, deck consumption, retry conditioning, observations, or returns. |
-| In-memory representation | Simplified. Use the engine's hashable `GameState`, `InformationState`, `MetalCard`, and `BettingAction` directly. Add codecs only when persistence is implemented. |
-| Exact algorithms | Scoped to known small games and reduced-support Air Poker fixtures. They are correctness oracles, not a promise to enumerate the canonical tree. |
-| Canonical training | External-sampling MCCFR is the scaling path, after its estimator and chance sampler agree with exact traversal on reduced fixtures. |
-| CFR+ | Retained as an exact reduced-game reference following Tammelin's alternating, vector-form algorithm. It is not mixed casually with sampled CFR. |
-| Exploitability | Exact only where an information-set-consistent best response is exactly enumerable. Canonical approximate response gains must not be labeled exact exploitability. |
-| Upper behavior models | Logit choice, failures, latent types, model grids, and sensitivity studies are deferred until the uniform baseline works. |
-| Infrastructure | Parallel writes, neural policies, RL wrappers, abstractions, elaborate checkpoint layouts, and experiment grids are out of Version 1. |
+| mechanics-exact | Every transition is delegated to the locked engine. |
+| distribution-exact | Chance samples come from the modeled distribution without hand abstraction. |
+| traversal-exact | Every history is enumerated; permitted only on reduced games. |
+| equilibrium-exact | A certified equilibrium or bound is computed; not currently available for the canonical game. |
 
-### 1.1 Findings corrected by this audit
+The production result will initially be a trained average strategy with measured
+error, not a claimed exact Nash equilibrium.
 
-1. A fixed canonical root is a game conditional on that exact deal and residual-air input. Merely omitting opponent cards or air from `InformationState` does not create a prior over those initial values. If they are meant to be privately uncertain, a later model must define a root distribution over valid calls to `initial_state(...)`.
-2. The canonical game still has imperfect information because Team 1 acts without Team 0's current choice and later decisions merge histories with different hidden upper hands and deck states.
-3. The present engine exposes exact chance enumeration but no sampled chance operation. Canonical MCCFR therefore has an explicit API/performance prerequisite; the solver must not duplicate the engine's retry kernel to work around it.
-4. External sampling draws a deterministic choice for each sampled opponent information set during one traversal. If that information set is encountered again, the sampled action must be reused. Sampling independently per full history is not the algorithm in Lanctot et al. [3].
-5. Exact canonical best response and exploitability are not established as feasible. The first canonical reports must distinguish exact reduced-game metrics, Monte Carlo value estimates, and empirical response gains.
+## Game conditions
 
----
-
-## 2. Authority and solved-game boundary
-
-The precedence order is:
-
-1. [`ENGINE.md`](./ENGINE.md) and `code/engine/game.py` for mechanics and information;
-2. `code/test/` for executable regression behavior;
-3. [`Air-Poker-Summary.md`](./Air-Poker-Summary.md) for narrative context only;
-4. the cited papers for solver algorithms, not Air Poker rules;
-5. this document for implementation sequence.
-
-If the narrative description and the engine abstraction differ, the engine wins. For example, the narrative discusses uncertainty about calamity after folding, while the locked engine settles a fold without calamity. A solver flag may not change that ruling.
-
-### 2.1 Version 1 game
-
-Version 1 fixes all of the following for one run:
+CFR guarantees require a finite, two-player, zero-sum game with perfect recall.
+The locked model is finite and zero-sum by construction. Perfect recall is a
+tested obligation:
 
 ```text
-root state             initial_state()
-metal-card sets        TEAM_0_METAL_CARDS and TEAM_1_METAL_CARDS
-residual air           (300, 300)
-strategic players      Team.ZERO and Team.ONE
-upper policies         (uniform_upper_policy, uniform_upper_policy)
-chance event           one complete HandPair
-lower observation      information_state(state, acting_team)
-terminal utility       terminal_returns(state)
+same player + same InformationState
+→ same ordered legal actions
+→ same sequence of that player's prior information/action pairs
 ```
 
-This is a conditional solution of the engine's canonical starting state. It is not a solution over an unknown deal, uncertain initial residual air, manga-only timing, physiology, communication, Witch Pain, or deliberate invalid construction.
+Any violation is an engine/model defect. Splitting or merging information sets
+inside the solver is prohibited.
 
-Any run with different `initial_state(...)` arguments is a separately configured game and must not share results or checkpoints with the Version 1 baseline.
+## Strategy and value
 
-The uniform upper policy means uniform over exact legal five-card masks, not poker categories or rank patterns. Both policies are evaluated against the same pre-round deck. The engine alone applies their `HandPair`, removes the union of cards, determines poker results and calamity, and handles retry conditioning.
-
-### 2.2 Non-negotiable solver rules
-
-- Call `current_actor`, `legal_actions`, `iter_chance_outcomes`, `apply`, `information_state`, and `terminal_returns`; do not reproduce their logic.
-- Use `InformationState` only for a lower policy lookup. Never key a policy by `GameState`.
-- Never add `round.hands`, `available_deck_mask`, opponent residual air, opponent unplayed card values, RNG state, or a future chance result to an information key.
-- Sample or enumerate the complete correlated `HandPair`. Never sample winner, overlap, calamity, or deck removal independently.
-- Keep the upper model fixed during a solve. Refitting it creates a different game and requires a new run.
-- Preserve engine action order. A table's vector index is the index in the exact tuple returned by `legal_actions(state)`.
-- Treat a zero resolving probability on retry as a model error, exactly as the engine does.
-
----
-
-## 3. Feasibility boundary measured from the current code
-
-`generate_legal_hands` was measured on the full deck for the ten canonical targets:
-
-| Team | Exact-hand support sizes |
-|---|---|
-| Team 0 | 25: 61,892; 26: 70,892; 36: 124,156; 39: 112,172; 45: 61,892 |
-| Team 1 | 8: 92; 15: 5,536; 44: 70,892; 47: 44,892; 63: 28 |
-
-Because initial upper policies factor and both see the full deck, one Round-1 chance node contains the Cartesian product of the selected supports. Across the 25 canonical metal-card pairs, that is **1,732,976 to 8,801,667,152 exact `HandPair` outcomes** before any betting branch or later round is considered.
-
-Consequences:
-
-- Do not build or cache the full canonical tree.
-- Do not use canonical exact CFR, CFR+, exact profile evaluation, or exact best response as early acceptance gates.
-- Exact enumeration remains mandatory on deterministic and small-support fixtures because it is the oracle for sampled code.
-- Before canonical MCCFR, provide an exact-distribution chance sampler that does not walk the joint Cartesian product.
-- Benchmark legal-hand generation and sampling before setting iteration or runtime targets.
-
-These are scope constraints, not permission to approximate mechanics or information.
-
----
-
-## 4. Minimal software boundary
-
-The first implementation should be small:
-
-```text
-code/solver/
-├── interface.py       # thin engine adapter and node classification
-├── tables.py          # information-set entries and strategy profiles
-├── exact.py           # exact evaluator and exact best response for small games
-├── cfr.py             # vanilla CFR and exact CFR+ for small games
-├── chance.py          # sampled chance boundary, added only in Phase 4
-├── mccfr.py           # external-sampling MCCFR, added only in Phase 4
-└── run.py             # manifests/checkpoints, added only in Phase 5
-
-code/test/
-├── test_solver_interface.py
-├── test_solver_exact.py
-├── test_solver_cfr.py
-└── test_solver_mccfr.py
-```
-
-Do not create empty future modules. Add each file when its phase starts.
-
-### 4.1 Thin Air Poker adapter
-
-The algorithm-facing object may use this shape:
-
-```python
-class NodeKind(Enum):
-    TERMINAL = auto()
-    CHANCE = auto()
-    PLAYER = auto()
-
-
-class AirPokerTraversal:
-    def root(self) -> GameState: ...
-    def kind(self, state: GameState) -> NodeKind: ...
-    def actor(self, state: GameState) -> Team | None: ...
-    def player_actions(
-        self, state: GameState
-    ) -> tuple[MetalCard | BettingAction, ...]: ...
-    def chance_outcomes(
-        self, state: GameState
-    ) -> Iterator[tuple[HandPair, float]]: ...
-    def next_state(
-        self, state: GameState, action: MetalCard | BettingAction | HandPair
-    ) -> GameState: ...
-    def information_key(self, state: GameState, team: Team) -> InformationState: ...
-    def returns(self, state: GameState) -> tuple[float, float]: ...
-```
-
-Its implementation is delegation:
-
-| Adapter operation | Engine source |
-|---|---|
-| `root` | `initial_state()` |
-| terminal/chance/player classification | `state.phase` |
-| `actor` | `current_actor(state)` |
-| player actions | `legal_actions(state)` |
-| exact chance | `iter_chance_outcomes(state, upper_policies)` |
-| transition | `apply(state, action)` |
-| information key | `information_state(state, team)` |
-| returns | `terminal_returns(state)` |
-
-The adapter may assert preconditions but may not repair or reinterpret a state. The CFR code can use the same small method set with test games such as Kuhn poker without turning this project into a general game framework.
-
-### 4.2 In-memory table contract
-
-Use engine values directly until checkpointing requires a codec:
-
-```python
-PlayerAction = MetalCard | BettingAction
-
-
-@dataclass(slots=True)
-class InfoSetEntry:
-    actions: tuple[PlayerAction, ...]
-    regret_sum: np.ndarray       # float64, shape (len(actions),)
-    strategy_sum: np.ndarray     # float64, same shape
-```
-
-Maintain one `dict[InformationState, InfoSetEntry]` per team. On every lookup:
-
-```text
-same InformationState => same acting Team => same ordered action tuple
-```
-
-Reject non-finite, negative, wrong-length, or non-normalized strategy vectors. If all positive regrets are zero, regret matching returns the uniform distribution. An unvisited average-strategy entry also falls back to uniform and is reported as unvisited.
-
-### 4.3 Information and perfect-recall contract
-
-During exact fixture traversal, retain each team's own sequence of prior `(InformationState, action)` pairs. Assert:
-
-```text
-same team and InformationState => same own prior information/action sequence
-```
-
-This is the repository's executable perfect-recall audit. It also catches action-set instability and accidental use of hidden state. The standard CFR guarantees in Zinkevich et al. require finite, two-player, zero-sum, perfect-recall play [1].
-
-### 4.4 Exact evaluation contract
-
-For a fixed behavior profile:
-
-- terminal node: return `terminal_returns(state)`;
-- chance node: probability-weight every child from `iter_chance_outcomes`;
-- player node: strategy-weight every legal action using the acting player's `InformationState`;
-- never choose an action separately for two histories in the same information set.
-
-The exact evaluator is required for small games and reduced-support Air Poker fixtures only. It is also the oracle for Monte Carlo value estimates.
-
-### 4.5 Regret contracts
-
-For updating player `i`, the immediate contribution at a history in information set `I` is:
+A behavioral strategy is a distribution `sigma_i(I)` over the ordered actions
+at every information set `I` owned by player `i`. For profile `sigma`, terminal
+value is
 
 \[
-\pi_{-i}(h)\left(v_i(h,a)-v_i(h)\right),
+v_i(\sigma)=\sum_{z\in Z}\pi^\sigma(z)u_i(z),
+\qquad v_0(\sigma)+v_1(\sigma)=0.
 \]
 
-where `pi_-i` includes chance and the opponent, but not player `i`. Contributions from every history in one information set are summed before its cumulative regret is changed.
-
-Vanilla CFR uses ordinary cumulative regrets and reach-weighted average strategies as defined by Zinkevich et al. [1]. CFR+ follows Tammelin [2]:
-
-- vector-form alternating player passes;
-- regret-matching+;
-- `R <- max(R + delta, 0)` after the complete information-set delta is known;
-- delayed linear average weight `max(iteration - delay, 0)`;
-- fixed pass order `Team.ZERO`, then `Team.ONE`;
-- as in Tammelin's Algorithm 1, the pass updating player `i` accumulates the non-updating player's average strategy at that player's information sets using that player's own reach and the iteration weight.
-
-Do not call a sampled regret-clipping experiment “CFR+.” The first external-sampling implementation uses ordinary regret matching.
-
-### 4.6 Best-response and reporting contract
-
-An exact best responder chooses one action for an entire responding-player information set, after aggregating continuation values across all compatible histories with opponent-and-chance reach weights. A greedy full-state responder is an illegal clairvoyant policy. `BR_i(sigma_-i)` below means player `i`'s maximum engine return against the fixed opposing strategy.
-
-For profile `sigma`, report both conventions where exact response is available:
+Reach factors as
 
 \[
-\operatorname{NashConv}(\sigma)=BR_0(\sigma_1)+BR_1(\sigma_0),
+\pi^\sigma(h)=\pi_c(h)\pi_0^\sigma(h)\pi_1^\sigma(h).
+\]
+
+Policy lookup is keyed only by `(player, InformationState)`. Full state may be
+used to traverse nature and apply transitions, never to select a lower action.
+
+## Exact oracle
+
+The oracle runs on the existing tiny Air Poker fixture and on production-engine
+fixtures with deterministic or small upper supports. It has four independent
+parts.
+
+### Exact profile evaluation
+
+- terminal: return engine utility;
+- chance: probability-weight every complete `HandPair` child;
+- player: strategy-weight every legal action using the information key;
+- missing profile entry: use a declared uniform fallback and report it.
+
+All probability vectors must be finite, nonnegative, correctly sized, and sum to
+one within a fixed tolerance.
+
+### Information-set-consistent best response
+
+For fixed `sigma_-i`, the responder selects one action for an entire information
+set after aggregating all compatible histories with opponent-and-chance reach.
+A responder that chooses separately from hidden full states is clairvoyant and
+invalid.
+
+Report
+
+\[
+BR_i(\sigma_{-i})=\max_{\sigma_i}u_i(\sigma_i,\sigma_{-i}),
+\]
+
+\[
+\operatorname{NashConv}(\sigma)
+=BR_0(\sigma_1)+BR_1(\sigma_0),
 \qquad
 \operatorname{exploitability}=\operatorname{NashConv}/2.
 \]
 
-The report must state that utilities are the engine's `-1/0/+1` match returns.
+These equalities use the engine's zero-sum returns. Exact best response is a
+reduced-game metric until canonical feasibility is demonstrated.
 
----
+### Vanilla CFR
 
-## 5. Phased implementation
+For updating player `i`, the counterfactual regret increment at information set
+`I` is
 
-Each phase ends at its acceptance gate. Later work does not begin merely because earlier code “runs.”
+\[
+\Delta R_i(I,a)=v_i(\sigma_{I\to a},I)-v_i(\sigma,I),
+\]
 
-### Phase 0 - Lock and measure the baseline
+weighted by chance and opponent reach, not player `i`'s own reach. Contributions
+from every history in `I` are summed before the table is updated.
 
-Deliverables:
+Regret matching uses
 
-- record the exact `initial_state()` inputs and uniform upper-policy pair;
-- keep the existing engine regression command green;
-- add a small script or test that records legal-hand support and chance-pair counts;
-- benchmark `generate_legal_hands` for the canonical targets;
-- write a short decision record for the sampled-chance API described in Phase 4.
+\[
+\sigma_i(I,a)=
+\begin{cases}
+R_i^+(I,a)/\sum_b R_i^+(I,b) & \sum_bR_i^+(I,b)>0,\\
+1/|A(I)| & \text{otherwise.}
+\end{cases}
+\]
 
-Acceptance gate:
+Average strategies are accumulated with the acting player's own reach. The
+average strategy, not the final iterate, is the default reported policy.
 
-- all existing engine tests pass;
-- the run scope says “canonical fixed root,” not “unknown private deal”;
-- no milestone assumes full canonical enumeration.
+### CFR+
 
-Current baseline at this audit: **48 engine and poker-math tests pass**.
+The exact reference follows alternating vector-form CFR+:
 
-### Phase 1 - Adapter and information audit
+\[
+R_i^{t+1}(I,a)=\max\{R_i^t(I,a)+\Delta R_i^t(I,a),0\}.
+\]
 
-Deliverables:
+Rules:
 
-- `AirPokerTraversal` delegating to the seven public engine operations;
-- deterministic upper-policy fixtures with one or a few hand-pair outcomes;
-- node, actor, transition, probability, action-order, information-key, and perfect-recall tests;
-- counters for histories, information sets, actions, chance support, and maximum depth on each fixture.
+- update Team 0, then Team 1;
+- hold regrets fixed during a complete player pass;
+- aggregate a complete information-set delta before clipping;
+- use regret-matching+;
+- use delayed linear average weight `max(t-delay,0)`;
+- fix traversal order for deterministic regression tests.
 
-Acceptance gate:
+The current `src/exact/cfr_plus.py` is a candidate reference implementation. It
+is not accepted until an independent evaluator and best response show decreasing
+exploitability on hand-solvable fixtures.
 
-- every engine action round-trips through the adapter unchanged;
-- every repeated information key has one team, one ordered action tuple, and one own-memory signature;
-- hidden hand/deck changes that leave `InformationState` equal use the same policy entry;
-- chance probabilities accepted by the adapter use the engine's normalization semantics and tolerance.
+## Why canonical exhaustive traversal is rejected
 
-### Phase 2 - Exact reduced-game oracle
+On the full deck, individual legal-hand supports range from 28 to 124,156 for
+the canonical targets. A first-round joint chance node contains roughly 1.7
+million to 8.8 billion exact pairs before any betting branch. Later hidden deck
+states multiply the number of histories and information-set members.
 
-Deliverables:
+Consequences:
 
-- normalized `StrategyProfile` and uniform fallback;
-- exact profile evaluator;
-- exact information-set-consistent best response;
-- NashConv/exploitability reporting;
-- known small-game tests plus reduced-support Air Poker tests.
+- never materialize the canonical joint chance support;
+- never build the full canonical tree;
+- do not gate production on canonical exact CFR, best response, or sequence-form LP;
+- retain exhaustive traversal only as a reduced-game oracle.
 
-Minimum fixtures:
+## Exact uniform-hand sampling
 
-- matching pennies or another hand-computable zero-sum game;
-- Kuhn poker for imperfect information and known equilibrium behavior;
-- Air Poker with deterministic hands;
-- Air Poker with a two-outcome hidden `HandPair` distribution;
-- no-rank/retry, overlap, fold, and terminal-tie paths already supported by engine fixtures.
+For available cards ordered as `c_i` with Air Poker values `w_i`, compute integer
+completion counts
 
-Acceptance gate:
+\[
+C(i,k,s)=C(i+1,k,s)+C(i+1,k-1,s-w_i),
+\]
 
-- exact values match hand calculations or known game values;
-- a best response never varies within one information set;
-- a best response improves against a deliberately weak profile;
-- exact chance expectation matches direct enumeration on every Air Poker fixture.
+with `C(i,0,0)=1` and impossible states zero. Then walk the cards once. At each
+step, include `c_i` with probability
 
-### Phase 3 - Exact CFR and CFR+ on reduced games
+\[
+\frac{C(i+1,k-1,s-w_i)}{C(i,k,s)}.
+\]
 
-Deliverables:
+This count-and-unrank procedure samples every exact legal mask with probability
+`1/C(0,5,n)` without enumerating the output set. Integer counts avoid probability
+drift; only the final random choice uses floating point or integer-range sampling.
 
-- vanilla CFR with reach-weighted average strategy;
-- exact alternating CFR+ following the contract in section 4.5;
-- deterministic convergence and traversal-order tests;
-- exploitability curves from the independent Phase 2 evaluator.
+Required properties:
 
-Acceptance gate:
+- count equals `len(generate_legal_hands(n,D))` on enumerable decks;
+- every sample contains five distinct available cards with sum `n`;
+- impossible targets return no-rank;
+- seeded draws are reproducible;
+- suit-distinct masks receive equal mass;
+- the algorithm does not cache unbounded per-deck hand lists.
 
-- vanilla CFR and CFR+ approach the same reduced-game value;
-- average-profile exploitability decreases on Kuhn poker and the reduced Air Poker fixture;
-- CFR+ regrets remain nonnegative and are clipped once per complete information-set update;
-- changing hidden-history enumeration order does not change a deterministic iteration result within tolerance;
-- average-strategy weights match a hand-computed short run.
+For the baseline, sample both marginals against the same pre-round deck and
+return the complete pair. The normal-node modeled probability is
+`1/(count_0*count_1)` when both supports are nonempty. Retry conditioning follows
+`MODEL.md`; zero resolving mass raises a model error.
 
-No canonical full-tree run is part of this gate.
+## Production algorithm: external-sampling MCCFR
 
-### Phase 4 - Exact-distribution sampling and canonical MCCFR
+One iteration contains an alternating traversal for each updating player.
 
-This phase first closes the current engine API gap.
+At a traversal for player `i`:
 
-The required sampled-chance semantic contract is:
+1. sample each chance node from the exact modeled kernel;
+2. at opponent nodes, sample from the opponent's current regret-matched policy;
+3. reuse one sampled action if that opponent information set reappears in the
+   same traversal;
+4. at player `i` nodes, enumerate every legal action;
+5. update only player `i`'s ordinary cumulative counterfactual regrets;
+6. accumulate a documented sampled estimator of the average strategy.
+
+Version 1 samples from the target distribution itself. There is no alternate
+proposal and no importance weighting. Regret clipping experiments must not be
+called CFR+ unless a separate sampled-CFR+ derivation and validation are supplied.
+
+External sampling is selected first because it preserves exact lower action
+sets while eliminating the canonical chance cross-product and opponent branch.
+If updating-player branching is later proven too expensive, outcome sampling or
+a documented action abstraction may be evaluated as a new algorithm—not silently
+substituted.
+
+## Tables
+
+Each player owns
 
 ```python
-sample_chance_outcome(
-    state: GameState,
-    upper_policies: tuple[UpperPolicy, UpperPolicy],
-    rng: random.Random,
-) -> tuple[HandPair, float]
+dict[InformationState, InfoSetEntry]
+
+InfoSetEntry:
+    actions: tuple[PlayerAction, ...]
+    regret_sum: float64[action_count]
+    strategy_sum: float64[action_count]
+    visits: int
 ```
 
-Whether this becomes a public engine function or a public engine-owned chance-kernel object is decided in Phase 0. Either form must:
+Invariants:
 
-- use the same policy validation as `iter_chance_outcomes`;
-- sample both policies against the same pre-round deck;
-- return the complete `HandPair` and its modeled probability;
-- reproduce the retry distribution conditional on not drawing double no-rank;
-- raise on zero resolving mass;
-- produce only actions accepted by `apply`;
-- match exact frequencies on small supports.
+- one information key has one owner and one ordered action tuple;
+- all values are finite;
+- cumulative sampled regrets may be signed; exact CFR+ regrets are nonnegative;
+- unvisited and all-nonpositive entries use uniform regret matching;
+- serialization includes an information/action codec version;
+- tables from different model fingerprints never merge.
 
-The first semantic implementation may materialize small policy supports. If benchmarks show that canonical uniform sampling is too slow, add an exact uniform-hand sampler in `poker_math.py` using dynamic-programming counts and combinatorial unranking. Its count must equal `len(generate_legal_hands(target, deck))`, and its samples must be uniform over exact masks. This optimization changes no card or game representation.
+## Evaluation
 
-Then implement external-sampling MCCFR as specified by Lanctot et al. [3]:
+Training and evaluation use independent seed streams.
 
-- enumerate every action of the updating lower player;
-- sample chance from the modeled distribution;
-- sample the opponent's action from the current policy;
-- memoize one sampled action per opponent information set for that traversal;
-- use ordinary sampled cumulative regrets and the external-sampling estimator;
-- document and test the sampled average-strategy estimator;
-- use modeled-distribution sampling only; no alternate proposal or importance weighting in Version 1.
-
-Acceptance gate:
-
-- sampled chance frequencies and fixed-profile values agree with exact reduced fixtures within statistical tolerance;
-- external-sampling MCCFR trends toward the Phase 3 solution on the same fixtures;
-- repeated seeds reproduce trajectories;
-- a canonical trajectory completes without joint chance enumeration or hidden-state leakage;
-- profiling identifies legal-hand sampling, traversal, and table growth separately.
-
-### Phase 5 - Canonical runs, evaluation, and persistence
-
-Deliverables:
-
-- a seeded canonical training runner using the fixed Version 1 game;
-- an independent Monte Carlo evaluator for fixed-profile value and terminal event rates;
-- confidence intervals for sampled values;
-- frozen-opponent response training as a diagnostic;
-- checkpoint/resume only after table identities and action ordering are stable;
-- a run manifest containing engine/docs/code hashes, initial-state inputs, upper-policy fingerprint, algorithm, hyperparameters, seed, iteration count, and codec version.
-
-Metric labels are strict:
-
-| Metric | Allowed label |
+| Context | Allowed metric |
 |---|---|
-| Exact reduced-game best responses | `NashConv`, `exploitability` |
-| Canonical Monte Carlo profile value | `estimated value` with confidence interval |
-| Finite trained response against a frozen profile | `empirical response gain` or `exploitability lower bound` |
-| A proven/certified canonical response bound | `canonical exploitability bound` |
+| Reduced exhaustive fixture | exact value, best responses, NashConv, exploitability |
+| Canonical fixed profile | Monte Carlo estimated value and event rates with confidence intervals |
+| Trained response against a frozen canonical profile | empirical response gain or exploitability lower bound |
+| Certified canonical response procedure | exploitability bound, with proof conditions stated |
 
-Do not describe a canonical profile as an approximate Nash equilibrium solely because training regret or self-play value appears stable.
+Self-play value near zero, small regret mass, or stable action frequencies alone
+do not establish equilibrium.
 
-Acceptance gate:
+Canonical reports include:
 
-- checkpoint/resume reproduces an uninterrupted seeded run;
-- evaluation uses a separate seed stream and does not mutate training tables;
-- reports separate solver sampling error from model choice;
-- the result is called a trained canonical profile unless an exploitability certificate is actually available.
+- model and solver fingerprints;
+- iterations, traversals, wall time, and nodes touched;
+- information-set count and table bytes by player;
+- chance samples, retry rate, folds, showdowns, ties, calamities, and terminal causes;
+- mean utility with interval and effective sample count;
+- frozen-response gains for both players;
+- convergence traces on held-out evaluation seeds.
 
-### Phase 6 - Optional behavioral-model research
+## Acceptance gates
 
-Only after the uniform baseline passes Phase 5 may the project add:
+### Oracle gate
 
-- fixed logit choice over exact legal hands;
-- accidental or deliberate no-rank models;
-- persistent latent upper types;
-- alternate initial-deal priors;
-- cross-model sensitivity studies.
+- exact profile values match hand calculations;
+- best response is constant within each responder information set;
+- NashConv is zero at a known solved fixture and positive for a weak profile;
+- vanilla CFR and CFR+ approach the same value;
+- average-profile exploitability decreases with training.
 
-The papers constrain the terminology and boundaries:
+### Sampler gate
 
-- McKelvey and Palfrey [4] justify logit response inside an extensive-form equilibrium model. A standalone fixed upper softmax is a **logit choice policy**, not automatically an AQRE.
-- Harsanyi [5] justifies a root chance draw over persistent hidden types under an explicit prior. A type must remain fixed for the match and must not enter a lower `InformationState`.
-- Every added upper model must expose exact and sampled distributions derived from one implementation and must be frozen for a solve.
-- A prior mixture optimizes expected value under that prior; it is not worst-case robustness.
+- DP counts equal exhaustive counts on reduced and selected full-deck targets;
+- sampled frequencies pass predeclared statistical tolerances;
+- exact and sampled fixed-profile values agree within confidence intervals;
+- retry and overlap are sampled only through complete hand pairs.
 
-No behavioral parameter grid is locked by this plan because the game description and current code do not identify those parameters.
+### MCCFR gate
 
----
+- fixed seeds reproduce table digests and metric traces;
+- reduced-game MCCFR approaches the exact oracle;
+- no policy access reads hidden engine state;
+- a canonical traversal completes without joint chance enumeration;
+- profiling separates sampler, traversal, table lookup, and serialization cost.
 
-## 6. Definition of done for Version 1
+### Reporting gate
 
-Version 1 is complete when:
+- evaluation does not mutate training state;
+- checkpoint/resume matches uninterrupted seeded training;
+- uncertainty from sampling is separated from uncertainty in the behavioral model;
+- claims use only the metric labels permitted above.
 
-1. the existing engine contract remains green and no solver module duplicates a mechanical rule;
-2. information-state and perfect-recall audits pass on every exact fixture;
-3. exact evaluation, best response, vanilla CFR, and CFR+ agree on reduced games;
-4. the sampled chance kernel is statistically equivalent to exact engine chance on reduced supports;
-5. external-sampling MCCFR agrees with the exact reduced oracle within stated statistical tolerance;
-6. a seeded canonical run trains, evaluates, checkpoints, and resumes without enumerating a joint upper-hand Cartesian product;
-7. the final report uses only metrics its evaluation method supports.
+## Prohibited shortcuts
 
-Anything beyond this list is a new phase, not an implicit Version 1 requirement.
+- keying a lower policy by `GameState`;
+- independently sampling winner, poker category, overlap, calamity, or deck removal;
+- treating hidden upper outcomes as public observations;
+- changing legal action order after a table is created;
+- truncating raises without a new model ID;
+- declaring convergence from self-play value alone;
+- using neural approximation before tabular bottlenecks are measured;
+- sharing tables across roots, upper models, observation schemas, or utilities.
 
----
+## Mathematical references
 
-## 7. Literature anchors
+- Zinkevich et al., *Regret Minimization in Games with Incomplete Information*,
+  `papers/NIPS-2007-regret-minimization-in-games-with-incomplete-information-Paper.pdf`.
+- Tammelin, *Solving Large Imperfect Information Games Using CFR+*,
+  `papers/sswp947.pdf`.
+- Lanctot et al., *Monte Carlo Sampling for Regret Minimization in Extensive
+  Games*, `papers/NIPS-2009-monte-carlo-sampling-for-regret-minimization-in-extensive-games-Paper.pdf`.
 
-The local papers are implementation references. [`literature_analysis.md`](./papers/literature_analysis.md) is useful background, but any earlier modeling proposal in it yields to the locked engine and this scoped plan.
-
-[1] Martin Zinkevich, Michael Johanson, Michael Bowling, and Carmelo Piccione. **“Regret Minimization in Games with Incomplete Information.”** NeurIPS 2007. [Local PDF](./papers/NIPS-2007-regret-minimization-in-games-with-incomplete-information-Paper.pdf). Used for perfect recall, counterfactual reach/regret, regret matching, reach-weighted average strategy, and the low-regret equilibrium connection.
-
-[2] Oskari Tammelin. **“Solving Large Imperfect Information Games Using CFR+.”** 2014. [Local PDF](./papers/1407.5042v1.pdf). Used for vector-form alternating CFR+, regret-matching+, and delayed linear averaging.
-
-[3] Marc Lanctot, Kevin Waugh, Martin Zinkevich, and Michael Bowling. **“Monte Carlo Sampling for Regret Minimization in Extensive Games.”** NeurIPS 2009. [Local PDF](./papers/NIPS-2009-monte-carlo-sampling-for-regret-minimization-in-extensive-games-Paper.pdf). Used for the sampled counterfactual-regret framework and external sampling of chance and opponent actions.
-
-[4] Richard D. McKelvey and Thomas R. Palfrey. **“Quantal Response Equilibria for Extensive Form Games.”** [Local PDF](./papers/sswp947.pdf). Deferred; used only to constrain later logit/AQRE terminology.
-
-[5] John C. Harsanyi. **“Games with Incomplete Information Played by ‘Bayesian’ Players, Part I: The Basic Model.”** 1967. [Local PDF](./papers/Harasyani.pdf). Deferred; used only for a later explicit root prior over persistent hidden types.
+The papers justify algorithmic claims under their assumptions. They do not
+justify Air Poker rules or the upper behavioral model.

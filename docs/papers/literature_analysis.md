@@ -460,7 +460,7 @@ This sketch omits traversal details, chance weighting, and strategy accumulation
 - an all-zero regret vector produces a uniform policy;
 - alternating updates do not mutate the non-updating player's regrets;
 - weighted average contributions use both iteration weight and the correct reach weight;
-- exploitability falls on Kuhn poker or another known reference game;
+- exploitability falls on a hand-solvable reference game;
 - the exact Air Poker fixture value is reproducible across runs.
 
 ---

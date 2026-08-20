@@ -1,6 +1,6 @@
 # Air Poker Engine Contract
 
-`code/engine/game.py` is the executable form of this document. This file is the
+`src/engine/game.py` is the executable form of this document. This file is the
 ground truth for the game represented by the solver; architecture built above it
 may optimize the representation, but may not silently change these mechanics or
 information boundaries.
@@ -300,10 +300,10 @@ foundation future solver architecture should trust.
 
 ## 9. Verification boundary
 
-The standard-library tests in `code/test` are the executable regression contract:
+The standard-library tests in `src/test` are the executable regression contract:
 
 ```powershell
-.\.venv\Scripts\python.exe -B -m unittest discover -s code/test -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s src/test -v
 ```
 
 They exhaustively classify all 2,598,960 five-card hands, verify the 7,462 poker

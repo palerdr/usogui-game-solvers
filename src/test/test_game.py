@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import FrozenInstanceError, fields, replace
 from unittest import TestCase
 
-from code.engine.game import (
+from src.engine.game import (
     ANTES,
     BIO_SECONDS,
     STARTING_BIOS,
@@ -26,7 +26,7 @@ from code.engine.game import (
     terminal_returns,
     uniform_upper_policy,
 )
-from code.engine.poker_math import (
+from src.engine.poker_math import (
     FULL_DECK_MASK,
     card_mask,
     generate_legal_hands,
