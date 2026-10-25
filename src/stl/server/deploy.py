@@ -29,7 +29,7 @@ from stl.dth import RECHECK_SAMPLES, Table
 
 ROOT = Path(__file__).resolve().parents[3]
 BUNDLE = ROOT / "artifacts" / "vercel"
-WEBCLIENT = ROOT / "src" / "browser" / "webclient"
+WEB = ROOT / "web"
 VERCEL_LINK = ROOT / ".vercel" / "project.json"
 # The packages the function installs. Their versions come from the root lock,
 # which pins the environment that the server tests run in.
@@ -88,8 +88,8 @@ def prepare(artifact: Path, bundle: Path = BUNDLE) -> str:
     if bundle.exists():
         shutil.rmtree(bundle)
     bundle.mkdir(parents=True)
-    subprocess.run(["npm", "--prefix", str(WEBCLIENT), "run", "build"], check=True)
-    shutil.copytree(WEBCLIENT / "dist", bundle / "public")
+    subprocess.run(["npm", "--prefix", str(WEB), "run", "build"], check=True)
+    shutil.copytree(WEB / "dist", bundle / "public")
     runtime = bundle / "runtime"
     sources = copy_sources(ROOT, runtime)
     version = code_version(runtime, sources, dth_sha256)

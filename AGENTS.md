@@ -18,12 +18,11 @@
   It imports no other project, and no project imports it.
 - `src/stl/server/` is the browser game's Python side: the session, the
   FastAPI routes, the hosted Vercel entry and the deploy pipeline. `python -m
-  stl serve` runs it locally. `src/browser/webclient/` holds the TypeScript
-  client. The client renders state and collects input; it never derives game
+  stl serve` runs it locally. `web/` holds the TypeScript client. The client renders state and collects input; it never derives game
   rules and never receives an unrevealed action.
 - Each project owns its configs, docs, tests, checkpoints, and outputs.
 - Generated data must remain gitignored. The character frames under
-  `src/browser/webclient/public/art/` are source art, not generated data, and
+  `web/public/art/` are source art, not generated data, and
   are tracked.
 
 Read the nearest nested `README.md` only when working in that subtree. Do not
@@ -116,13 +115,13 @@ validation to make a change pass.
 ```powershell
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
-npm --prefix src/browser/webclient run typecheck
+npm --prefix web run typecheck
 opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
 opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
 lake -d src/formal build
 ```
 
-The typecheck needs `npm --prefix src/browser/webclient install` once. The browser
+The typecheck needs `npm --prefix web install` once. The browser
 client is not covered by `pytest`, so skipping it leaves the front end
 unchecked.
 

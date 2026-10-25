@@ -546,7 +546,7 @@ def test_a_missing_build_is_explained_rather_than_a_404(tmp_path) -> None:
     )
     response = TestClient(app).get("/")
     assert response.status_code == 200
-    assert "npm --prefix src/browser/webclient run build" in response.text
+    assert "npm --prefix web run build" in response.text
 
 
 @pytest.mark.parametrize(
@@ -576,13 +576,13 @@ def test_snapshot_carries_authoritative_winner_seat(
     assert snapshot.winner_is_human is winner_is_human
 
 
-_TYPES = Path(__file__).resolve().parents[2] / "src" / "browser" / "webclient" / "src" / "types.ts"
+_TYPES = Path(__file__).resolve().parents[2] / "web" / "src" / "types.ts"
 
 
 def _interface_fields(source: str, name: str) -> dict[str, tuple[str, bool]]:
     match = re.search(rf"export interface {name} \{{(.*?)\n\}}", source, re.DOTALL)
     if match is None:
-        raise AssertionError(f"webclient/src/types.ts has no interface {name}")
+        raise AssertionError(f"web/src/types.ts has no interface {name}")
     fields: dict[str, tuple[str, bool]] = {}
     for field, optional, annotation in re.findall(
         r"^\s*(\w+)(\?)?:\s*([^;]+);", match.group(1), re.MULTILINE
@@ -628,7 +628,7 @@ def _model_fields(model: type[BaseModel]) -> dict[str, tuple[str, bool]]:
 def _string_union(source: str, name: str) -> set[str]:
     match = re.search(rf"export type {name}\s*=\s*(.*?);", source, re.DOTALL)
     if match is None:
-        raise AssertionError(f"webclient/src/types.ts has no type alias {name}")
+        raise AssertionError(f"web/src/types.ts has no type alias {name}")
     return set(re.findall(r'"([^"]+)"', match.group(1)))
 
 

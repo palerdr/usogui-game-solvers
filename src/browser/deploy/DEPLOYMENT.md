@@ -3,7 +3,7 @@
 You can run the browser against Hal locally:
 
 ```sh
-npm --prefix src/browser/webclient run build
+npm --prefix web run build
 uv run python -m stl serve --port 8766
 ```
 
@@ -149,11 +149,11 @@ of 2 GB), and log volume made no difference. A new process costs the request
 Python and its imports. A fast player's Continue and Commit presses fall in
 that window, so about one move in three stalled. The browser client therefore
 holds any request that would leave 0.35 s to 1.0 s after the last hosted
-answer until that second ends (`webclient/src/pace.ts`). Outside the window a
+answer until that second ends (`web/src/pace.ts`). Outside the window a
 long run still met one new process in about 60 s to 80 s of steady play.
 
 The client also sends a second copy of a request that has no answer after
-0.9 s (`webclient/src/hedge.ts`). The compare-and-set commits one copy of a
+0.9 s (`web/src/hedge.ts`). The compare-and-set commits one copy of a
 move, both copies compute the same reveal from the same seeds, and the refused
 copy reveals nothing.
 
@@ -265,7 +265,7 @@ Run these checks after a change to the hosted Hal:
 
 ```sh
 uv run python -m pytest tests/server tests/test_hal.py -q
-npm --prefix src/browser/webclient run typecheck
+npm --prefix web run typecheck
 ```
 
 The local operational check, `browser.deploy.check_translated_hal` at commit

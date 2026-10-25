@@ -384,12 +384,10 @@ def snapshot_from_session(session: PlaySession) -> Snapshot:
 
 TRANSCRIPT_SCHEMA = "arena-public-play-session-v1"
 
-# The built browser client. ``npm --prefix src/browser/webclient run build``
+# The built browser client. ``npm --prefix web run build``
 # writes it; when it exists the Python server serves it alone, with no Vite
 # process, and when it does not the root route explains how to get it.
-DEFAULT_WEBCLIENT_DIST = (
-    Path(__file__).resolve().parents[3] / "src" / "browser" / "webclient" / "dist"
-)
+DEFAULT_WEBCLIENT_DIST = Path(__file__).resolve().parents[3] / "web" / "dist"
 
 _NO_CLIENT_PAGE = """<!doctype html>
 <meta charset="utf-8">
@@ -398,10 +396,10 @@ _NO_CLIENT_PAGE = """<!doctype html>
 <h1 style="font-size:15px;letter-spacing:.22em">SURPASSING THE LEADER</h1>
 <p>The API is running, but the browser client has not been built.</p>
 <p>Either build it once and reload this page:</p>
-<pre>npm --prefix src/browser/webclient install
-npm --prefix src/browser/webclient run build</pre>
+<pre>npm --prefix web install
+npm --prefix web run build</pre>
 <p>or run the development client, which proxies to this server:</p>
-<pre>npm --prefix src/browser/webclient run dev</pre>
+<pre>npm --prefix web run dev</pre>
 </body>
 """
 

@@ -7,7 +7,6 @@ The recording is an Usogui leap-second edit, credited as original sound.
 We use the first tick at 0.180–0.360 seconds, which includes its initial
 attack and low resonance. We fade its last 80 ms to exclude the faint
 music-bearing tail. We repeat this tick at its source pitch.
-We no longer play `tock.wav`, the earlier pitch-shifted copy.
 We cut the gong at 22.840–24.280 seconds and fade its last 350 ms. After
 450 ms, we constrain each frequency to a decaying energy envelope to
 suppress new musical notes during the ring. We leave the first 400 ms
@@ -20,15 +19,11 @@ and 0.70 for the gong to leave headroom. The source mixes music and clock
 into one mono channel. This treatment suppresses music; it cannot recover
 an exact isolated clock stem. Listening validation remains open.
 
-Use the existing NumPy and SciPy environment to reproduce the cuts:
-
-```bash
-uv run python src/browser/webclient/tools/prepare_clock_audio.py /path/to/ref.wav
-```
-
-The input is a mono, 16-bit, 44.1 kHz WAV, 41.1893 seconds long. Its SHA-256 is
+The cutting script is in git history. Read it with
+`git show 5cb7160:src/browser/webclient/tools/prepare_clock_audio.py`.
+Its input is a mono, 16-bit, 44.1 kHz WAV, 41.1893 seconds long. Its SHA-256 is
 `50cf1583e16f58bf3df36fd557bbf11f243bae0b6711331c0b0625836bd8eb8a`.
-The script does not download the source.
+The source WAV is not in the repository.
 
 The rights to this audio remain uncleared for redistribution. These cuts
 serve your local play; clear the rights before a public release.

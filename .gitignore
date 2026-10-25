@@ -54,15 +54,13 @@ src/dth_ocaml/bisect*.coverage
 # Generated media
 *.png
 # The character frames the web client draws are committed source art. Without
-# them a fresh clone draws labelled placeholders and no test fails. The second
-# line covers the client's later home in web/.
-!src/browser/webclient/public/art/**/*.png
+# them a fresh clone draws labelled placeholders and no test fails.
 !web/public/art/**/*.png
 
 # Browser client: dependencies and build. The .vercel pattern below covers
 # the Vercel project link in .vercel/.
-src/browser/webclient/node_modules/
-src/browser/webclient/dist/
+web/node_modules/
+web/dist/
 
 # OS/editor noise
 .DS_Store

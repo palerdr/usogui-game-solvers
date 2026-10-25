@@ -26,7 +26,7 @@ Use Python 3.12 or 3.13 and `uv`. One root `pyproject.toml` and one
 uv sync --locked
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
-npm --prefix src/browser/webclient run typecheck
+npm --prefix web run typecheck
 opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
 opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
 ```
@@ -41,7 +41,7 @@ uv run python -m stl leap
 uv run python -m stl dth
 
 # Browser game on 127.0.0.1:8000, once the client is built; translated Hal is the default
-npm --prefix src/browser/webclient run build
+npm --prefix web run build
 uv run python -m stl serve
 uv run python -m stl serve --hal exact
 ```

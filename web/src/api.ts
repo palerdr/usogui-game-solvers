@@ -57,8 +57,6 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T>(path: string, body: unknown): Promise<T> =>
   request<T>(path, { method: "POST", body: JSON.stringify(body) });
 
-export const getRules = (): Promise<Rules> => request<Rules>("/api/rules");
-
 /** A public read wakes the policy server without loading or changing your game. */
 export const warmServer = (): Promise<Rules> =>
   paced().then(() => send<Rules>("/api/rules", { cache: "no-store", credentials: "omit" }));

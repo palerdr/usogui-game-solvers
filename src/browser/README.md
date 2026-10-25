@@ -1,12 +1,12 @@
 # Browser App Instructions
 
-`src/browser/` holds the browser game's TypeScript client in
-[`webclient/`](webclient/README.md) and the deploy notes in
-[`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md). The game's Python side lives in
+`src/browser/` holds the deploy notes in
+[`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md). The game's TypeScript client
+lives in `web/`, its design brief in `docs/GAMEPLAY.md`, and its Python side in
 `src/stl/server/`. Build the client once, then run the local server:
 
 ```powershell
-npm --prefix src/browser/webclient run build
+npm --prefix web run build
 uv run python -m stl serve
 ```
 
@@ -20,12 +20,12 @@ uv run python -m stl serve
 - `python -m stl serve` builds Hal with `stl.hal.make_hal`: `--hal translated`
   (the default) or `--hal exact` (the certified DTH equilibrium).
 - `stl/server/app.py` holds the player-facing rules text. The client's
-  character frames are static files under `webclient/public/art/`.
+  character frames are static files under `web/public/art/`.
 - `tests/conftest.py` holds the fakes that more than one test shares.
 
 ## Server invariants
 
-`stl/server/app.py` serves the TypeScript client in `webclient/`. It builds
+`stl/server/app.py` serves the TypeScript client in `web/`. It builds
 its provider once at startup, because provider construction memory-maps a
 multi-gigabyte artifact, which must not happen on a request path.
 `snapshot_from_session` in the same module is the only serializer that faces
@@ -38,7 +38,7 @@ The browser server is one repeated-opponent series: one Hal is retained across
 games, game `N` is seeded with the base seed plus `N`, and every finished game
 is appended to a public transcript in the `arena-public-play-session-v1`
 shape. `GET /api/transcript` serves that transcript plus the live game's
-resolved half-rounds. When `webclient/dist/` has been built, the Python server
+resolved half-rounds. When `web/dist/` has been built, the Python server
 serves it at `/`, so one process is the whole game.
 
 The web session's `human_name` is a presentation label only; it never
@@ -92,7 +92,7 @@ build, the local launch commands, and the Vercel pipeline.
 ## Working in this subtree
 
 Run `uv run python -m pytest tests/server -q`. The client is not covered by
-`pytest`; run `npm --prefix src/browser/webclient test`,
-`npm --prefix src/browser/webclient run typecheck`, and
-`npm --prefix src/browser/webclient run build` after a client change. The
-typecheck needs `npm --prefix src/browser/webclient install` once.
+`pytest`; run `npm --prefix web test`,
+`npm --prefix web run typecheck`, and
+`npm --prefix web run build` after a client change. The
+typecheck needs `npm --prefix web install` once.
