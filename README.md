@@ -20,14 +20,13 @@ records its authorship in [`src/dth_ocaml/AUTHORS.md`](src/dth_ocaml/AUTHORS.md)
 
 ## Setup
 
-Use Python 3.12 or 3.13 and `uv`. The browser app is its own uv project in
-`src/browser/`:
+Use Python 3.12 or 3.13 and `uv`. One root `pyproject.toml` and one
+`uv.lock` cover every Python package, the browser server included:
 
 ```powershell
-uv sync --dev
+uv sync --locked
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
-uv run --project src/browser python -m pytest src/browser/tests -q
 npm --prefix src/browser/webclient run typecheck
 opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
 opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
@@ -44,8 +43,8 @@ uv run python -m stl.dth_kernel
 
 # Browser game on 127.0.0.1:8000, once the client is built; exact Hal is the default
 npm --prefix src/browser/webclient run build
-uv run --project src/browser python -m browser
-uv run --project src/browser python -m browser --hal-agent translated
+uv run python -m browser
+uv run python -m browser --hal-agent translated
 ```
 
 Each project owns its `config/`, `docs/`, tests, checkpoints, and outputs.

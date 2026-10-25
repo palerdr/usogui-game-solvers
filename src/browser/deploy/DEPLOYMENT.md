@@ -4,7 +4,7 @@ You can run the browser against the complete policy provider:
 
 ```sh
 npm --prefix src/browser/webclient run build
-uv run --project src/browser python -m browser --port 8766
+uv run python -m browser --port 8766
 ```
 
 The default table is `artifacts/dth/V.npy`. For a new checkout, build it
@@ -55,16 +55,16 @@ Vercel CLI installs Linux dependencies for the deployment, including when you
 run the build on macOS.
 
 ```sh
-uv run --project src/browser python -m browser.deploy.prepare_vercel
+uv run python -m browser.deploy.prepare_vercel
 npx vercel build --cwd src/browser/build/vercel --yes
-uv run --project src/browser python -m browser.deploy.prepare_vercel --bytecode
+uv run --isolated --python 3.13 python -m browser.deploy.prepare_vercel --bytecode
 npx vercel deploy --cwd src/browser/build/vercel --prebuilt --archive=tgz --target preview
 ```
 
 `manifest.py` lists each runtime file that the preparation command copies
 into `runtime/`, in the repository layout. `production.py` hashes the files
 that the list flags `in_version` into the hosted code version. The preparation
-command reads the pins of the function's packages from `src/browser/uv.lock`.
+command reads the pins of the function's packages from the root `uv.lock`.
 
 Vercel ships no bytecode and sets `PYTHONDONTWRITEBYTECODE`, so a new process
 compiled numpy, scipy, and FastAPI from source. The `--bytecode` step compiles
@@ -217,7 +217,7 @@ Neither deployment mode changes the canonical referee or the leap rule.
 You can run the frozen candidate on the canonical local browser surface:
 
 ```sh
-uv run --project src/browser python -m browser --hal-agent translated --conceal-hal-details
+uv run python -m browser --hal-agent translated --conceal-hal-details
 ```
 
 Add `--pure-dth` to use the benchmark's permanent 1..60 game. The selected
@@ -267,8 +267,7 @@ reveals from its 60-action model and clears stale sequence references.
 Run these checks after a change to the hosted Hal:
 
 ```sh
-uv run --project src/browser python -m pytest src/browser/tests -q
-uv run python -m pytest src/arena/tests -q
+uv run python -m pytest src/browser/tests src/arena/tests -q
 npm --prefix src/browser/webclient run typecheck
 ```
 

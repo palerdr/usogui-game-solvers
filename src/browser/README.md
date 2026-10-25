@@ -7,7 +7,7 @@ Build the client once, then run the local server:
 
 ```powershell
 npm --prefix src/browser/webclient run build
-uv run --project src/browser python -m browser
+uv run python -m browser
 ```
 
 ## Boundaries
@@ -94,25 +94,20 @@ the existing commit-before-sampling and reveal contracts.
 - A change to a file in the version ends every live hosted session at the
   next deploy. `names.py` stays out of the version, so a word-list change does
   not end games.
-- `prepare_vercel` reads the pins of the bundle's packages from
-  `src/browser/uv.lock`, writes the bundle to the ignored `build/vercel/`, and
+- `prepare_vercel` reads the pins of the bundle's packages from the root
+  `uv.lock`, writes the bundle to the ignored `build/vercel/`, and
   copies the ignored Vercel project link from `.vercel/project.json`.
 
 ## Environment
 
-The browser app is its own uv project. `pyproject.toml` declares FastAPI,
-uvicorn, and httpx, and it installs the root `stl-solver` package as an
-editable path dependency, so the browser code still ships from `src/`. A
-browser dependency change edits `src/browser/uv.lock` alone; the root lock
-and the leap builder hash stay unchanged. Run every
-browser command with `uv run --project src/browser`. The environment lives in
-the ignored `src/browser/.venv/`.
+The root `pyproject.toml` declares FastAPI, uvicorn, httpx, and pydantic, and
+the root `uv.lock` pins them. The browser code ships in the root `stl-solver`
+package.
 
 ## Working in this subtree
 
-Run `uv run --project src/browser python -m pytest src/browser/tests -q`.
-The root suite does not collect these tests, because the root environment
-has no FastAPI. The client is not covered by
+Run `uv run python -m pytest src/browser/tests -q`. The root suite collects
+these tests too. The client is not covered by
 `pytest`; run `npm --prefix src/browser/webclient test`,
 `npm --prefix src/browser/webclient run typecheck`, and
 `npm --prefix src/browser/webclient run build` after a client change. The

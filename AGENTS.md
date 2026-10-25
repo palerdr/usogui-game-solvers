@@ -77,16 +77,9 @@ The table lists the import rules of each project. No test enforces them.
 - The STL leap kernel `src/stl/solver/leap_kernel.py` is numba code. Its
   first call compiles it into the ignored `src/stl/solver/__pycache__/`;
   `NUMBA_CACHE_DIR` moves that cache.
-- The browser app is its own uv project, `src/browser/pyproject.toml`, with
-  its own `src/browser/uv.lock`. FastAPI, uvicorn, and httpx live there, and
-  the project installs the root package as an editable path dependency. A
-  browser dependency change edits `src/browser/uv.lock` alone and leaves the
-  root lock and the leap builder hash unchanged. Run browser
-  commands with `uv run --project src/browser`.
-- The root `[tool.uv] default-groups` installs `dev` and `research`, so the
-  root environment still installs torch, which no surviving code imports.
-  `research` is a dependency group, so the browser project does not inherit
-  it.
+- One root `pyproject.toml` and one `uv.lock` cover every Python package,
+  the browser server included. The deploy bundle takes its package pins from
+  that lock. A dependency change therefore also changes the leap builder hash.
 
 ## Frozen global rules
 
@@ -126,7 +119,6 @@ validation to make a change pass.
 ```powershell
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
-uv run --project src/browser python -m pytest src/browser/tests -q
 npm --prefix src/browser/webclient run typecheck
 opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
 opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
@@ -137,10 +129,9 @@ The typecheck needs `npm --prefix src/browser/webclient install` once. The brows
 client is not covered by `pytest`, so skipping it leaves the front end
 unchecked.
 
-`pytest` runs distributed at `-n 8`; that width is deliberate, because one
-worker per logical core exhausts Windows handles importing torch's
-dependencies and makes the workers contend for the GPU. Add `-n 0` for a
-readable serial traceback when something fails.
+`pytest` runs distributed at `-n 8`. Add `-n 0` for a readable serial
+traceback when something fails. The hosted runtime runs on Python 3.13, so CI
+also runs `uv run --locked --python 3.13 python -m pytest src/browser/tests -q -n 0`.
 
 Everything runs by default, including the `slow` tests that build real complete
 artifacts end to end — they are the only coverage of resume and backend

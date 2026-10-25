@@ -5,12 +5,15 @@ description = "Independent exact-game implementations, accelerators, and neutral
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+    "fastapi>=0.141.1",
     "highspy>=1.12,<2",
-    "hydra-core>=1.3,<2",
+    "httpx>=0.28.1",
+    "llvmlite>=0.49,<0.50",
     "numba>=0.67.0,<0.68",
     "numpy>=2.0,<3",
-    "pyyaml>=6.0,<7",
+    "pydantic>=2.13,<3",
     "scipy>=1.14,<2",
+    "uvicorn>=0.52.1",
 ]
 
 [build-system]
@@ -25,45 +28,17 @@ dev = [
     "pytest>=8.0",
     "pytest-xdist>=3.6",
 ]
-# The torch Hal providers in src/arena/policies and the Hal lab's training
-# stack. [tool.uv] default-groups installs this group with dev.
-research = [
-    "gymnasium>=1.0,<2",
-    "sb3-contrib>=2.9,<3",
-    "stable-baselines3>=2.9,<3",
-    "torch>=2.5",
-]
 
 [tool.pytest.ini_options]
-# The browser app's tests import FastAPI, which the browser project in
-# src/browser/pyproject.toml installs. Run them with
-# `uv run --project src/browser python -m pytest src/browser/tests -q`.
-testpaths = ["src/stl/tests", "src/arena/tests"]
+testpaths = ["src/stl/tests", "src/arena/tests", "src/browser/tests"]
 pythonpath = ["src", "."]
 # The suite is overwhelmingly independent and every artifact-building test
 # already writes under its own tmp_path, so it distributes cleanly. Use "-n 0"
 # when a failure needs a readable serial traceback.
-#
-# 8, not "auto": several tests import torch, and one worker per logical core
-# (24 here) exhausts Windows handles while importing sympy and makes the
-# workers fight over the GPU. 8 leaves headroom and still gets most of the win.
+# CI passes "-n logical" to use every runner core.
 addopts = "-n 8"
 # Slow tests run by default. Use -m "not slow" for a tighter loop.
 markers = ["slow: a full-domain leap check against the real tables"]
 
 [tool.uv]
 package = true
-# `uv run` and `uv sync` install both groups, so the root environment keeps
-# torch and the training stack. The browser project's own lock holds FastAPI,
-# so a browser dependency change leaves this project's uv.lock alone.
-default-groups = ["dev", "research"]
-
-[tool.uv.sources]
-torch = [
-    { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
-
-[[tool.uv.index]]
-name = "pytorch-cu130"
-url = "https://download.pytorch.org/whl/cu130"
-explicit = true

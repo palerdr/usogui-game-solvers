@@ -19,9 +19,9 @@ from stl.dth import DEFAULT_PATH, RECHECK_SAMPLES, Table
 BUNDLE = "src/browser/build/vercel"
 WEBCLIENT = "src/browser/webclient"
 VERCEL_LINK = "src/browser/.vercel/project.json"
-# The packages the function installs. Their versions come from the browser
-# project's lock, which pins the environment that the browser tests run in.
-BROWSER_LOCK = "src/browser/uv.lock"
+# The packages the function installs. Their versions come from the root lock,
+# which pins the environment that the browser tests run in.
+LOCK = "uv.lock"
 BUNDLE_PACKAGES = ("fastapi", "numpy", "scipy", "httpx", "uvicorn")
 
 
@@ -129,7 +129,7 @@ def main():
         "from browser.deploy.production import create_production_app\n"
         f'app = create_production_app(root / "runtime/artifacts/dth/V.npy", "{dth_sha256}")\n'
     )
-    pins = locked_versions(root / BROWSER_LOCK)
+    pins = locked_versions(root / LOCK)
     dependencies = ", ".join(f'"{name}=={version}"' for name, version in pins.items())
     (target / "pyproject.toml").write_text(
         '[project]\nname = "stl-browser"\nversion = "0.1.0"\n'

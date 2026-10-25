@@ -1,4 +1,4 @@
-"""Run the local browser server: ``uv run --project src/browser python -m browser``.
+"""Run the local browser server: ``uv run python -m browser``.
 
 Hal is built once here, at startup, through ``arena.policies.registry``:
 ``--hal-agent exact`` plays the certified DTH equilibrium, and
