@@ -1,8 +1,9 @@
 // The four bars in the top-left corner and the clock block in the top-right.
 //
 // Rendered as DOM rather than into the canvas so the text stays crisp at any
-// device pixel ratio. Mirrors the columns `_player_column` builds in
-// src/terminal/tui.py, folded into one corner so the stage stays clear.
+// device pixel ratio. Mirrors the columns `_player_column` built in the retired
+// terminal TUI (src/terminal/tui.py at 938fb25), folded into one corner so the
+// stage stays clear.
 
 import type { PlayerView, Snapshot, Transcript } from "../types";
 import { escapeHtml } from "./escape";

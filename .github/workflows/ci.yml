@@ -62,7 +62,7 @@ jobs:
           enable-cache: true
           python-version: "3.13"
       - run: uv sync --project src/browser --frozen
-      - run: uv run --project src/browser python -m pytest src/browser/tests tests/parity -q
+      - run: uv run --project src/browser python -m pytest src/browser/tests -q
 
   dth-compact:
     runs-on: ubuntu-latest

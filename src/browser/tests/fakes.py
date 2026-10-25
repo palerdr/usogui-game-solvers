@@ -1,7 +1,6 @@
 """Fakes that more than one browser test module shares.
 
-``tests/parity/test_terminal_browser.py`` at the repository root imports them
-too. No runtime module imports this one.
+No runtime module imports this one.
 
 - ``StubHal`` is a deterministic Hal that never opens the DTH artifact.
   ``make_client`` builds a local browser app around it, and ``play_out``

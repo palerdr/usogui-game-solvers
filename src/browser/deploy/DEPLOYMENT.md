@@ -224,25 +224,21 @@ Neither deployment mode changes the canonical referee or the leap rule.
 You can run the frozen candidate on the canonical local browser surface:
 
 ```sh
-uv run --project src/browser python -m browser --hal-agent perfect-hal --perfect-hal-model translated-v1 --dth-complete-tablebase src/dth/artifacts/complete_full_v1 --conceal-hal-details
+uv run --project src/browser python -m browser --hal-agent translated --dth-complete-tablebase src/dth/artifacts/complete_full_v1 --conceal-hal-details
 ```
 
-Add `--pure-dth` to use the benchmark's permanent 1..60 game. Old remains
-available as `--perfect-hal-model v1`; the Bayesian and ensemble selectors
-keep their existing behavior. The selected variant reads its frozen parameters
+Add `--pure-dth` to use the benchmark's permanent 1..60 game. The selected
+variant reads its frozen parameters
 from `src/arena/config/translated_hal_v1_selection.json`.
 
 For hosted activation, set `STL_HAL_POLICY=translated-v1` in the target
 environment and use the existing preparation and preview commands above.
 The preparation command packages `src/dth/artifacts/complete_full_v1` by
-default. The evaluated artifact `outputs/perfect-hal-bayes-v2/tablebase` holds
-the same `value.npy` and `solver_kind.npy` bytes, but the root `uv.lock` edit
-of the restructure makes its source digests stale, so the preparation command
-refuses it. The package includes the candidate and its memory adapter. Its
+default. The package includes the candidate and its memory adapter. Its
 policy package uses direct imports so the serving process does not need Torch
 or training modules.
 
-On 2026-09-29 the `exploit_continuation_v1` study's canonical gate compared
+On 2026-09-29 the `exploit_continuation_v1` study (commit `938fb25`) compared
 translated and exact Hal in canonical STL against the human emulators:
 translated scored .939 and exact .547, a player-clustered gain of 39.3 points
 [37.0, 40.7]. The study's decision is to deploy translated-v1. The preview
@@ -276,16 +272,16 @@ The candidate uses DTH equilibrium during canonical leap turns. Baku may
 submit 61 as Dropper; Checker remains capped at 60. The adapter excludes leap
 reveals from its 60-action model and clears stale sequence references.
 
-You can repeat the local operational check with a new output path:
+Run these checks after a change to the hosted Hal:
 
 ```sh
-uv run --project src/browser python -m browser.deploy.check_translated_hal --artifact src/dth/artifacts/complete_full_v1 --output src/hal_lab/outputs/translated-hal-v1/runtime-review.json
-uv run --project src/browser python -m pytest src/browser/tests tests/parity -q
+uv run --project src/browser python -m pytest src/browser/tests -q
 uv run python -m pytest src/arena/tests -q
 npm --prefix src/browser/webclient run typecheck
 ```
 
-The recorded local run covered 32 games and 16 action-61 reveals. It measured
+The local operational check, `browser.deploy.check_translated_hal` at commit
+`938fb25`, recorded a run that covered 32 games and 16 action-61 reveals. It measured
 1.56 ms p95 policy latency, 13.2 ms p95 request latency, and 62.2 ms p95 worker
 recovery. The 2026-09-29 rerun on `complete_full_v1` and the restructured
 serving code measured 1.01 ms, 2.04 ms, and 21.8 ms. The largest checkpoint was 6,788 bytes. These ASGI measurements use
@@ -299,31 +295,5 @@ passed 837, skipped one, and failed eight checks against the stale Rust
 extensions and `src/dth/artifacts/complete_fast_v1` of that time. We preserved
 those artifacts and the solver validation gates.
 
-## Exploit continuation candidate
-
-The `exploit_continuation_v1` study in `src/hal_lab/` decides whether the
-exploit continuation replaces translated Hal. Its `select` phase writes the
-chosen arm to `src/arena/config/exploit_continuation_v1_selection.json`, and
-`deploy/manifest.py` adds `exploit-continuation-v1` to `POLICIES` only when
-that file exists. Its `record` phase reads promotion gate P6 from this runtime
-check:
-
-```sh
-uv run --project src/browser python -m browser.deploy.check_exploit_continuation --artifact src/dth/artifacts/complete_full_v1 --output src/hal_lab/outputs/exploit_continuation_v1/runtime-check.json
-```
-
-Pass the report to `record` with `--runtime-check`. The gate refuses a report
-of another provider, another arm, or other source bytes than the confirmed
-phases hashed.
-
-Deploy the candidate only when the study's results file names
-`exploit-continuation-v1` as its decision. The 2026-09-29 run selected
-`la_role_g025` and failed gates P1, P3, and P5, so its decision is
-translated-v1 (`src/hal_lab/experiments/exploit_continuation_v1/exploit_continuation_v1_results.json`). Set
-`STL_HAL_POLICY=exploit-continuation-v1` in the target environment and use the
-preparation and preview commands above. Check that `/api/health` reports
-`policy: "exploit-continuation-v1"`. The candidate keeps translated Hal's
-opponent memory, its cookie boundary, and its leap-turn equilibrium, which the
-translated section describes.
 A change to `manifest.py` or `production.py` changes the code version of every
 policy, so the deploy that ships it ends every live hosted session.

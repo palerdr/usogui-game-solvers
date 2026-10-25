@@ -1,10 +1,8 @@
 """Run the local browser server: ``uv run --project src/browser python -m browser``.
 
-Hal is built once here, at startup, through ``arena.policies.registry``: the
-same provider construction and the same agent options that
-``python -m terminal play`` uses. The ``abstract`` provider is refused because
-it can build a tablebase from scratch, which must never happen behind an HTTP
-request.
+Hal is built once here, at startup, through ``arena.policies.registry``:
+``--hal-agent exact`` plays the certified DTH equilibrium, and
+``--hal-agent translated`` plays translated Hal.
 """
 
 from __future__ import annotations
@@ -24,14 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m browser")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument(
-        "--hal-agent",
-        choices=registry.BROWSER_AGENTS,
-        default="dth",
-        help="'abstract' is unavailable here: it may build a tablebase on first use",
-    )
-    # The browser accepts every agent option of `python -m terminal play`, and
-    # each option means the same thing here.
+    parser.add_argument("--hal-agent", choices=registry.KINDS, default="exact")
     registry.add_play_arguments(parser)
     parser.add_argument("--human-name", default="Baku")
     parser.add_argument(
@@ -48,14 +39,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--seed",
         type=int,
         default=None,
-        help="base RNG seed; game N of the series uses seed + N, as terminal play does",
+        help="base RNG seed; game N of the series uses seed + N",
     )
     parser.add_argument("--start-clock", type=int, default=OPENING_START_CLOCK)
     parser.add_argument("--max-half-rounds", type=int, default=None)
     parser.add_argument(
         "--pure-dth",
         action="store_true",
-        help="permanent literal actions 1..60; required for Perfect and PM Hal",
+        help="permanent literal actions 1..60",
     )
     parser.add_argument(
         "--transcript",
@@ -73,11 +64,6 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     args.human_name = validate_human_display_name(args.human_name)
-    if registry.requires_pure_dth(args.hal_agent, args) and not args.pure_dth:
-        raise SystemExit(
-            f"{args.hal_agent} is a pure-DTH policy; pass --pure-dth so action "
-            "61 is impossible"
-        )
 
     app = create_app(
         hal_factory=lambda: registry.make_hal(args),

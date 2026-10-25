@@ -13,30 +13,19 @@
   leap artifact through `stl.reader` and the compact DTH solver through
   `src/dth_compact/main.py`, and import no other project module.
 - `docs/papers/` owns primary evidence and cited literature.
-- `src/stl/`, `src/dth/`, `src/dth_compact/`, `src/abstract/`, and
-  `src/dth_ocaml/` are peer projects. They must not import one another.
-  `src/arena/` is the game library that the apps and the lab share: it may
-  consume their public interfaces, but they must not import it or one another.
+- `src/stl/`, `src/dth/`, `src/dth_compact/`, and `src/dth_ocaml/` are peer
+  projects. They must not import one another. `src/arena/` is the game library
+  that the browser app uses: it may consume their public interfaces, but they
+  must not import it or one another.
 - `src/formal/` is a Lean project that machine-checks the solvers' mathematics.
   It imports no other project, and no project imports it.
-- `src/terminal/` is the terminal game app, `python -m terminal play`. It may
-  import `arena` and `stl.engine`, and no project imports it.
 - `src/browser/` is the browser game app, `python -m browser`: the FastAPI
   server, the TypeScript client in `src/browser/webclient/`, and the Vercel
   deploy pipeline in `src/browser/deploy/`. It may import `arena`,
   `stl.engine`, and `dth.agent`, and no project imports it. The client renders
   state and collects input; it never derives game rules and never receives an
   unrevealed action.
-- `src/hal_lab/` is the Hal research lab. It owns Hal training, the
-  `python -m hal_lab match` series, and the frozen evidence of the finished
-  studies, with the ignored root `outputs/` store.
-  It may import `arena`, `stl.engine`, `stl.solver.canonical`, `stl.reader`,
-  `dth.agent`, and `dth.solver`, and no project imports it.
 - Each project owns its configs, docs, tests, checkpoints, and outputs.
-- The root `tests/` holds the terminal-versus-browser parity tests in
-  `tests/parity/`. A parity test runs
-  both apps with the same options. It lives outside `src/`, because neither
-  app may import the other.
 - Generated data must remain gitignored. The character sprites under
   `src/arena/art/sprites/` and the rules spread in `src/arena/art/panels/` are
   source art, not generated data, and are tracked.
@@ -54,30 +43,21 @@ The table lists the import rules of each project. No test enforces them.
 
 | Layer | Projects | May import |
 | --- | --- | --- |
-| Peers | `stl`, `dth`, `dth_compact`, `abstract`, `dth_ocaml`, `dth_cpp` | No other project |
+| Peers | `stl`, `dth`, `dth_compact`, `dth_ocaml`, `dth_cpp` | No other project |
 | Proofs | `formal` | Nothing |
-| Library | `arena` | `stl.engine`, `stl.solver.canonical`, `stl.reader`, `dth.agent`, `dth.solver`, `abstract` |
-| App | `terminal` | `arena`, `stl.engine` |
+| Library | `arena` | `stl.engine`, `stl.reader`, `dth.agent`, `dth.solver` |
 | App | `browser` | `arena`, `stl.engine`, `dth.agent` |
-| Lab | `hal_lab` | `arena`, `stl.engine`, `stl.solver.canonical`, `stl.reader`, `dth.agent`, `dth.solver` |
 | Consumer | `paper` | `stl.reader`, `main` (`src/dth_compact/main.py`) |
 
-- No project imports `hal_lab`, `terminal`, or `browser`. The root
-  `tests/parity/` may import both apps.
-- `arena` imports no `terminal`, `browser`, or `hal_lab` module, and
-  `terminal` imports no `browser` or `hal_lab` module.
+- No project imports `browser`, and `arena` imports no `browser` module.
 - `paper` owns no importable module. `stl.reader` is the one read path into a
   completed leap artifact. Code outside `stl` reads leap tables through it,
   not through the `stl.solver.leap_*` builder modules.
-- Inside `arena`, `contracts.py`, `agent.py`, `session.py`, `match.py`, and
-  `variants.py` import `stl.engine` and each other alone. `dth` and
-  `abstract` enter through the adapters and `arena/policies/`.
-- `stl`, `dth`, `abstract`, `dth_compact`, `arena`, `terminal`, and `browser`
-  do not import `torch`, `gymnasium`, `stable_baselines3`, or `sb3_contrib`,
-  except the three torch Hal providers
-  `arena/policies/{exploit_hal,aggro_hal,pm_hal}.py` and the arena tests that
-  exercise them. `arena/policies/__init__.py` imports nothing. `hal_lab` may
-  import these packages, and Hal training and evaluation code lives there.
+- Inside `arena`, `contracts.py`, `agent.py`, `session.py`, and
+  `variants.py` import `stl.engine` and each other alone. `dth` enters
+  through the adapters and `arena/policies/`.
+- No project imports `torch`, `gymnasium`, `stable_baselines3`, or
+  `sb3_contrib`. `arena/policies/__init__.py` imports nothing.
 - The `file:line` citations in `src/formal` read against commit `938fb25`.
 
 ## Fingerprints and locks
@@ -103,9 +83,9 @@ The table lists the import rules of each project. No test enforces them.
   root lock, the DTH digest, and the leap builder hash unchanged. Run browser
   commands with `uv run --project src/browser`.
 - The root `[tool.uv] default-groups` installs `dev` and `research`, so the
-  root environment keeps torch and the Hal training stack for `arena` and
-  `hal_lab`. `research` is a dependency group, so the browser project does
-  not inherit it.
+  root environment still installs torch, which no surviving code imports.
+  `research` is a dependency group, so the browser project does not inherit
+  it.
 
 ## Frozen global rules
 
@@ -121,7 +101,7 @@ The table lists the import rules of each project. No test enforces them.
   input at any rung.
 - In STL's leap window only Baku as Dropper may choose 61; Checker remains
   capped at 60. Both players know the leap rule from game initialization.
-- DTH and abstract do not inherit STL-only leap or information-state mechanics.
+- DTH does not inherit STL-only leap or information-state mechanics.
 - The `dth_ocaml` solver library in `lib/solver/`, its tests, and
   `bin/solve_tablebase.ml` are an independent OCaml implementation of **pure
   DTH**, not STL: actions are literal seconds 1..60 and it has no leap window.
@@ -145,7 +125,7 @@ validation to make a change pass.
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
 uv run --project src/dth_compact pytest src/dth_compact/tests -q
-uv run --project src/browser python -m pytest src/browser/tests tests/parity -q
+uv run --project src/browser python -m pytest src/browser/tests -q
 npm --prefix src/browser/webclient run typecheck
 opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
 opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml

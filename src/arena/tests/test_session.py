@@ -1,7 +1,4 @@
-"""Phase-machine invariants for :mod:`arena.session`.
-
-``python -m terminal play`` parity lives in ``src/terminal/tests/test_cli.py``.
-"""
+"""Phase-machine invariants for :mod:`arena.session`."""
 
 from __future__ import annotations
 

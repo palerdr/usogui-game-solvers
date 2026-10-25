@@ -86,24 +86,6 @@ def test_kernel_defers_row_after_support_miss():
     assert np.all(kind==4) and np.max(np.abs(out-VALUE))<1e-9
 
 
-def test_support_fallback_seeds_then_reuses_row_policy(tmp_path):
-    from stl.solver.leap_lp import SupportFallback
-    from stl.solver.leap_profiles import N,profiles
-    p=profiles();n=4
-    succ=np.lib.format.open_memmap(tmp_path/'succ.npy',mode='w+',dtype=float,shape=(n,N+1))
-    fail=np.lib.format.open_memmap(tmp_path/'fail.npy',mode='w+',dtype=float,shape=(n,N+1))
-    succ[:]=0.;fail[:]=0.;succ[:,-1]=fail[:,-1]=-1.
-    for i in range(n):
-        succ[i,p.succ[0]]=-S
-        fail[i,p.fail[0]]=(1-p.rev[0]-F)/p.rev[0]
-    succ.flush();fail.flush()
-    with SupportFallback(workers=1)as fallback:
-        out,solved,cached=fallback.solve(('H1',51),('H1',54),succ,fail,np.zeros(n,np.int32),np.arange(n,dtype=np.int32),False)
-        assert solved==1 and cached==0
-        assert fallback.support_hits==n-1
-    assert np.max(np.abs(out-VALUE))<1e-9
-
-
 def test_paired_isolated_edges_move_in_opposite_directions():
     from stl.solver.leap_support import solve_supported
     from stl.solver.leap_kernel import sweep_batch
@@ -132,24 +114,6 @@ def test_paired_hole_intervals_shift_one_action():
     out=np.empty(1);kind=np.empty(1,np.uint8);masks=np.zeros((1,2),np.uint64)
     failed=sweep_batch(np.zeros(1,np.int32),np.zeros(1,np.int32),-s[None,:],np.array([[-f]]),np.arange(60,dtype=np.int32)[None,:],np.zeros(1,np.int32),np.ones(1),False,1e-6,out,kind,seeds,masks)
     assert failed==0 and kind[0]==5 and abs(out[0]-expected)<1e-8
-
-
-def test_support_fallback_bulk_solves_large_systems(tmp_path):
-    from stl.solver.leap_lp import SupportFallback
-    from stl.solver.leap_profiles import N,profiles
-    p=profiles();n=4
-    succ=np.lib.format.open_memmap(tmp_path/'succ.npy',mode='w+',dtype=float,shape=(n,N+1))
-    fail=np.lib.format.open_memmap(tmp_path/'fail.npy',mode='w+',dtype=float,shape=(n,N+1))
-    succ[:]=0.;fail[:]=0.;succ[:,-1]=fail[:,-1]=-1.
-    for i in range(n):
-        succ[i,p.succ[0]]=-S
-        fail[i,p.fail[0]]=(1-p.rev[0]-F)/p.rev[0]
-    succ.flush();fail.flush()
-    with SupportFallback(workers=1,max_dimension=1)as fallback:
-        values,solved,cached=fallback.solve(('H1',51),('H1',54),succ,fail,np.zeros(n,np.int32),np.arange(n,dtype=np.int32),False)
-        assert solved==n and cached==0 and fallback.support_hits==0
-        assert fallback.large_support_lp==n-1
-    assert np.max(np.abs(values-VALUE))<1e-9
 
 
 def test_support_kernel_keeps_checker_seeds_separate():

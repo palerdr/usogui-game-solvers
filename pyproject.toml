@@ -18,7 +18,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/stl", "src/dth", "src/abstract", "src/arena", "src/terminal", "src/browser", "src/hal_lab"]
+packages = ["src/stl", "src/dth", "src/arena", "src/browser"]
 
 [dependency-groups]
 dev = [
@@ -35,10 +35,10 @@ research = [
 ]
 
 [tool.pytest.ini_options]
-# The browser app's tests and the root tests/parity import FastAPI, which the
-# browser project in src/browser/pyproject.toml installs. Run them with
-# `uv run --project src/browser python -m pytest src/browser/tests tests/parity -q`.
-testpaths = ["src/stl/tests", "src/dth/tests", "src/abstract/tests", "src/arena/tests", "src/terminal/tests", "src/hal_lab/tests"]
+# The browser app's tests import FastAPI, which the browser project in
+# src/browser/pyproject.toml installs. Run them with
+# `uv run --project src/browser python -m pytest src/browser/tests -q`.
+testpaths = ["src/stl/tests", "src/dth/tests", "src/arena/tests"]
 pythonpath = ["src", "."]
 # The suite is overwhelmingly independent and every artifact-building test
 # already writes under its own tmp_path, so it distributes cleanly. Use "-n 0"

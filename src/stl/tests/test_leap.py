@@ -1,4 +1,4 @@
-"""Protect the leap kernel before its first calibrated key sweep."""
+"""Protect the leap kernel, its clocks and its sweep scheduler."""
 from functools import lru_cache
 from pathlib import Path
 import random
@@ -45,6 +45,28 @@ def test_clock_matches_engine():
                 assert child_clock(half, clock, q) == g.game_clock
         g.game_clock = clock; g.snap_clock_to_next_minute()
         assert snap(clock) == g.game_clock
+
+
+def test_leap_window_is_closed_and_turn_duration_agrees():
+    from stl.engine.game import (
+        LS_WINDOW_END,
+        LS_WINDOW_START,
+        TURN_DURATION_LEAP,
+        TURN_DURATION_NORMAL,
+    )
+    from stl.solver.leap_profiles import is_leap_window, turn_duration
+    expected = {
+        LS_WINDOW_START - 1: False,
+        LS_WINDOW_START: True,
+        LS_WINDOW_END: True,
+        LS_WINDOW_END + 1: False,
+    }
+
+    for clock, inside in expected.items():
+        assert is_leap_window(clock) is inside
+        assert turn_duration(clock) == (
+            TURN_DURATION_LEAP if inside else TURN_DURATION_NORMAL
+        )
 
 
 @pytest.mark.parametrize('limit,expected', [(1500, 570612), (1800, 12971150)])
@@ -205,8 +227,8 @@ def test_subtree_vs_naive(dth):
     assert abs(evaluate_states(('H1', 53), pair, dth)[0]-expected) <= 1e-8
 
 
-def test_store_pack_checkpoint_and_floor(tmp_path):
-    from stl.solver.leap_build import TableStore, calibrate
+def test_store_pack_checkpoint(tmp_path):
+    from stl.solver.leap_build import TableStore
     from stl.solver.leap_profiles import N
     store = TableStore(tmp_path)
     a = store.create(('REV', 3420))
@@ -216,8 +238,6 @@ def test_store_pack_checkpoint_and_floor(tmp_path):
     assert restored.shape == (N, 184)
     assert restored[3, 4] == .25 and restored[8, 9] == -.4
     assert np.isnan(restored[0, 0]) and np.all(restored[:, -1] == -1.)
-    with pytest.raises(ValueError, match='3420'):
-        calibrate(DTH_PATH, tmp_path, min_clock=3419)
 
 
 def test_kernel_rounding_mode():
@@ -254,44 +274,6 @@ def test_hot_horizon(tmp_path):
     assert store.pack_cold(3059) == [('REV', 3600)]
     assert not store.path(('REV', 3600)).exists()
     assert store.load(('REV', 3600))[0, 0] == .75
-
-
-def test_projection_uses_measured_spread(tmp_path):
-    from stl.solver.leap_build import calibration_report, Reachability, TableStore
-    store = TableStore(tmp_path)
-    store.write_bytes = store.pack_bytes = 600
-    store.write_seconds = store.pack_seconds = 3.
-    records = []
-    for kind in ('H1', 'H2', 'REV'):
-        for index, rate in [(1, 100), (2, 200)]:
-            records.append({'key': [kind, index], 'states': 100, 'kernel_seconds': 100/rate,
-                            'classes_per_second': rate, 'failures': 0, 'lp_seconds': 0,
-                            'write_bytes': 100, 'write_seconds': 100/rate,
-                            'pack_bytes': 100, 'pack_seconds': 100/rate})
-    reach = Reachability({('H1', 12): 500}, None)
-    report = calibration_report(records, reach, store, 4.)
-    assert report['memmap_write_rate_range_MB_s'] == [0.0001, 0.0002]
-    assert report['pack_rate_range_MB_s'] == [0.0001, 0.0002]
-    assert report['projection_seconds']['low'] < report['projection_seconds']['high']
-    assert report['seconds_per_lp'] is None
-
-
-def test_projection_separates_window_keys(tmp_path):
-    from stl.solver.leap_build import calibration_report, Reachability, TableStore
-    store = TableStore(tmp_path)
-    store.write_bytes = store.pack_bytes = 400
-    store.write_seconds = store.pack_seconds = 4.
-    records = []
-    for key, rate in [(('H1', 59), 100), (('H2', 56), 20),
-                      (('H2', 57), 100), (('REV', 3540), 100)]:
-        records.append({'key': list(key), 'states': 100, 'kernel_seconds': 100/rate,
-                        'classes_per_second': rate, 'failures': 0, 'lp_seconds': 0,
-                        'write_bytes': 100, 'write_seconds': 1,
-                        'pack_bytes': 100, 'pack_seconds': 1})
-    report = calibration_report(records, Reachability({('H2', 12): 500}, None), store, 4.)
-    assert report['rows']['H2']['classes_per_second'] == 20
-    assert report['rows']['H2']['states'] == 100
-    assert report['window_H2']['states'] == 100
 
 
 def test_reachability_source_guard(tmp_path):

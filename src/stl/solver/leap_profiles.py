@@ -4,8 +4,27 @@ from functools import lru_cache
 
 import numpy as np
 
-from stl.engine.game import Player, Referee
-from stl.solver.canonical import turn_duration
+from stl.engine.game import (
+    LS_WINDOW_END,
+    LS_WINDOW_START,
+    TURN_DURATION_LEAP,
+    TURN_DURATION_NORMAL,
+    Player,
+    Referee,
+)
+
+
+def is_leap_window(clock: int | float) -> bool:
+    """Return whether a half-round starting at ``clock`` spans second 61."""
+
+    return LS_WINDOW_START <= clock <= LS_WINDOW_END
+
+
+def turn_duration(clock: int | float) -> int:
+    """Return the number of literal action seconds at ``clock``."""
+
+    return TURN_DURATION_LEAP if is_leap_window(clock) else TURN_DURATION_NORMAL
+
 
 N_ALIVE = 16_711
 N = 17_011

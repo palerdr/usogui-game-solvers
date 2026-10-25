@@ -6,8 +6,9 @@
 import type { Leaderboard, OutcomeResult, OutcomeView, Tally } from "../types";
 
 /**
- * The terminal's `_RESULT_TEXT` in src/terminal/tui.py, with a comma where the
- * terminal sets a dash: "CHECK FAILED, died, revived" reads cleaner.
+ * The retired terminal TUI's `_RESULT_TEXT` (src/terminal/tui.py at 938fb25),
+ * with a comma where the terminal set a dash: "CHECK FAILED, died, revived"
+ * reads cleaner.
  */
 export const RESULT_TEXT: Record<OutcomeResult, string> = {
   check_success: "CHECK SUCCESS",

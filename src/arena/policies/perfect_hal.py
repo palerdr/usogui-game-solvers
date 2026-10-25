@@ -6,9 +6,7 @@ stage-matrix authority.  This provider uses only revealed public history to
 forecast the opponent, then plays an unrestricted best response in the exact
 continuation-adjusted matrix.
 
-The live forecaster uses Bayesian latent-model filtering and integrates
-change-point uncertainty. We retain the v1 forecaster as the frozen PM source
-and evaluation baseline. Both learn from public reveals.
+The forecaster learns from public reveals. Translated Hal builds on it.
 """
 
 from __future__ import annotations
@@ -636,9 +634,7 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         self.config = config
         self.agent = agent or CompleteDTHAgent(self.artifact_dir)
         if opponent_model is None:
-            from arena.policies.bayesian_hal import BayesianHalOpponentModel
-
-            opponent_model = BayesianHalOpponentModel(config)
+            opponent_model = PerfectHalOpponentModel(config)
         self.opponent_model = opponent_model
         if self.opponent_model.config != config:
             raise ValueError("Perfect Hal provider and opponent-model configs differ")
@@ -871,16 +867,6 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         }
 
 
-def make_live_provider(
-    *,
-    artifact_dir: str | Path,
-    config: PerfectHalConfig = PerfectHalConfig(),
-) -> PerfectHalPolicyProvider:
-    """Construct the checkpoint-free live provider over exact DTH artifacts."""
-
-    return PerfectHalPolicyProvider(artifact_dir, config)
-
-
 __all__ = [
     "ACTION_COUNT",
     "ACTIONS",
@@ -891,5 +877,4 @@ __all__ = [
     "PerfectHalOpponentModel",
     "PerfectHalDecision",
     "PerfectHalPolicyProvider",
-    "make_live_provider",
 ]

@@ -13,42 +13,33 @@ uv run --project src/browser python -m browser
 ## Boundaries
 
 - Browser imports `arena`, `stl.engine`, and `dth.agent`. No project imports
-  browser, and browser imports neither `terminal` nor `hal_lab`.
+  browser.
 - Browser imports no `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`. `tests/test_runtime_imports.py` and `tests/test_manifest.py`
   check the hosted runtime in a fresh interpreter.
-- `arena.policies.registry` builds Hal for `python -m browser`, with the same
-  provider construction and agent options as `python -m terminal play`. Add a
-  provider there, and never in this app.
+- `arena.policies.registry` builds Hal for `python -m browser`:
+  `--hal-agent exact` (the default) or `--hal-agent translated`.
 - The browser reads the rules text and the prepared art from
-  `arena.presentation`, which the terminal shares. It never imports the
-  terminal app.
+  `arena.presentation`.
 - `tests/fakes.py` holds the fakes that more than one browser test shares.
-  The root `tests/parity/test_terminal_browser.py` imports them too: it runs the
-  terminal and the browser with the same options, and it lives outside both
-  apps because neither app imports the other.
 
 ## Server invariants
 
 `app.py` serves the TypeScript client in `webclient/`. It builds its
-provider once at startup — provider construction memory-maps a
-multi-gigabyte artifact and the `abstract` provider can build a tablebase
-outright, so neither may happen on a request path; `python -m browser`
-refuses `--hal-agent abstract` for that reason. `schema.py` holds the only
+provider once at startup, because provider construction memory-maps a
+multi-gigabyte artifact, which must not happen on a request path. `schema.py` holds the only
 serializer that faces the browser, so the seat-scoping rule has exactly one
 place to be enforced and one place to be tested. `arena.session.PlaySession`
 samples Hal's action inside `submit`, after the human's second is accepted;
 `src/arena/README.md` states that hidden-information guarantee.
 
-The browser server is one repeated-opponent series, the same unit as
-`python -m terminal play --games N`: one Hal is retained across games, game
+The browser server is one repeated-opponent series: one Hal is retained across games, game
 `N` is seeded with the base seed plus `N`, and every finished game is appended
-to a public transcript in the CLI's `arena-public-play-session-v1` shape. `GET
+to a public transcript in the `arena-public-play-session-v1` shape. `GET
 /api/transcript` serves that transcript plus the live game's resolved
 half-rounds, and `--transcript PATH` rewrites the same JSON after every
-finished game. `--public-hal-label`, `--conceal-hal-details`, `--pure-dth`,
-and every agent option of `python -m terminal play` are accepted with the same
-meaning.
+finished game. It also accepts `--public-hal-label`, `--conceal-hal-details`,
+and `--pure-dth`.
 When `webclient/dist/` has been built, the Python server serves it at `/`, so
 one process is the whole game.
 
@@ -57,11 +48,7 @@ only; they never replace Baku's rule-bearing identity. `Hal` is reserved as a
 display label. Browser session
 replacement is a sequenced mutation, is allowed only before play or after a
 terminal acknowledgement, and advances the sequence across the replacement.
-The browser server's live provider set is `dth`, `adaptive-dth`,
-`exploit-hal`, and, behind `--pure-dth`, `perfect-hal` and `pm-hal`; terminal
-`perfect-hal --perfect-hal-model translated-v1` also supports canonical play
-through its leap fallback. `python -m terminal play` offers `abstract`. The
-retired `stl-mcts` surface is not advertised. Browser snapshots carry
+Browser snapshots carry
 server-owned character, role, and winner-seat fields, so the client never
 infers identity from presentation labels.
 
@@ -88,13 +75,6 @@ replay. Reload and next-game requests retain that evidence. Separate cookies
 keep separate models; workers share the immutable tablebase. The local server
 keeps one repeated-opponent series.
 
-`STL_HAL_POLICY=exploit-continuation-v1` serves the arm that the
-`exploit_continuation_v1` study selects, with the same opponent memory and the
-health label `exploit-continuation-v1`. The policy reads its arm from
-`src/arena/config/exploit_continuation_v1_selection.json`. Until the study
-writes that file, the policy stays out of `deploy/manifest.py`'s `POLICIES`
-and `production.py` refuses it at startup.
-
 ## Deployment
 
 [`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md) holds the certified recurrence
@@ -114,12 +94,6 @@ commit-before-sampling and reveal contracts.
 - A change to a file in the version ends every live hosted session at the
   next deploy. `names.py` stays out of the version, so a word-list change does
   not end games.
-- `deploy/check_exploit_continuation.py` measures decision, request, and
-  worker-recovery latency of the continuation on the hosted stack with the
-  real tablebase. The study's promotion gate P6 reads its report, which names
-  its schema, the policy, the continuation, and the SHA-256 of each measured
-  source. `deploy/check_translated_hal.py` did the same for translated-v1, and
-  a frozen hal_lab record binds its bytes.
 - `prepare_vercel` reads the pins of the bundle's packages from
   `src/browser/uv.lock`, writes the bundle to the ignored `build/vercel/`, and
   copies the ignored Vercel project link from `.vercel/project.json`. It still
@@ -136,16 +110,9 @@ the DTH artifact digest, and the leap builder hash stay unchanged. Run every
 browser command with `uv run --project src/browser`. The environment lives in
 the ignored `src/browser/.venv/`.
 
-The hosted runtime never loads torch. Local play against `exploit-hal` or
-`pm-hal` loads a torch provider, so add the `learned` group:
-
-```powershell
-uv run --project src/browser --group learned python -m browser --hal-agent exploit-hal
-```
-
 ## Working in this subtree
 
-Run `uv run --project src/browser python -m pytest src/browser/tests tests/parity -q`.
+Run `uv run --project src/browser python -m pytest src/browser/tests -q`.
 The root suite does not collect these tests, because the root environment
 has no FastAPI. The client is not covered by
 `pytest`; run `npm --prefix src/browser/webclient test`,

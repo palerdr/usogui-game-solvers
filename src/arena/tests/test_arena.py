@@ -5,12 +5,6 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
-from abstract.rules import Bucket12Frozen95Rules
-from arena import abstract_adapter
-from arena.abstract_adapter import (
-    AbstractTablebasePolicyProvider,
-    project_to_abstract_state,
-)
 from arena.agent import PolicyDrivenAgent, decision_from_game, normalize_legal_policy
 from arena.contracts import CanonicalDecision
 from stl.engine.game import Game, Player, Referee
@@ -28,95 +22,6 @@ def _decision(*, legal: tuple[int, ...] = (1, 2, 3)) -> CanonicalDecision:
         dropper_ttd_seconds=70,
         native_state=object(),
     )
-
-
-def test_projection_floors_seconds_to_role_relative_ten_second_buckets() -> None:
-    state = project_to_abstract_state(_decision())
-    assert (
-        state.checker_load,
-        state.checker_ttd,
-        state.dropper_load,
-        state.dropper_ttd,
-    ) == (1, 12, 2, 7)
-
-
-def test_projection_floors_seconds_to_role_relative_five_second_buckets() -> None:
-    state = project_to_abstract_state(_decision(), Bucket12Frozen95Rules())
-    assert (
-        state.checker_load,
-        state.checker_ttd,
-        state.dropper_load,
-        state.dropper_ttd,
-    ) == (
-        3,
-        24,
-        5,
-        14,
-    )
-
-
-def test_five_second_provider_uses_packed_lookup_and_lifts_actions(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path,
-) -> None:
-    class _Packed:
-        manifest = {"metadata": {"ruleset_id": "bucket12_frozen95"}}
-
-        def __init__(self, artifact_dir) -> None:
-            assert artifact_dir == tmp_path
-
-        def lookup(self, state) -> dict[str, np.ndarray]:
-            assert (state.checker_load, state.checker_ttd) == (3, 24)
-            drop = np.zeros(12, dtype=np.float32)
-            check = np.zeros(12, dtype=np.float32)
-            drop[[0, 11]] = (0.25, 0.75)
-            check[5] = 1.0
-            return {"drop_policy": drop, "check_policy": check}
-
-    monkeypatch.setattr(abstract_adapter, "PackedTablebase", _Packed)
-    provider = AbstractTablebasePolicyProvider(tmp_path, bucket_seconds=5)
-    assert provider.policy(_decision()) == pytest.approx({5: 0.25, 60: 0.75})
-
-
-def test_match_lifecycle_delivers_each_public_reveal_exactly_once() -> None:
-    from arena.match import play_match_game
-
-    class _LifecycleProvider:
-        def __init__(self) -> None:
-            self.resets = 0
-            self.records = []
-            self.outcomes = []
-
-        def reset_game(self) -> None:
-            self.resets += 1
-
-        def policy(self, decision):
-            del decision
-            return {2: 1.0}
-
-        def observe(self, record) -> None:
-            self.records.append(record)
-
-        def end_game(self, outcome) -> None:
-            self.outcomes.append(outcome)
-
-    first = _LifecycleProvider()
-    second = _LifecycleProvider()
-    play_match_game(
-        first,
-        second,
-        seed=11,
-        start_clock=720,
-        max_half_rounds=2,
-        game_index=3,
-    )
-
-    assert first.resets == second.resets == 1
-    assert len(first.records) == len(second.records) == 2
-    assert [record.half_round_index for record in first.records] == [0, 1]
-    assert first.records == second.records
-    assert len(first.outcomes) == len(second.outcomes) == 1
-    assert first.outcomes[0].game_index == 3
 
 
 def test_policy_normalization_discards_illegal_zero_mass_entries() -> None:
@@ -211,23 +116,3 @@ def test_dth_provider_serves_only_complete_exact_policies(
     provider = adapter.DTHCompletePolicyProvider(tmp_path)
     assert provider.policy(_decision()) == {1: 1.0}
     assert "1 exact moves" in provider.match_summary()
-
-
-def test_abstract_adapter_falls_back_to_uniform_outside_the_closure(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path,
-) -> None:
-    class _Packed:
-        manifest = {"metadata": {"ruleset_id": "bucket12_frozen95"}}
-
-        def __init__(self, artifact_dir) -> None:
-            del artifact_dir
-
-        def lookup(self, state):
-            raise LookupError("outside the root's reachable closure")
-
-    monkeypatch.setattr(abstract_adapter, "PackedTablebase", _Packed)
-    provider = AbstractTablebasePolicyProvider(tmp_path, bucket_seconds=5)
-    policy = provider.policy(_decision())
-    assert set(policy) == {5 * (index + 1) for index in range(12)}
-    assert all(weight == 1.0 for weight in policy.values())

@@ -13,11 +13,6 @@ file enters the version only under the ``STL_HAL_POLICY`` values in its
 out of the version when a change to it must not end games: ``names.py`` holds
 the leaderboard word list (see ``DEPLOYMENT.md``).
 
-``exploit-continuation-v1`` serves the arm that the ``exploit_continuation_v1``
-study selects. It joins ``POLICIES``, and its selection file joins the list,
-once the study's select phase writes that file. Before that, ``production``
-refuses the policy.
-
 ``tests/test_manifest.py`` checks that the list holds each first-party module
 that ``browser.deploy.production`` imports under each policy.
 """
@@ -31,15 +26,10 @@ from dth.agent import runtime_source_files
 
 # The repository root, or the ``runtime/`` directory inside the bundle.
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-CONTINUATION = "exploit-continuation-v1"
-CONTINUATION_SELECTION = "src/arena/config/exploit_continuation_v1_selection.json"
-# The bundle holds the selection file when prepare_vercel found it.
-CONTINUATION_READY = (REPOSITORY_ROOT / CONTINUATION_SELECTION).is_file()
-POLICIES = ("exact", "translated-v1", *((CONTINUATION,) if CONTINUATION_READY else ()))
-_ALL = ("exact", "translated-v1", CONTINUATION)
-# The policies that serve translated Hal's opponent model and its memory.
-_TRANSLATED = ("translated-v1", CONTINUATION)
-_CONTINUATION = (CONTINUATION,)
+POLICIES = ("exact", "translated-v1")
+_ALL = POLICIES
+# The policy that serves translated Hal's opponent model and its memory.
+_TRANSLATED = ("translated-v1",)
 
 
 @dataclass(frozen=True)
@@ -90,15 +80,6 @@ RUNTIME_FILES: tuple[RuntimeFile, ...] = (
         "src/arena/config/translated_hal_v1_selection.json", in_version=True, policies=_TRANSLATED
     ),
     RuntimeFile("src/browser/opponent_memory.py", in_version=True, policies=_TRANSLATED),
-    # The exploit continuation candidate and the arm that its study selected.
-    RuntimeFile(
-        "src/arena/policies/exploit_continuation.py", in_version=True, policies=_CONTINUATION
-    ),
-    *(
-        (RuntimeFile(CONTINUATION_SELECTION, in_version=True, policies=_CONTINUATION),)
-        if CONTINUATION_READY
-        else ()
-    ),
     # The certified DTH agent. code_config_digest stands for these files in
     # the version.
     *(RuntimeFile(path) for path in runtime_source_files()),

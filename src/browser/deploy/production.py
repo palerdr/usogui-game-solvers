@@ -10,13 +10,7 @@ from pathlib import Path
 from arena.agent import PolicyDrivenAgent
 from arena.dth_adapter import DTHCompletePolicyProvider
 from browser.app import SessionConfig, SeriesConfig, create_app
-from browser.deploy.manifest import (
-    CONTINUATION,
-    CONTINUATION_SELECTION,
-    POLICIES,
-    REPOSITORY_ROOT,
-    version_entries,
-)
+from browser.deploy.manifest import POLICIES, REPOSITORY_ROOT, version_entries
 from browser.hosted import create_hosted_app
 from browser.ledger import SupabaseLedger
 from browser.redis_store import RedisSessionStore
@@ -32,11 +26,6 @@ def create_production_app(artifact: Path):
     # every cold start cost about ten seconds before the first answer.
     agent = CompleteDTHAgent(artifact, verify_hashes=False)
     policy_name = os.environ.get("STL_HAL_POLICY", "exact")
-    if policy_name == CONTINUATION and policy_name not in POLICIES:
-        raise ValueError(
-            f"STL_HAL_POLICY={CONTINUATION} needs {CONTINUATION_SELECTION}, "
-            "which the exploit_continuation_v1 study writes"
-        )
     if policy_name not in POLICIES:
         raise ValueError(f"STL_HAL_POLICY must be one of {', '.join(POLICIES)}")
     memory = None
@@ -50,22 +39,6 @@ def create_production_app(artifact: Path):
 
         def make_policy():
             return TranslatedHalPolicyProvider(artifact, agent=agent)
-    elif policy_name == CONTINUATION:
-        from arena.policies.exploit_continuation import (
-            ExploitContinuationHalPolicyProvider,
-            selected_continuation,
-        )
-        from browser.opponent_memory import OpponentMemory
-
-        memory = OpponentMemory()
-        policy_label = CONTINUATION
-        # Read the selected arm once, so a bad selection fails at cold start.
-        continuation = selected_continuation()
-
-        def make_policy():
-            return ExploitContinuationHalPolicyProvider(
-                artifact, agent=agent, continuation=continuation
-            )
     else:
 
         def make_policy():

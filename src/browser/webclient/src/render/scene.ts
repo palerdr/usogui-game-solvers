@@ -3,8 +3,8 @@
 // right. Roles swap between halves, so the two players trade places while Yakou
 // never moves.
 //
-// Constants are taken from src/terminal/tui.py so both front ends stage the scene
-// identically.
+// Constants are taken from the retired terminal TUI (src/terminal/tui.py at
+// 938fb25).
 
 import type { Snapshot } from "../types";
 import { humanWon, playerForRole } from "./identity";

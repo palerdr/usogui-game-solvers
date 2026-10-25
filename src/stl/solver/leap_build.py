@@ -1,4 +1,4 @@
-"""Reachability, value storage, and bounded calibration of the public leap game."""
+"""Reachability, value storage, and the full certified sweep of the public leap game."""
 from __future__ import annotations
 
 import argparse
@@ -189,8 +189,7 @@ def builder_hash():
     # The glob covers the numba kernel, leap_kernel.py; uv.lock pins numba.
     root = Path(__file__).resolve().parents[3]
     files = [*Path(__file__).parent.glob('leap_*.py'),
-             root/'src/stl/engine/game.py', root/'src/stl/solver/canonical.py',
-             root/'uv.lock', root/'pyproject.toml']
+             root/'src/stl/engine/game.py', root/'uv.lock', root/'pyproject.toml']
     h = hashlib.sha256()
     for path in sorted(files):
         name = str(path.relative_to(root)).encode(); data = path.read_bytes()
@@ -368,121 +367,6 @@ def _load_reach(directory):
                          for name, n in data.items()}, directory)
 
 
-def calibration_report(records, reach, store, wall_seconds):
-    rows = {}
-    for kind in TOTALS:
-        selected = [r for r in records if r['key'][0] == kind
-                    and not (kind == 'H2' and is_window(r['key']))]
-        seconds = sum(r['kernel_seconds'] for r in selected)
-        states = sum(r['states'] for r in selected)
-        rates = [r['classes_per_second'] for r in selected]
-        rows[kind] = {'states': states, 'classes_per_second': states/seconds,
-                      'rate_low': min(rates), 'rate_high': max(rates),
-                      'failures': sum(r['failures'] for r in selected)}
-    write_rate = store.write_bytes/store.write_seconds
-    pack_rate = store.pack_bytes/store.pack_seconds
-    done = {tuple(r['key']) for r in records}
-    remaining = {k: v for k, v in reach.counts.items() if k not in done}
-    remaining_states = {kind: sum(v for k, v in remaining.items() if k[0] == kind) for kind in TOTALS}
-    window_records = [r for r in records if r['key'][0] == 'H2' and is_window(r['key'])]
-    window_states = sum(r['states'] for r in window_records)
-    window_seconds = sum(r['kernel_seconds'] for r in window_records)
-    dense_bytes = sum(N*(key_columns(k)+1)*8 for k in remaining)
-    packed_bytes = sum(v*8+(N*key_columns(k)+7)//8 for k, v in remaining.items())
-    failures = sum(r['failures'] for r in records)
-    lp_seconds = sum(r['lp_seconds'] for r in records)
-    lp_cost = lp_seconds/failures if failures else 0.
-    projected_residue = sum(remaining_states[k]*rows[k]['failures']/rows[k]['states'] for k in rows)
-    write_rates = [r['write_bytes']/r['write_seconds'] for r in records]
-    pack_rates = [r['pack_bytes']/r['pack_seconds'] for r in records]
-    io_seconds = {'low': dense_bytes/max(write_rates)+packed_bytes/max(pack_rates),
-                  'central': dense_bytes/write_rate+packed_bytes/pack_rate,
-                  'high': dense_bytes/min(write_rates)+packed_bytes/min(pack_rates)}
-    estimates = {bound: sum(remaining_states[k]/rows[k][rate] for k in rows)
-                 + io_seconds[bound]+projected_residue*lp_cost
-                 for bound, rate in [('low', 'rate_high'), ('central', 'classes_per_second'), ('high', 'rate_low')]}
-    return {'rows': rows,
-            'window_H2': {'states': window_states, 'classes_per_second': window_states/window_seconds if window_seconds else None,
-                          'failures': sum(r['failures'] for r in window_records)},
-            'memmap_write_MB_s': write_rate/1e6, 'pack_MB_s': pack_rate/1e6,
-            'memmap_write_rate_range_MB_s': [min(write_rates)/1e6, max(write_rates)/1e6],
-            'pack_rate_range_MB_s': [min(pack_rates)/1e6, max(pack_rates)/1e6],
-            'peak_rss_bytes': resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == 'darwin' else 1024),
-            'wall_seconds': wall_seconds, 'remaining_dense_bytes': dense_bytes,
-            'remaining_packed_bytes': packed_bytes, 'projected_residue': projected_residue,
-            'seconds_per_lp': lp_cost if failures else None,
-            'projection_seconds': estimates,
-            'projection_note': 'Per-key kernel and I/O spread. Zero observed residue assumes zero future residue.'}
-
-
-def calibrate(dth_path, directory, min_clock=3420):
-    if min_clock != 3420:
-        raise ValueError('calibration must stop at clock 3420')
-    start = time.perf_counter(); directory = Path(directory)
-    directory.mkdir(parents=True, exist_ok=True)
-    dth_path = Path(dth_path); dth = np.load(dth_path, mmap_mode='r')
-    if dth.shape != (N, N+1) or dth.dtype != np.float64 or not np.all(dth[:, -1] == -1):
-        raise ValueError('DTH table schema mismatch')
-    identity = {'schema': 'stl-leap-values-v1', 'builder_sha256': builder_hash(),
-                'dth_sha256': file_hash(dth_path), 'saddle_tolerance': 1e-6,
-                'minimum_clock': min_clock, 'python': sys.version, 'numpy': np.__version__,
-                'numba': numba.__version__}
-    checkpoint_path = directory/'checkpoint.json'
-    records = []
-    if checkpoint_path.exists():
-        checkpoint = json.loads(checkpoint_path.read_text())
-        if checkpoint['identity'] != identity:
-            raise ValueError('checkpoint source or DTH digest mismatch')
-        records = checkpoint['records']
-        manifest_path = directory/'manifest.json'
-        if manifest_path.exists():
-            manifest = json.loads(manifest_path.read_text())
-            if manifest.get('stopped_at_clock') == min_clock and manifest.get('builder_sha256') == identity['builder_sha256']:
-                validate_files(directory, manifest['files'])
-                report = json.loads((directory/'report.json').read_text())
-                print(json.dumps(report, indent=2), flush=True)
-                return report
-        validate_files(directory, checkpoint['files'])
-    reach_dir = directory/'reachability'
-    reach = _load_reach(reach_dir) if (reach_dir/'counts.json').exists() else forward_reachability(directory=reach_dir)
-    if reach.by_type != TOTALS or reach.window_count != 470336555:
-        raise RuntimeError('full reachability count mismatch')
-    store = TableStore(directory/'tables')
-    if checkpoint_path.exists():
-        for name, value in checkpoint['io'].items():
-            setattr(store, name, value)
-    done = {tuple(r['key']) for r in records}
-    files = checkpoint['files'] if checkpoint_path.exists() else {
-        str(path.relative_to(directory)): file_hash(path) for path in reach_dir.glob('*')}
-    for key in sorted(reach.counts, key=key_clock, reverse=True):
-        if key_clock(key) < min_clock:
-            break
-        if key in done:
-            continue
-        before = {name: getattr(store, name) for name in ('write_bytes', 'write_seconds', 'pack_bytes', 'pack_seconds')}
-        record = sweep_key(key, reach.load(key), store, dth)
-        # We retain the dense hot set and pack a copy to measure final output I/O.
-        store.pack(key, retain_dense=True)
-        for path in store.directory.glob(f'{key_name(key)}.*npy'):
-            files[str(path.relative_to(directory))] = file_hash(path)
-        store.pack_cold(key_clock(key))
-        record.update({name: getattr(store, name)-value for name, value in before.items()})
-        records.append(record)
-        io = {name: getattr(store, name) for name in ('write_bytes', 'write_seconds', 'pack_bytes', 'pack_seconds')}
-        write_json(checkpoint_path, {'identity': identity, 'records': records, 'files': files, 'io': io})
-        print(json.dumps(record), flush=True)
-    for path in reach_dir.glob('*'):
-        files[str(path.relative_to(directory))] = file_hash(path)
-    report = calibration_report(records, reach, store, time.perf_counter()-start)
-    write_json(directory/'report.json', report)
-    files['report.json'] = file_hash(directory/'report.json')
-    files['checkpoint.json'] = file_hash(checkpoint_path)
-    write_json(directory/'manifest.json', {**identity, 'files': files, 'complete': False,
-                                          'stopped_at_clock': 3420, 'states': sum(r['states'] for r in records)})
-    print(json.dumps(report, indent=2), flush=True)
-    return report
-
-
 def _rss_bytes():
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == 'darwin' else 1024)
 
@@ -629,12 +513,9 @@ def main():
     parser.add_argument('--min-clock', type=int, default=3420)
     parser.add_argument('--full', action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
-    if args.full:
-        if args.min_clock != 720:
-            parser.error('--full requires --min-clock 720')
-        run_full(args.dth_path, args.output)
-    else:
-        calibrate(args.dth_path, args.output, args.min_clock)
+    if not args.full or args.min_clock != 720:
+        parser.error('only the full sweep remains: pass --full --min-clock 720')
+    run_full(args.dth_path, args.output)
 
 
 if __name__ == '__main__':

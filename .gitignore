@@ -34,7 +34,6 @@ paper/*.fls
 paper/*.out
 src/stl/outputs/
 src/dth/outputs/
-src/abstract/outputs/
 
 # Training artifacts
 models/
