@@ -9,7 +9,7 @@ function fails at cold start.
 The closure check runs the production entry in a fresh interpreter under each
 ``STL_HAL_POLICY`` value, because this test process may already hold modules
 from other tests. The run builds the hosted app with an in-memory store and a
-stand-in agent, then plays one half-round through a restart, so a module that
+stand-in table, then plays one half-round through a restart, so a module that
 a request imports counts too.
 """
 
@@ -39,21 +39,15 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 from browser.deploy import production
-from dth.agent import CertifiedStageGame
+from stl.dth import Stage
 
 
-class Agent:
-    tablebase = types.SimpleNamespace(metadata={"code_config_digest": "closure"})
-
-    def decide(self, state):
+class Table:
+    def stage(self, state):
         uniform = np.full(60, 1.0 / 60)
-        return types.SimpleNamespace(drop_policy=uniform, check_policy=uniform)
-
-    def stage_game(self, state):
-        uniform = np.full(60, 1.0 / 60)
-        return CertifiedStageGame(
+        return Stage(
             state=tuple(int(value) for value in state), value=1.0 / 60, matrix=np.eye(60),
-            drop_policy=uniform, check_policy=uniform.copy(), saddle_gap=0.0,
+            drop=uniform, check=uniform.copy(), gap=0.0,
         )
 
 
@@ -71,9 +65,9 @@ class Store:
         return True
 
 
-production.CompleteDTHAgent = lambda *args, **kwargs: Agent()
+production.Table = types.SimpleNamespace(open=lambda *args, **kwargs: Table())
 production.RedisSessionStore = lambda *args: Store()
-app = production.create_production_app(Path("unused"))
+app = production.create_production_app(Path("unused"), "closure")
 with TestClient(app, base_url="https://testserver") as client:
     def post(path, state, **values):
         response = client.post(path, json={"sequence": state["sequence"], **values})

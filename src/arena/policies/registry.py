@@ -13,30 +13,30 @@ from pathlib import Path
 
 from arena.agent import PolicyDrivenAgent
 
-DEFAULT_DTH_COMPLETE_TABLEBASE = "src/dth/artifacts/complete_full_v1"
 KINDS = ("exact", "translated")
 
 
-def dth_artifact_dir(args: argparse.Namespace) -> Path:
-    artifact_dir = Path(args.dth_complete_tablebase)
-    manifest = artifact_dir / "tablebase.json"
-    if not manifest.is_file():
+def open_table(args: argparse.Namespace):
+    from stl.dth import Table
+
+    path = Path(args.dth)
+    if not path.is_file():
         raise FileNotFoundError(
-            f"complete DTH tablebase is required at {artifact_dir}; "
-            "build it with: uv run python -m dth complete"
+            f"the certified DTH table is required at {path}; "
+            "build it with: uv run python -m stl.dth_kernel"
         )
-    return artifact_dir
+    return Table.open(path)
 
 
 def make_provider(kind: str, args: argparse.Namespace):
     if kind == "exact":
         from arena.dth_adapter import DTHCompletePolicyProvider
 
-        return DTHCompletePolicyProvider(artifact_dir=dth_artifact_dir(args))
+        return DTHCompletePolicyProvider(open_table(args))
     if kind == "translated":
         from arena.translated_hal_adapter import TranslatedHalPolicyProvider
 
-        return TranslatedHalPolicyProvider(dth_artifact_dir(args))
+        return TranslatedHalPolicyProvider(open_table(args))
     raise ValueError(f"unknown Hal kind {kind!r}; choose one of {', '.join(KINDS)}")
 
 
@@ -47,11 +47,11 @@ def make_hal(args: argparse.Namespace) -> PolicyDrivenAgent:
 
 
 def add_play_arguments(parser: argparse.ArgumentParser) -> None:
-    """Add the tablebase option that both Hal kinds read."""
+    """Add the DTH table option that both Hal kinds read."""
+    from stl.dth import DEFAULT_PATH
 
     parser.add_argument(
-        "--dth-complete-tablebase",
-        default=DEFAULT_DTH_COMPLETE_TABLEBASE,
-        metavar="DTH_COMPLETE_TABLEBASE",
-        help="completed exact DTH quotient tablebase directory",
+        "--dth",
+        default=str(DEFAULT_PATH),
+        help="the certified DTH table V.npy that python -m stl.dth_kernel writes",
     )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import argparse
+import hashlib
 import py_compile
 import shutil
 import subprocess
@@ -12,7 +13,7 @@ import tomllib
 from pathlib import Path
 
 from browser.deploy.manifest import RUNTIME_FILES
-from dth.agent import CompleteDTHAgent
+from stl.dth import DEFAULT_PATH, RECHECK_SAMPLES, Table
 
 # The bundle, the client, and the Vercel project link, by repository path.
 BUNDLE = "src/browser/build/vercel"
@@ -20,7 +21,6 @@ WEBCLIENT = "src/browser/webclient"
 VERCEL_LINK = "src/browser/.vercel/project.json"
 # The packages the function installs. Their versions come from the browser
 # project's lock, which pins the environment that the browser tests run in.
-# The root uv.lock still enters the bundle, because the DTH digest labels it.
 BROWSER_LOCK = "src/browser/uv.lock"
 BUNDLE_PACKAGES = ("fastapi", "numpy", "scipy", "httpx", "uvicorn")
 
@@ -67,8 +67,7 @@ def add_bytecode(target: Path) -> int:
 def copy_runtime_sources(root: Path, target: Path) -> None:
     """Copy each file of the runtime manifest to ``runtime/`` in the bundle.
 
-    The copy keeps each file's path from the repository root, so the DTH
-    digest labels ``src/dth/...`` and ``uv.lock`` still match at cold start.
+    The copy keeps each file's path from the repository root.
     """
     for entry in RUNTIME_FILES:
         destination = target / "runtime" / entry.path
@@ -91,9 +90,7 @@ def locked_versions(lock: Path, names: tuple[str, ...] = BUNDLE_PACKAGES) -> dic
 def main():
     root = Path(__file__).resolve().parents[3]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--artifact", type=Path, default=root / "src/dth/artifacts/complete_full_v1"
-    )
+    parser.add_argument("--artifact", type=Path, default=DEFAULT_PATH)
     parser.add_argument(
         "--bytecode",
         action="store_true",
@@ -104,10 +101,13 @@ def main():
         count = add_bytecode(root / BUNDLE)
         print(f"Added {count} bytecode files to the built function.")
         return
-    agent = CompleteDTHAgent(options.artifact)
-    opening = agent.decide((0, 0, 0, 0))
+    table = Table.open(options.artifact, rechecks=RECHECK_SAMPLES)
+    opening = table.stage((0, 0, 0, 0))
+    with options.artifact.open("rb") as file:
+        dth_sha256 = hashlib.file_digest(file, "sha256").hexdigest()
     print(
-        f"Certified artifact: opening value={opening.value}, gap={opening.saddle_gap}"
+        f"Certified table: opening value={opening.value}, gap={opening.gap}, "
+        f"sha256={dth_sha256}"
     )
     target = root / BUNDLE
     if target.exists():
@@ -118,18 +118,16 @@ def main():
         check=True,
     )
     shutil.copytree(root / WEBCLIENT / "dist", target / "public")
-    # The manifest holds the root uv.lock, so runtime/uv.lock comes with it.
     copy_runtime_sources(root, target)
-    artifact = target / "runtime/src/dth/artifacts/complete_fast_v1"
-    artifact.mkdir(parents=True)
-    for name in ("tablebase.json", "value.npy", "solver_kind.npy"):
-        shutil.copy2(options.artifact / name, artifact / name)
+    artifact = target / "runtime/artifacts/dth/V.npy"
+    artifact.parent.mkdir(parents=True)
+    shutil.copy2(options.artifact, artifact)
     (target / "app.py").write_text(
         "import sys\nfrom pathlib import Path\n"
         "root = Path(__file__).resolve().parent\n"
         'sys.path.insert(0, str(root / "runtime/src"))\n'
         "from browser.deploy.production import create_production_app\n"
-        'app = create_production_app(root / "runtime/src/dth/artifacts/complete_fast_v1")\n'
+        f'app = create_production_app(root / "runtime/artifacts/dth/V.npy", "{dth_sha256}")\n'
     )
     pins = locked_versions(root / BROWSER_LOCK)
     dependencies = ", ".join(f'"{name}=={version}"' for name, version in pins.items())

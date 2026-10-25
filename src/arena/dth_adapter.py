@@ -1,4 +1,4 @@
-"""Complete DTH tablebase adapter for the canonical STL arena.
+"""Certified DTH table adapter for the canonical STL arena.
 
 The four load/TTD coordinates and every ordinary action are identical between
 pure DTH and canonical STL. The sole prospective rules difference is the
@@ -9,14 +9,14 @@ canonical action.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Mapping
 
 import numpy as np
 
 from arena.contracts import CanonicalDecision
-from dth.agent import CompleteDTHAgent, MoveDecision
+from stl.dth import Stage, Table
 
 
 def project_to_dth_state(decision: CanonicalDecision) -> tuple[int, int, int, int]:
@@ -35,33 +35,27 @@ def project_to_dth_state(decision: CanonicalDecision) -> tuple[int, int, int, in
 
 @dataclass
 class DTHCompletePolicyProvider:
-    """Serve exact equilibrium policies from the completed tablebase.
+    """Serve exact equilibrium policies from the certified DTH table.
 
-    ``agent`` shares one opened tablebase between providers; the hosted
-    runtime passes the agent that it opened once for every player. With
+    ``table`` is one opened ``stl.dth.Table``; the hosted runtime shares it
+    between every player. Each decision records its stage and latency. With
     ``record_decisions`` false the provider keeps no per-move record, so a
     long-lived provider does not grow.
     """
 
-    artifact_dir: Path
-    decisions: list[MoveDecision] = field(default_factory=list, repr=False)
-    agent: CompleteDTHAgent | None = field(default=None, repr=False)
+    table: Table = field(repr=False)
+    decisions: list[tuple[Stage, float]] = field(default_factory=list, repr=False)
     record_decisions: bool = True
-    _agent: CompleteDTHAgent = field(init=False, repr=False)
-
-    def __post_init__(self) -> None:
-        self._agent = (
-            self.agent if self.agent is not None else CompleteDTHAgent(self.artifact_dir)
-        )
 
     def close(self) -> None:
         """Match the provider lifecycle contract; memmaps need no explicit close."""
 
     def policy(self, decision: CanonicalDecision) -> Mapping[int, float]:
-        move = self._agent.decide(project_to_dth_state(decision))
+        started = time.monotonic()
+        stage = self.table.stage(project_to_dth_state(decision))
         if self.record_decisions:
-            self.decisions.append(move)
-        row = move.drop_policy if decision.role == "dropper" else move.check_policy
+            self.decisions.append((stage, time.monotonic() - started))
+        row = stage.drop if decision.role == "dropper" else stage.check
         return {
             second: float(probability)
             for second, probability in enumerate(row, start=1)
@@ -72,9 +66,9 @@ class DTHCompletePolicyProvider:
         if not self.decisions:
             return "dth complete: no moves played"
         latencies = np.asarray(
-            [move.elapsed_seconds for move in self.decisions], dtype=np.float64
+            [elapsed for _stage, elapsed in self.decisions], dtype=np.float64
         )
-        worst_gap = max(move.saddle_gap for move in self.decisions)
+        worst_gap = max(stage.gap for stage, _elapsed in self.decisions)
         return (
             f"dth complete: {len(self.decisions)} exact moves; "
             f"worst saddle gap {worst_gap:.3g}; "

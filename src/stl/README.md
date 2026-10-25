@@ -1,6 +1,8 @@
 # STL Project Instructions
 
-This subtree contains the STL referee and the L2 leap builder. We require the full artifact audit before claiming an L2 solve. We do
+This subtree contains the STL referee, the L2 leap builder, and the DTH solver: `dth.py` holds the rules, the
+certified ladder, `Table` and `Stage`, and `dth_kernel.py` holds the numba sweep that writes `artifacts/dth/V.npy`.
+We require the full artifact audit before claiming an L2 solve. We do
 not provide a learned model, opponent model, or gameplay agent. Git history is the archive for
 the removed experiments; do not restore them under `legacy`, `old`, or
 version-suffixed names.
@@ -96,7 +98,7 @@ bits in row-major order. Each dense table keeps NaN in unreachable cells and
 -1 in its last column. The manifest records file hashes and marks this segment
 as incomplete. A complete L2 claim still requires the full audit.
 
-The slow leap tests require `src/dth_compact/artifacts/V.npy`. Run
+The slow leap tests require `artifacts/dth/V.npy`, which `uv run python -m stl.dth_kernel` writes. Run
 `uv run python -m pytest src/stl/tests -q`; its first run compiles the kernel
 in each worker. The full reachability test checks the measured state totals
 without performing a value sweep.

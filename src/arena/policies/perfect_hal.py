@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from operator import index as integer_index
-from pathlib import Path
 from typing import Mapping
 
 import numpy as np
@@ -25,11 +24,7 @@ from arena.contracts import (
     PublicHalfRound,
 )
 from arena.dth_adapter import project_to_dth_state
-from dth.agent import (
-    CERTIFIED_SADDLE_GAP_TOLERANCE,
-    CertifiedStageGame,
-    CompleteDTHAgent,
-)
+from stl.dth import MAX_SADDLE_GAP, Stage, Table
 
 ACTION_COUNT = 60
 ACTIONS = tuple(range(1, ACTION_COUNT + 1))
@@ -551,13 +546,13 @@ class PerfectHalOpponentModel:
         state.observations += 1
 
 
-def _validate_stage(stage: CertifiedStageGame) -> None:
+def _validate_stage(stage: Stage) -> None:
     matrix = np.asarray(stage.matrix, dtype=np.float64)
     if matrix.shape != (ACTION_COUNT, ACTION_COUNT) or not np.all(np.isfinite(matrix)):
         raise ValueError("certified DTH stage matrix must be finite 60x60")
     for label, raw in (
-        ("dropper", stage.drop_policy),
-        ("checker", stage.check_policy),
+        ("dropper", stage.drop),
+        ("checker", stage.check),
     ):
         policy = np.asarray(raw, dtype=np.float64)
         if (
@@ -569,9 +564,9 @@ def _validate_stage(stage: CertifiedStageGame) -> None:
             raise ValueError(f"certified DTH {label} policy is malformed")
     if (
         not np.isfinite(stage.value)
-        or not np.isfinite(stage.saddle_gap)
-        or stage.saddle_gap < 0.0
-        or stage.saddle_gap > CERTIFIED_SADDLE_GAP_TOLERANCE
+        or not np.isfinite(stage.gap)
+        or stage.gap < 0.0
+        or stage.gap > MAX_SADDLE_GAP
     ):
         raise ValueError("certified DTH value or saddle gap is malformed")
 
@@ -624,15 +619,13 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
 
     def __init__(
         self,
-        artifact_dir: str | Path,
+        table: Table,
         config: PerfectHalConfig = PerfectHalConfig(),
         *,
-        agent: CompleteDTHAgent | None = None,
         opponent_model: PerfectHalOpponentModel | None = None,
     ) -> None:
-        self.artifact_dir = Path(artifact_dir)
+        self.table = table
         self.config = config
-        self.agent = agent or CompleteDTHAgent(self.artifact_dir)
         if opponent_model is None:
             opponent_model = PerfectHalOpponentModel(config)
         self.opponent_model = opponent_model
@@ -712,7 +705,7 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         elif self._current_actor_name.casefold() != decision.actor_name.casefold():
             raise RuntimeError("Perfect Hal cannot switch player identity mid-game")
 
-        stage = self.agent.stage_game(project_to_dth_state(decision))
+        stage = self.table.stage(project_to_dth_state(decision))
         _validate_stage(stage)
         opponent_role = "checker" if decision.role == "dropper" else "dropper"
         forecast = self.opponent_model.predict(
@@ -724,10 +717,10 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         matrix = np.asarray(stage.matrix, dtype=np.float64)
         if decision.role == "dropper":
             action_values = matrix @ forecast.policy
-            exact_policy = np.asarray(stage.drop_policy, dtype=np.float64)
+            exact_policy = np.asarray(stage.drop, dtype=np.float64)
         else:
             action_values = -(matrix.T @ forecast.policy)
-            exact_policy = np.asarray(stage.check_policy, dtype=np.float64)
+            exact_policy = np.asarray(stage.check, dtype=np.float64)
         policy = _best_response_policy(action_values, self.config)
         expected_payoff = float(policy @ action_values)
         exact_expected = float(exact_policy @ action_values)

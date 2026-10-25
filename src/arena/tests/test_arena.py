@@ -60,7 +60,7 @@ def test_decision_uses_engine_role_relative_state() -> None:
 
 
 def test_stl_and_dth_revival_surfaces_match_over_the_full_domain() -> None:
-    from dth.solver import revival_model
+    from stl.dth import revival_probability
 
     referee = Referee(cprs_performed=17)
     player = Player(name="Either", physicality=0.01)
@@ -70,7 +70,7 @@ def test_stl_and_dth_revival_surfaces_match_over_the_full_domain() -> None:
             actual = referee.compute_survival_probability(
                 player, death_duration=st_in_vial + 60
             )
-            assert actual == revival_model(st_in_vial, ttd)
+            assert actual == revival_probability(st_in_vial, ttd)
 
 
 def test_dth_projection_is_the_exact_literal_second_identity() -> None:
@@ -92,27 +92,21 @@ def test_dth_projection_is_the_exact_literal_second_identity() -> None:
         project_to_dth_state(wide)
 
 
-def test_dth_provider_serves_only_complete_exact_policies(
-    monkeypatch, tmp_path
-) -> None:
+def test_dth_provider_serves_only_complete_exact_policies() -> None:
     import arena.dth_adapter as adapter
-    from dth.agent import MoveDecision
+    from stl.dth import Stage
 
-    class _Agent:
-        def __init__(self, artifact_dir) -> None:
-            assert artifact_dir == tmp_path
-
-        def decide(self, state):
-            return MoveDecision(
+    class _Table:
+        def stage(self, state):
+            return Stage(
                 state=state,
                 value=0.1,
-                drop_policy=(1.0,) + (0.0,) * 59,
-                check_policy=(0.0,) * 59 + (1.0,),
-                saddle_gap=1e-7,
-                elapsed_seconds=0.001,
+                matrix=np.zeros((60, 60)),
+                drop=np.array((1.0,) + (0.0,) * 59),
+                check=np.array((0.0,) * 59 + (1.0,)),
+                gap=1e-7,
             )
 
-    monkeypatch.setattr(adapter, "CompleteDTHAgent", _Agent)
-    provider = adapter.DTHCompletePolicyProvider(tmp_path)
+    provider = adapter.DTHCompletePolicyProvider(_Table())
     assert provider.policy(_decision()) == {1: 1.0}
     assert "1 exact moves" in provider.match_summary()

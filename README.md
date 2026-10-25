@@ -4,9 +4,7 @@ This repository contains deliberately separate game-solving projects:
 
 | Project | Purpose | Rules |
 | --- | --- | --- |
-| `src/stl/` | Canonical leap-aware referee compatibility layer and formulation shell; no complete STL solver yet | L2 public game; only Baku as Dropper may use second 61 |
-| `src/dth/` | Completed pure Drop the Handkerchief solve and its audit | Exact 289,374,121-class quotient tablebase; literal seconds 1..60 |
-| `src/dth_compact/` | The paper's solver: one numba file that builds the complete 289,374,121-class table in about 49 s | Pure DTH; literal seconds 1..60 |
+| `src/stl/` | Canonical leap-aware referee, the certified leap table, and the DTH solver `stl.dth` with its numba sweep `stl.dth_kernel`, which builds the complete 289,374,121-class table | L2 public game; only Baku as Dropper may use second 61. DTH: literal seconds 1..60 |
 | `src/dth_ocaml/` | Hand-written exact OCaml reference; `play/` keeps the CS 3110 STL engine and terminal UI | Pure DTH with literal seconds 1..60 and the repository-wide frozen revival model |
 | `src/dth_cpp/` | In-progress native exact DTH implementation | Pure DTH; build order and root integration remain subtree-owned while work is active |
 | `src/arena/` | Game library: session, provider adapters, exact and translated Hal | Canonical STL referee with pluggable policy-provider adapters |
@@ -29,7 +27,6 @@ Use Python 3.12 or 3.13 and `uv`. The browser app is its own uv project in
 uv sync --dev
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
-uv run --project src/dth_compact pytest src/dth_compact/tests -q
 uv run --project src/browser python -m pytest src/browser/tests -q
 npm --prefix src/browser/webclient run typecheck
 opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
@@ -42,16 +39,8 @@ opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
 # The certified STL leap table
 uv run python -m stl.solver.leap_build --full --min-clock 720
 
-# Pure DTH complete solution and its audit
-uv run python -m dth --help
-
-# Complete exact DTH quotient tablebase
-uv run python -m dth complete
-uv run python -m dth complete-audit
-
-# The paper's compact solver: its own uv project
-uv run --project src/dth_compact src/dth_compact/main.py
-uv run --project src/dth_compact pytest src/dth_compact/tests -q
+# The certified DTH table: artifacts/dth/V.npy, sha256 e43977b7...
+uv run python -m stl.dth_kernel
 
 # Browser game on 127.0.0.1:8000, once the client is built; exact Hal is the default
 npm --prefix src/browser/webclient run build
@@ -69,20 +58,21 @@ The paper is available as both the rendered
 [`paper/dth_exact_solution.pdf`](paper/dth_exact_solution.pdf) and its
 [`paper/dth_exact_solution.tex`](paper/dth_exact_solution.tex) source. It gives
 a certified exact solution of the complete finite DTH game, including the root
-value and equilibrium strategies, and describes the one-file solver in
-[`src/dth_compact/`](src/dth_compact/). Reproduce its result from the
-repository root in about a minute:
+value and equilibrium strategies, and describes the solver in
+[`src/stl/dth.py`](src/stl/dth.py) and
+[`src/stl/dth_kernel.py`](src/stl/dth_kernel.py). Reproduce its result from
+the repository root in about two minutes:
 
 ```powershell
-uv run --project src/dth_compact src/dth_compact/main.py
-uv run --project src/dth_compact pytest src/dth_compact/tests -q
+uv run python -m stl.dth_kernel
+uv run python -m pytest src/stl/tests/test_dth.py src/stl/tests/test_dth_kernel.py -q
 ```
 
-With the compact solver's table built (`src/dth_compact/artifacts/V.npy`), the
-figures and the PDF can be rebuilt:
+With the table built (`artifacts/dth/V.npy`), the figures and the PDF can be
+rebuilt:
 
 ```powershell
-uv run --project src/dth_compact python paper/generate_figure_data.py
+uv run python paper/generate_figure_data.py
 uv run --with matplotlib --with seaborn python paper/make_figures.py
 Push-Location paper
 tectonic dth_exact_solution.tex --synctex --keep-logs

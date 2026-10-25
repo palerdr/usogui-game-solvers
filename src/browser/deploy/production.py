@@ -14,17 +14,18 @@ from browser.deploy.manifest import POLICIES, REPOSITORY_ROOT, version_entries
 from browser.hosted import create_hosted_app
 from browser.ledger import SupabaseLedger
 from browser.redis_store import RedisSessionStore
-from dth.agent import CompleteDTHAgent
+from stl.dth import Table
 
 
-def create_production_app(artifact: Path):
+def create_production_app(artifact: Path, dth_sha256: str):
     # httpx logs one INFO line for each call, the in-process game calls
     # included. A move wrote up to forty lines to Vercel's log pipe.
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    # `prepare_vercel` hashes both arrays before it copies them into the
-    # bundle, and the bundle is immutable once deployed. Rehashing 2.3 GB on
-    # every cold start cost about ten seconds before the first answer.
-    agent = CompleteDTHAgent(artifact, verify_hashes=False)
+    # `prepare_vercel` hashes V.npy and rechecks 1,200 classes before it
+    # copies the table into the immutable bundle, and passes the hash in.
+    # A cold start checks only the shape and the six anchors: rehashing
+    # 2.3 GB cost about ten seconds before the first answer.
+    table = Table.open(artifact)
     policy_name = os.environ.get("STL_HAL_POLICY", "exact")
     if policy_name not in POLICIES:
         raise ValueError(f"STL_HAL_POLICY must be one of {', '.join(POLICIES)}")
@@ -38,11 +39,11 @@ def create_production_app(artifact: Path):
         policy_label = "translated-hal-v1"
 
         def make_policy():
-            return TranslatedHalPolicyProvider(artifact, agent=agent)
+            return TranslatedHalPolicyProvider(table)
     else:
 
         def make_policy():
-            return DTHCompletePolicyProvider(artifact, agent=agent, record_decisions=False)
+            return DTHCompletePolicyProvider(table, record_decisions=False)
 
     def factory(game_seed, policy_seed, sequence_start=0):
         policy = make_policy()
@@ -55,12 +56,12 @@ def create_production_app(artifact: Path):
         )
 
     # The hosted code version. deploy/manifest.py flags the files that enter
-    # it for each policy.
+    # it for each policy, and the table enters by its sha256.
     digest = hashlib.sha256()
     digest.update(policy_name.encode())
     for entry in version_entries(policy_name):
         digest.update((REPOSITORY_ROOT / entry.path).read_bytes())
-    digest.update(agent.tablebase.metadata["code_config_digest"].encode())
+    digest.update(dth_sha256.encode())
     url = os.environ.get("KV_REST_API_URL") or os.environ.get(
         "UPSTASH_REDIS_REST_URL", ""
     )

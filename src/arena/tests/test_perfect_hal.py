@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -14,7 +13,7 @@ from arena.policies.perfect_hal import (
     PerfectHalPolicyProvider,
 )
 from arena.testing import (
-    StageAgent as _StageAgent,
+    StageTable as _StageTable,
     make_decision as _decision,
     make_forecast as _forecast,
     make_reveal as _reveal,
@@ -122,9 +121,9 @@ def test_noninteger_actions_fail_without_consuming_the_forecast() -> None:
     assert model.observations("checker") == 1
 
 
-def test_provider_places_all_mass_on_the_forecast_best_response(tmp_path: Path) -> None:
-    agent = _StageAgent()
-    provider = PerfectHalPolicyProvider(tmp_path, agent=agent)
+def test_provider_places_all_mass_on_the_forecast_best_response() -> None:
+    table = _StageTable()
+    provider = PerfectHalPolicyProvider(table)
 
     first = provider.policy(_decision(role="dropper"))
     assert first == pytest.approx(
@@ -138,13 +137,11 @@ def test_provider_places_all_mass_on_the_forecast_best_response(tmp_path: Path) 
     assert provider.last_decision.opponent_policy[6] > 0.5
     assert provider.last_decision.expected_exploit_gain > 0.0
     assert provider.last_decision.best_response_actions == (7,)
-    assert agent.states == [(12, 60, 24, 120), (12, 60, 24, 120)]
+    assert table.states == [(12, 60, 24, 120), (12, 60, 24, 120)]
 
 
-def test_provider_preserves_session_memory_across_games_and_seat_names(
-    tmp_path: Path,
-) -> None:
-    provider = PerfectHalPolicyProvider(tmp_path, agent=_StageAgent())
+def test_provider_preserves_session_memory_across_games_and_seat_names() -> None:
+    provider = PerfectHalPolicyProvider(_StageTable())
     provider.reset_game()
     provider.policy(_decision(role="dropper", actor_name="Hal"))
     provider.observe(
@@ -177,18 +174,16 @@ def test_provider_preserves_session_memory_across_games_and_seat_names(
     assert provider.last_decision is None
 
 
-def test_provider_fails_closed_before_stage_lookup_outside_pure_dth(
-    tmp_path: Path,
-) -> None:
-    agent = _StageAgent()
-    provider = PerfectHalPolicyProvider(tmp_path, agent=agent)
+def test_provider_fails_closed_before_stage_lookup_outside_pure_dth() -> None:
+    table = _StageTable()
+    provider = PerfectHalPolicyProvider(table)
     with pytest.raises(ValueError, match="pure DTH only"):
         provider.policy(_decision(legal_seconds=tuple(range(1, ACTION_COUNT + 2))))
-    assert agent.states == []
+    assert table.states == []
 
 
-def test_provider_requires_one_public_reveal_per_decision(tmp_path: Path) -> None:
-    provider = PerfectHalPolicyProvider(tmp_path, agent=_StageAgent())
+def test_provider_requires_one_public_reveal_per_decision() -> None:
+    provider = PerfectHalPolicyProvider(_StageTable())
     provider.policy(_decision())
     with pytest.raises(RuntimeError, match="twice before a reveal"):
         provider.policy(_decision())
@@ -196,10 +191,8 @@ def test_provider_requires_one_public_reveal_per_decision(tmp_path: Path) -> Non
         provider.reset_game()
 
 
-def test_diagnostics_are_json_serializable_and_explicitly_unrestricted(
-    tmp_path: Path,
-) -> None:
-    provider = PerfectHalPolicyProvider(tmp_path, agent=_StageAgent())
+def test_diagnostics_are_json_serializable_and_explicitly_unrestricted() -> None:
+    provider = PerfectHalPolicyProvider(_StageTable())
     provider.policy(_decision())
     diagnostics = provider.experiment_diagnostics()
     assert diagnostics["pure_dth_only"] is True

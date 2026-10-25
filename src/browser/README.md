@@ -12,7 +12,7 @@ uv run --project src/browser python -m browser
 
 ## Boundaries
 
-- Browser imports `arena`, `stl.engine`, and `dth.agent`. No project imports
+- Browser imports `arena`, `stl.engine`, and `stl.dth`. No project imports
   browser.
 - Browser imports no `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`. `tests/test_runtime_imports.py` and `tests/test_manifest.py`
@@ -78,9 +78,8 @@ keeps one repeated-opponent series.
 ## Deployment
 
 [`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md) holds the certified recurrence
-build, the local launch commands, and the Vercel pipeline. The complete DTH
-reader accepts its source-bound v3 artifact. The browser keeps the existing
-commit-before-sampling and reveal contracts.
+build, the local launch commands, and the Vercel pipeline. The browser keeps
+the existing commit-before-sampling and reveal contracts.
 
 - `deploy/manifest.py` is the one list of the hosted runtime's files.
   `deploy/prepare_vercel.py` copies each file to `runtime/<path>` in the
@@ -88,25 +87,24 @@ commit-before-sampling and reveal contracts.
   flag into the hosted code version. `tests/test_manifest.py` fails when the
   production entry imports a first-party module that the list omits. Add a
   runtime file to the list in the change that adds its import.
-- The bundle keeps the repository layout below `runtime/`, because the DTH
-  `code_config_digest` labels its inputs `src/dth/...` and `uv.lock`.
-  `dth.agent.runtime_source_files()` names the DTH files.
+- The bundle keeps the repository layout below `runtime/` and ships the DTH
+  table at `runtime/artifacts/dth/V.npy`. `prepare_vercel` rechecks 1,200
+  classes, hashes `V.npy`, and passes the sha256 to `create_production_app`,
+  which adds it to the hosted code version.
 - A change to a file in the version ends every live hosted session at the
   next deploy. `names.py` stays out of the version, so a word-list change does
   not end games.
 - `prepare_vercel` reads the pins of the bundle's packages from
   `src/browser/uv.lock`, writes the bundle to the ignored `build/vercel/`, and
-  copies the ignored Vercel project link from `.vercel/project.json`. It still
-  copies the root `uv.lock` to `runtime/uv.lock`, because the DTH digest
-  labels that file.
+  copies the ignored Vercel project link from `.vercel/project.json`.
 
 ## Environment
 
 The browser app is its own uv project. `pyproject.toml` declares FastAPI,
 uvicorn, and httpx, and it installs the root `stl-solver` package as an
 editable path dependency, so the browser code still ships from `src/`. A
-browser dependency change edits `src/browser/uv.lock` alone; the root lock,
-the DTH artifact digest, and the leap builder hash stay unchanged. Run every
+browser dependency change edits `src/browser/uv.lock` alone; the root lock
+and the leap builder hash stay unchanged. Run every
 browser command with `uv run --project src/browser`. The environment lives in
 the ignored `src/browser/.venv/`.
 

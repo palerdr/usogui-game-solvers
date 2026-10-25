@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 
 from arena.contracts import PublicGameOutcome
-from arena.testing import StageAgent, make_decision, make_reveal
+from arena.testing import StageTable, make_decision, make_reveal
 from arena.translated_hal_adapter import TranslatedHalPolicyProvider
 from browser.opponent_memory import OpponentMemory
 
@@ -52,7 +52,7 @@ def _baku(n, role, hal_last, baku_last):
 
 
 def _provider():
-    return TranslatedHalPolicyProvider("unused", agent=StageAgent(_matrix()))
+    return TranslatedHalPolicyProvider(StageTable(_matrix()))
 
 
 def _memory_app(provider):

@@ -7,10 +7,10 @@ import numpy as np
 import pytest
 
 ARTIFACT = Path(__file__).resolve().parents[1]/'outputs'/'leap-full-native'
-DTH_PATH = Path(__file__).resolve().parents[2]/'dth_compact'/'artifacts'/'V.npy'
+DTH_PATH = Path(__file__).resolve().parents[3]/'artifacts'/'dth'/'V.npy'
 needs_artifact = pytest.mark.skipif(
     not (ARTIFACT/'manifest.json').is_file() or not DTH_PATH.is_file(),
-    reason='src/stl/outputs/leap-full-native or the DTH tail is unavailable')
+    reason='src/stl/outputs/leap-full-native or artifacts/dth/V.npy is unavailable')
 
 
 def _sha256(path):
@@ -72,7 +72,7 @@ def test_default_paths_come_from_the_package_or_absolute_environment(fake_artifa
     artifact, dth, _ = fake_artifact
     package = Path(reader.__file__).resolve().parent
     assert reader.DEFAULT_ARTIFACT == package/'outputs'/'leap-full-native'
-    assert reader.DEFAULT_DTH == package.parent/'dth_compact'/'artifacts'/'V.npy'
+    assert reader.DEFAULT_DTH == package.parents[1]/'artifacts'/'dth'/'V.npy'
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv('STL_LEAP_ARTIFACT', str(artifact))
     monkeypatch.setenv('STL_LEAP_DTH', str(dth))

@@ -1,15 +1,17 @@
-"""Drop the Handkerchief tablebase: one certified game value per state class, from a single backward
-pass over the potential layers phi = 1200..0 (architecture.md)."""
+"""Drop the Handkerchief: the rules, the certified solver ladder, and the finished table.
+
+The rules, the profile table and the class encoding define the 289,374,121 state classes. Rungs 1-3 certify
+one class at the 1e-6 saddle gap, and recheck and the six anchors check a finished table. Table opens the
+V.npy that dth_kernel writes, and Stage is one certified stage game read from it. This module needs numpy and
+scipy only, so the hosted game opens the table without numba. The recipe is src/dth_compact/architecture.md.
+"""
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import numba as nb
 import numpy as np
-from numba import njit, prange
 from scipy.optimize import linprog
 
 # ---- rules and sizes ---------------------------------------------------------------------------
@@ -30,7 +32,7 @@ MAX_SADDLE_GAP = 1e-6         # the certificate gate
 PURE, SUPPORT, LP = 0, 1, 2   # solver rungs, stored in K
 UNSOLVED = 255                # K sentinel; V uses NaN
 RECHECK_SAMPLES = 1200        # classes re-derived independently in finalize
-ARTIFACTS = Path(__file__).resolve().parent / "artifacts"   # V.npy and K.npy land here (gitignored)
+DEFAULT_PATH = Path(__file__).resolve().parents[2] / "artifacts" / "dth" / "V.npy"   # gitignored
 
 ANCHORS = [  # ((s_c, t_c, s_d, t_d), certified value), architecture.md section 6
     ((0, 0, 0, 0), 0.08985007280951046),
@@ -72,6 +74,7 @@ class SolveResult:
         self.saddle_gap = self.minimax - self.maximin
         self.certified = bool(np.isfinite(self.saddle_gap) and self.saddle_gap <= MAX_SADDLE_GAP)
         self.value = 0.5 * (self.maximin + self.minimax) if self.certified else None
+
 
 
 # ---- profile tables ----------------------------------------------------------------------------
@@ -163,18 +166,8 @@ def decode_class(c: int) -> tuple[int, int]:
     return divmod(int(c), N)
 
 
-# ---- values and layers -------------------------------------------------------------------------
-def values_array() -> np.ndarray:
-    """V[pc, pd] = value; NaN until solved; the extra column WIN holds -1.0."""
-    V = np.full((N, N + 1), np.nan, dtype=np.float64)
-    V[:, WIN] = -1.0
-    return V
 
-
-def kinds_array() -> np.ndarray:
-    return np.full((N, N), UNSOLVED, dtype=np.uint8)
-
-
+# ---- values ------------------------------------------------------------------------------------
 def class_values(pc: int, pd: int, V: np.ndarray, table: ProfileTable) -> tuple[np.ndarray, float]:
     """The 60 successful-check values and the failed-check value of one class (architecture.md 4.3)."""
     s = np.empty(LAGS, dtype=np.float64)
@@ -192,20 +185,7 @@ def class_values(pc: int, pd: int, V: np.ndarray, table: ProfileTable) -> tuple[
     return s, float(f)
 
 
-def layer_pairs(P: int, table: ProfileTable) -> tuple[np.ndarray, np.ndarray]:
-    """All classes (pc, pd) with phi[pc] + phi[pd] == P, pd-major so neighbours read the same row of V."""
-    pcs, pds = [], []
-    for a in range(max(0, P - MAX_PHI), min(MAX_PHI, P) + 1):
-        bc, bd = table.bucket[a], table.bucket[P - a]
-        if bc.size and bd.size:
-            pds.append(np.repeat(bd, bc.size))
-            pcs.append(np.tile(bc, bd.size))
-    if not pcs:
-        return np.empty(0, dtype=np.int32), np.empty(0, dtype=np.int32)
-    return np.concatenate(pcs), np.concatenate(pds)
-
-
-# ---- solver ladder, scalar (the oracle: tests and the finalize recheck) --------------------------
+# ---- solver ladder, scalar (the oracle: tests, the finalize recheck, and Table.stage) -----------
 def _M_dot(s: np.ndarray, f: float, q: np.ndarray) -> np.ndarray:
     # (M q)[i] = f * sum_{j<i} q[j] + sum_{k>=i} s[k-i] q[k]
     n = len(q)
@@ -314,129 +294,13 @@ def solve_class(s: np.ndarray, f: float) -> SolveResult:
     return res
 
 
-# ---- solver ladder, numba kernel (rungs 1-2 fused per class; the LP stays in scipy) -------------
-@njit(cache=True)
-def _ladder(s, f, r, q):
-    """Rungs 1-2 on one class (~120 comparisons, then ~3.6k multiply-adds) in L1-resident scratch.
-    Returns (value, kind); kind == LP means 'not certified here, hand it to the LP'."""
-    n = s.shape[0]
-    lo = s[0]
-    hi = s[0]
-    for k in range(1, n):
-        if s[k] < lo:
-            lo = s[k]
-        if s[k] > hi:
-            hi = s[k]
-    s0 = s[0]
-    maximin = max(lo, min(f, s0))
-    minimax = min(hi, max(f, s0))
-    if minimax - maximin <= MAX_SADDLE_GAP:
-        return 0.5 * (maximin + minimax), PURE
 
-    d0 = s0 - f
-    if abs(d0) < 1e-12:
-        return 0.0, LP
-    # r[k] = -sum_{m<k} (s[m+1] - s[m]) r[k-1-m] / d0
-    r[0] = 1.0
-    for k in range(1, n):
-        acc = 0.0
-        for m in range(k):
-            acc += (s[m + 1] - s[m]) * r[k - 1 - m]
-        r[k] = -acc / d0
-    # q = clip(reverse(r), 0) / sum
-    qsum = 0.0
-    for k in range(n):
-        rk = r[n - 1 - k]
-        if not np.isfinite(rk):
-            return 0.0, LP
-        qk = rk if rk > 0.0 else 0.0
-        q[k] = qk
-        qsum += qk
-    if qsum <= 0.0:
-        return 0.0, LP
-    for k in range(n):
-        q[k] /= qsum
-    # (M q)[i] = f * sum_{j<i} q[j] + sum_{k>=i} s[k-i] q[k]; track only its min and max
-    cum = 0.0
-    mn = np.inf
-    mx = -np.inf
-    for i in range(n):
-        acc = f * cum
-        for k in range(i, n):
-            acc += s[k - i] * q[k]
-        if acc < mn:
-            mn = acc
-        if acc > mx:
-            mx = acc
-        cum += q[i]
-    if mx - mn <= MAX_SADDLE_GAP:
-        return 0.5 * (mn + mx), SUPPORT
-    return 0.0, LP
-
-
-@njit(parallel=True, cache=True)
-def _solve_layer_kernel(pcs, pds, V, K, succ, fail, rev, scratch, need_lp):
-    """One layer in parallel: gather the 61 children of each class, run the fused ladder, write V and K.
-    Every read is a finished layer and every write is this class's own cell, so there are no races.
-    prange splits the layer statically across threads (numba's workqueue layer; tbb has no macOS-arm64 wheel)."""
-    for i in prange(pcs.shape[0]):
-        tid = nb.get_thread_id()
-        s = scratch[tid, 0]
-        r = scratch[tid, 1]
-        q = scratch[tid, 2]
-        pc = pcs[i]
-        pd = pds[i]
-        for k in range(LAGS):
-            s[k] = -V[pd, succ[pc, k]]
-        p = rev[pc]
-        f = p * (-V[pd, fail[pc]]) + (1.0 - p)
-        value, kind = _ladder(s, f, r, q)
-        if kind == LP:
-            need_lp[i] = True
-        else:
-            need_lp[i] = False
-            V[pc, pd] = value
-            K[pc, pd] = kind
-
-
-def solve_layer(P: int, V: np.ndarray, K: np.ndarray, table: ProfileTable, scratch: np.ndarray) -> tuple[int, np.ndarray]:
-    """Solve layer P: the kernel for rungs 1-2, then the LP worklist. Returns (classes, counts by rung)."""
-    pcs, pds = layer_pairs(P, table)
-    if pcs.size == 0:
-        return 0, np.zeros(3, dtype=np.int64)
-    need_lp = np.empty(pcs.size, dtype=np.bool_)
-    _solve_layer_kernel(pcs, pds, V, K, table.success_children, table.fail_child, table.rev, scratch, need_lp)
-    for i in np.flatnonzero(need_lp):
-        pc, pd = int(pcs[i]), int(pds[i])
-        res = try_rung3(*class_values(pc, pd, V, table))
-        if not res.certified:
-            raise RuntimeError(f"uncertified class ({pc}, {pd}) (gap {res.saddle_gap}) - aborting build")
-        V[pc, pd] = res.value
-        K[pc, pd] = LP
-    return pcs.size, np.bincount(K[pcs, pds], minlength=3).astype(np.int64)
-
-
-# ---- sweep -------------------------------------------------------------------------------------
+# ---- checks on a finished table ------------------------------------------------------------------
 def recheck(c: int, V: np.ndarray, table: ProfileTable) -> SolveResult:
     """Re-derive one class from its stored children with the scalar ladder (architecture.md 4.10)."""
     pc, pd = decode_class(c)
     s, f = class_values(pc, pd, V, table)
     return solve_class(s, f)
-
-
-def finalize(V: np.ndarray, K: np.ndarray, table: ProfileTable, log=print) -> None:
-    """Every class solved and in range, every rung recorded, and 1,200 strided classes re-derived (4.9)."""
-    core = V[:, :N]
-    assert not np.isnan(core).any(), "unsolved classes remain"
-    assert (np.abs(core) <= 1 + 1e-9).all(), "a value left [-1, 1]"
-    assert (K <= LP).all(), "a class has no rung recorded"
-    worst = 0.0
-    for c in np.linspace(0, CLASSES - 1, RECHECK_SAMPLES).astype(np.int64):
-        pc, pd = decode_class(c)
-        err = abs(recheck(c, V, table).value - V[pc, pd])
-        worst = max(worst, err)
-        assert err <= MAX_SADDLE_GAP, f"recheck mismatch at class {c}: {err}"
-    log(f"finalize: {RECHECK_SAMPLES} rechecks ok, worst |diff| = {worst:.3e}")
 
 
 def verify_anchors(V: np.ndarray, table: ProfileTable) -> list[tuple[tuple, float, float, bool]]:
@@ -450,32 +314,72 @@ def verify_anchors(V: np.ndarray, table: ProfileTable) -> list[tuple[tuple, floa
     return out
 
 
-def build(table: ProfileTable, stop_at: int = 0, log=print) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """The whole sweep (architecture.md 4.8): layers MAX_LAYER down to stop_at, N^2 = 289,374,121 classes
-    times the constant per-class ladder. Returns V, K, counts by rung."""
-    V, K = values_array(), kinds_array()
-    scratch = np.empty((nb.get_num_threads(), 3, LAGS), dtype=np.float64)
-    counts = np.zeros(3, dtype=np.int64)
-    t0 = time.perf_counter()
-    for P in range(MAX_LAYER, stop_at - 1, -1):
-        n, c = solve_layer(P, V, K, table, scratch)
-        counts += c
-        if n and P % 25 == 0:
-            log(f"layer {P:4d}: {n:8d} classes | {counts.sum():10d} solved | {time.perf_counter() - t0:7.1f}s")
-    return V, K, counts
+# ---- the finished table ------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Stage:
+    """One certified stage game: Dropper rows, Checker columns, values from the Dropper's side."""
+
+    state: tuple[int, int, int, int]   # (s_c, t_c, s_d, t_d), Checker first
+    value: float                       # the stored value V[pc, pd]
+    matrix: np.ndarray                 # M[d, c] for seconds d, c in 1..60, read-only
+    drop: np.ndarray                   # a certified Dropper mix over seconds 1..60, read-only
+    check: np.ndarray                  # a certified Checker mix over seconds 1..60, read-only
+    gap: float                         # max(M check) - min(drop M), at most MAX_SADDLE_GAP
 
 
-def main() -> None:
-    table = build_table()
-    V, K, counts = build(table)
-    finalize(V, K, table)
-    for state, expected, got, ok in verify_anchors(V, table):
-        print(f"anchor {state}: expected {expected:.16f} got {got:.16f} {'ok' if ok else 'MISMATCH'}")
-    print(f"pure={counts[0]} support={counts[1]} lp={counts[2]} total={counts.sum()}")
-    ARTIFACTS.mkdir(exist_ok=True)
-    np.save(ARTIFACTS / "V.npy", V)
-    np.save(ARTIFACTS / "K.npy", K)
+class Table:
+    """The finished V.npy, memory-mapped read-only.
 
+    open fails closed on a wrong shape or dtype, on any of the six anchors, and on any of `rechecks` strided
+    classes that the scalar ladder re-derives. A state off the domain raises: ValueError outside ST 0..299 and
+    TTD 0..300, and IndexError (a LookupError) for an alive TTD in 1..59.
+    """
 
-if __name__ == "__main__":
-    main()
+    def __init__(self, values: np.ndarray, profiles: ProfileTable) -> None:
+        self.values = values
+        self.profiles = profiles
+
+    @classmethod
+    def open(cls, path: str | Path = DEFAULT_PATH, rechecks: int = 0) -> Table:
+        values = np.load(path, mmap_mode="r")
+        if values.shape != (N, N + 1) or values.dtype != np.float64:
+            raise ValueError(f"{path}: {values.dtype} {values.shape} is not float64 {(N, N + 1)}")
+        profiles = build_table()
+        wrong = [state for state, _expected, _got, ok in verify_anchors(values, profiles) if not ok]
+        if wrong:
+            raise ValueError(f"{path}: the anchors {wrong} differ from their certified values")
+        for c in np.linspace(0, CLASSES - 1, rechecks).astype(np.int64):
+            pc, pd = decode_class(c)
+            if not abs(recheck(c, values, profiles).value - values[pc, pd]) <= MAX_SADDLE_GAP:
+                raise ValueError(f"{path}: class {c} fails its recheck")
+        return cls(values, profiles)
+
+    def classes(self, state) -> tuple[int, int]:
+        """The (Checker, Dropper) profile ids of a state (s_c, t_c, s_d, t_d)."""
+        if len(state) != 4 or any(isinstance(x, bool) or not isinstance(x, (int, np.integer)) for x in state):
+            raise ValueError(f"a DTH state is four integers, not {state!r}")
+        sc, tc, sd, td = (int(x) for x in state)
+        if not (0 <= sc <= MAX_ST and 0 <= sd <= MAX_ST and 0 <= tc <= MAX_TTD and 0 <= td <= MAX_TTD):
+            raise ValueError(f"the DTH state {state!r} lies outside ST 0..{MAX_ST} and TTD 0..{MAX_TTD}")
+        return profile(sc, tc, self.profiles), profile(sd, td, self.profiles)
+
+    def value(self, state) -> float:
+        pc, pd = self.classes(state)
+        return float(self.values[pc, pd])
+
+    def stage(self, state) -> Stage:
+        """Rebuild the class's matrix from its stored children, solve it, and check the certificate."""
+        pc, pd = self.classes(state)
+        s, f = class_values(pc, pd, self.values, self.profiles)
+        result = solve_class(s, f)
+        matrix = full_matrix(s, f)
+        lower = float((result.drop @ matrix).min())
+        upper = float((matrix @ result.check).max())
+        value = float(self.values[pc, pd])
+        if not upper - lower <= MAX_SADDLE_GAP:
+            raise RuntimeError(f"the stage {state} has saddle gap {upper - lower:g} above {MAX_SADDLE_GAP:g}")
+        if not lower - MAX_SADDLE_GAP <= value <= upper + MAX_SADDLE_GAP:
+            raise RuntimeError(f"the stored value of {state} lies outside its certificate [{lower}, {upper}]")
+        for array in (matrix, result.drop, result.check):
+            array.setflags(write=False)
+        return Stage(tuple(int(x) for x in state), value, matrix, result.drop, result.check, max(0.0, upper - lower))

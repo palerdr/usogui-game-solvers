@@ -8,7 +8,7 @@ import pytest
 
 def test_full_mode_crosses_calibration_floor(tmp_path, monkeypatch):
     from stl.solver import leap_build as b
-    path = Path('src/dth_compact/artifacts/V.npy')
+    path = Path('artifacts/dth/V.npy')
     if not path.exists():
         pytest.skip('DTH artifact unavailable')
     dth = np.load(path, mmap_mode='r')
@@ -128,7 +128,7 @@ def test_full_sweep_groups_compressed_failure_tables(tmp_path, monkeypatch):
     from stl.solver import leap_build as b
     from stl.solver.leap_profiles import profiles
     from stl.solver.leap_oracle import solve_stage
-    path = Path('src/dth_compact/artifacts/V.npy')
+    path = Path('artifacts/dth/V.npy')
     if not path.exists(): pytest.skip('DTH artifact unavailable')
     dth = np.load(path, mmap_mode='r'); p = profiles()
     first = np.full((b.N, 184), .1); first[:, -1] = -1.

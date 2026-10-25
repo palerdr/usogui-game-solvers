@@ -1,27 +1,24 @@
 """Generate the exact data behind the paper's layer-width and root-strategy figures.
 
-Both come from the compact solver in ``src/dth_compact``: the layer widths are
-a census of its profile buckets, and the root strategies are the equalizer
-pair (Proposition "One recurrence, both strategies") re-derived from the
-finished table ``src/dth_compact/artifacts/V.npy``, which ``uv run main.py``
-inside ``src/dth_compact`` writes. Run with that project's environment:
+Both come from the DTH solver in ``stl.dth``: the layer widths are a census of
+its profile buckets, and the root strategies are the equalizer pair
+(Proposition "One recurrence, both strategies") re-derived from the finished
+table ``artifacts/dth/V.npy``, which ``uv run python -m stl.dth_kernel``
+writes. Run from the repository root:
 
-    uv run --project src/dth_compact python paper/generate_figure_data.py
+    uv run python paper/generate_figure_data.py
 """
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import numpy as np
 
-REPOSITORY = Path(__file__).resolve().parents[1]
-COMPACT = REPOSITORY / "src" / "dth_compact"
-OUTPUT = REPOSITORY / "paper" / "build" / "figures"
+from stl import dth as solver
 
-sys.path.insert(0, str(COMPACT))
-import main as solver  # noqa: E402
+REPOSITORY = Path(__file__).resolve().parents[1]
+OUTPUT = REPOSITORY / "paper" / "build" / "figures"
 
 
 def write_layer_widths(table) -> None:
@@ -52,9 +49,9 @@ def write_root_strategies(table, V: np.ndarray) -> None:
 
 
 def main() -> None:
-    values = COMPACT / "artifacts" / "V.npy"
+    values = solver.DEFAULT_PATH
     if not values.is_file():
-        raise SystemExit(f"missing {values}; run `uv run main.py` inside {COMPACT} first")
+        raise SystemExit(f"missing {values}; run `uv run python -m stl.dth_kernel` first")
     table = solver.build_table()
     V = np.load(values, mmap_mode="r")
     if V.shape != (solver.N, solver.N + 1):

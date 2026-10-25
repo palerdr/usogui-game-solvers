@@ -33,15 +33,13 @@ paper/*.fdb_latexmk
 paper/*.fls
 paper/*.out
 src/stl/outputs/
-src/dth/outputs/
+# Built tables: artifacts/dth/V.npy from python -m stl.dth_kernel.
+artifacts/
 
 # Training artifacts
 models/
 checkpoints/
 src/stl/checkpoints/
-src/dth/artifacts/
-src/dth_compact/artifacts/
-src/dth/checkpoints/
 
 # Lean/Lake build products and the vendored Mathlib checkout
 src/formal/.lake/

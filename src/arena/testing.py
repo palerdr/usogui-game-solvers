@@ -3,10 +3,8 @@
 Tests in more than one project import these fakes. No runtime module imports
 this one.
 
-- ``StageAgent`` stands in for ``CompleteDTHAgent.stage_game`` with a fixed
+- ``StageTable`` stands in for ``stl.dth.Table.stage`` with a fixed
   certified stage, and ``certified_stage`` builds that stage.
-- ``pure_policy`` puts all mass on one of the 60 actions, and ``drop_stage``
-  builds the certified stage that the Exploit Hal tests share.
 - ``make_decision`` builds one canonical decision, and ``make_reveal`` builds
   one public half-round reveal. ``make_forecast`` asks an opponent model for
   one forecast.
@@ -29,7 +27,7 @@ from arena.contracts import (
 )
 from arena.policies.perfect_hal import ACTION_COUNT
 from arena.session import PlaySession
-from dth.agent import CertifiedStageGame
+from stl.dth import Stage
 from stl.engine.game import (
     OPENING_START_CLOCK,
     PHYSICALITY_BAKU,
@@ -43,60 +41,40 @@ if TYPE_CHECKING:
     from arena.policies.perfect_hal import PerfectHalOpponentModel
 
 
-def certified_stage(matrix: np.ndarray | None = None) -> CertifiedStageGame:
+def certified_stage(matrix: np.ndarray | None = None) -> Stage:
     resolved = (
         np.eye(ACTION_COUNT, dtype=np.float64)
         if matrix is None
         else np.asarray(matrix, dtype=np.float64)
     )
     uniform = np.full(ACTION_COUNT, 1.0 / ACTION_COUNT, dtype=np.float64)
-    return CertifiedStageGame(
+    return Stage(
         state=(0, 60, 0, 60),
         value=1.0 / ACTION_COUNT,
         matrix=resolved,
-        drop_policy=uniform.copy(),
-        check_policy=uniform.copy(),
-        saddle_gap=0.0,
+        drop=uniform.copy(),
+        check=uniform.copy(),
+        gap=0.0,
     )
 
 
-class StageAgent:
+class StageTable:
     def __init__(self, matrix: np.ndarray | None = None) -> None:
         self.matrix = matrix
         self.states: list[tuple[int, int, int, int]] = []
 
-    def stage_game(self, state) -> CertifiedStageGame:
+    def stage(self, state) -> Stage:
         normalized = tuple(int(value) for value in state)
         self.states.append(normalized)
         stage = certified_stage(self.matrix)
-        return CertifiedStageGame(
+        return Stage(
             state=normalized,
             value=stage.value,
             matrix=stage.matrix,
-            drop_policy=stage.drop_policy,
-            check_policy=stage.check_policy,
-            saddle_gap=stage.saddle_gap,
+            drop=stage.drop,
+            check=stage.check,
+            gap=stage.gap,
         )
-
-
-def pure_policy(index: int) -> np.ndarray:
-    policy = np.zeros(60, dtype=np.float64)
-    policy[index] = 1.0
-    return policy
-
-
-def drop_stage() -> CertifiedStageGame:
-    matrix = np.zeros((60, 60), dtype=np.float64)
-    matrix[0, 0] = 1.0
-    matrix[0, 1:] = -1.0
-    return CertifiedStageGame(
-        state=(0, 0, 0, 0),
-        value=0.0,
-        matrix=matrix,
-        drop_policy=pure_policy(1),
-        check_policy=pure_policy(1),
-        saddle_gap=0.0,
-    )
 
 
 def make_decision(

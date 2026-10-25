@@ -10,11 +10,10 @@
 - `docs/` owns repository-wide canonical game and solver contracts.
 - `paper/` owns the project's mathematical paper. Re-render and visually
   inspect its PDF after changing the TeX. Its figure scripts read the STL
-  leap artifact through `stl.reader` and the compact DTH solver through
-  `src/dth_compact/main.py`, and import no other project module.
+  leap artifact through `stl.reader` and the DTH table through `stl.dth`,
+  and import no other project module.
 - `docs/papers/` owns primary evidence and cited literature.
-- `src/stl/`, `src/dth/`, `src/dth_compact/`, and `src/dth_ocaml/` are peer
-  projects. They must not import one another. `src/arena/` is the game library
+- `src/stl/` and `src/dth_ocaml/` are peer projects. They must not import one another. `src/arena/` is the game library
   that the browser app uses: it may consume their public interfaces, but they
   must not import it or one another.
 - `src/formal/` is a Lean project that machine-checks the solvers' mathematics.
@@ -22,7 +21,7 @@
 - `src/browser/` is the browser game app, `python -m browser`: the FastAPI
   server, the TypeScript client in `src/browser/webclient/`, and the Vercel
   deploy pipeline in `src/browser/deploy/`. It may import `arena`,
-  `stl.engine`, and `dth.agent`, and no project imports it. The client renders
+  `stl.engine`, and `stl.dth`, and no project imports it. The client renders
   state and collects input; it never derives game rules and never receives an
   unrevealed action.
 - Each project owns its configs, docs, tests, checkpoints, and outputs.
@@ -43,18 +42,18 @@ The table lists the import rules of each project. No test enforces them.
 
 | Layer | Projects | May import |
 | --- | --- | --- |
-| Peers | `stl`, `dth`, `dth_compact`, `dth_ocaml`, `dth_cpp` | No other project |
+| Peers | `stl`, `dth_ocaml`, `dth_cpp` | No other project |
 | Proofs | `formal` | Nothing |
-| Library | `arena` | `stl.engine`, `stl.reader`, `dth.agent`, `dth.solver` |
-| App | `browser` | `arena`, `stl.engine`, `dth.agent` |
-| Consumer | `paper` | `stl.reader`, `main` (`src/dth_compact/main.py`) |
+| Library | `arena` | `stl.engine`, `stl.reader`, `stl.dth` |
+| App | `browser` | `arena`, `stl.engine`, `stl.dth` |
+| Consumer | `paper` | `stl.reader`, `stl.dth` |
 
 - No project imports `browser`, and `arena` imports no `browser` module.
 - `paper` owns no importable module. `stl.reader` is the one read path into a
   completed leap artifact. Code outside `stl` reads leap tables through it,
   not through the `stl.solver.leap_*` builder modules.
 - Inside `arena`, `contracts.py`, `agent.py`, `session.py`, and
-  `variants.py` import `stl.engine` and each other alone. `dth` enters
+  `variants.py` import `stl.engine` and each other alone. `stl.dth` enters
   through the adapters and `arena/policies/`.
 - No project imports `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`. `arena/policies/__init__.py` imports nothing.
@@ -62,10 +61,12 @@ The table lists the import rules of each project. No test enforces them.
 
 ## Fingerprints and locks
 
-- `src/dth/complete_tablebase.py` hashes the root `uv.lock` into the DTH
-  artifact digest. A root `uv.lock` change ships with rebuilt
-  `src/dth/artifacts/complete_full_v1` and `complete_fast_v1` in the same
-  commit series.
+- `python -m stl.dth_kernel` writes the ignored `artifacts/dth/V.npy`
+  (sha256 `e43977b7...`), which the leap manifest binds by hash.
+  `stl.dth.Table.open` fails closed on its shape and the six anchors. No
+  lock enters a DTH digest.
+- `stl.dth` imports numpy and scipy only, so the hosted bundle needs no
+  numba. The numba sweep lives in `stl.dth_kernel`.
 - `stl.solver.leap_build.builder_hash()` hashes the builder sources, the
   numba kernel `leap_kernel.py` among them, with the root `pyproject.toml` and
   `uv.lock`, and a resume refuses a changed hash. Do not start or resume a
@@ -80,7 +81,7 @@ The table lists the import rules of each project. No test enforces them.
   its own `src/browser/uv.lock`. FastAPI, uvicorn, and httpx live there, and
   the project installs the root package as an editable path dependency. A
   browser dependency change edits `src/browser/uv.lock` alone and leaves the
-  root lock, the DTH digest, and the leap builder hash unchanged. Run browser
+  root lock and the leap builder hash unchanged. Run browser
   commands with `uv run --project src/browser`.
 - The root `[tool.uv] default-groups` installs `dev` and `research`, so the
   root environment still installs torch, which no surviving code imports.
@@ -109,9 +110,10 @@ The table lists the import rules of each project. No test enforces them.
   the same frozen rules and the same 1e-6 saddle-gap gate as its Python peer.
   `src/dth_ocaml/play/` is a second dune package that holds the CS 3110 STL
   engine and its terminal UI. The solver library does not link it.
-- The `dth_compact` project is the paper's one-file solver of **pure DTH**. It
-  shares `src/dth/`'s rules, revival surface, and reference anchors, is held
-  to the same 1e-6 saddle-gap gate, and is not the arena's policy provider.
+- `stl.dth` and `stl.dth_kernel` are the paper's solver of **pure DTH**, held
+  to the 1e-6 saddle-gap gate, and `stl.dth.Table` is the arena's one DTH
+  table. `src/c/fast_kernel.c` is the retired C recurrence kernel; no code
+  calls it.
 - `docs/FORMULATION_LADDER.md` fixes which games are claimed at all. Work that
   does not sit on a rung is not a supported claim.
 
@@ -124,7 +126,6 @@ validation to make a change pass.
 ```powershell
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
-uv run --project src/dth_compact pytest src/dth_compact/tests -q
 uv run --project src/browser python -m pytest src/browser/tests -q
 npm --prefix src/browser/webclient run typecheck
 opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml

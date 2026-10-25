@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from scipy.optimize import linprog
 
-DTH_PATH = Path('src/dth_compact/artifacts/V.npy')
+DTH_PATH = Path('artifacts/dth/V.npy')
 
 
 def lp(s, f, window):

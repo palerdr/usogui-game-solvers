@@ -1,10 +1,10 @@
 # Arena Project Instructions
 
 `src/arena/` is the game library that the browser app uses. It may import
-public interfaces from `stl` and `dth`, and those projects must not import it.
+public interfaces from `stl`, and `stl` must not import it.
 
 - The STL engine remains the only canonical live-game referee.
-- The completed DTH tablebase is the default Hal policy provider.
+- The certified DTH table, `stl.dth.Table`, is the default Hal policy provider.
 - Providers return policy distributions; `PolicyDrivenAgent` alone masks and
   samples literal legal seconds.
 - [`src/browser/`](../browser/README.md) is the browser game,
@@ -25,12 +25,12 @@ public interfaces from `stl` and `dth`, and those projects must not import it.
   module. `src/browser/tests/test_runtime_imports.py` checks this in
   a fresh interpreter.
 - `variants.py` holds `PureDTHGame`. `contracts.py`, `agent.py`, `session.py`,
-  and `variants.py` import no project except `stl.engine`; `dth` enters
+  and `variants.py` import no project except `stl.engine`; `stl.dth` enters
   through the adapters and `policies/`.
 - `transcript.py` writes the public play transcript file for the browser's
   `--transcript`. `session.py` stays free of I/O.
 - `testing.py` holds the fakes that the tests of more than one project share,
-  such as `StageAgent` and `make_session`. No runtime module imports it.
+  such as `StageTable` and `make_session`. No runtime module imports it.
 - No arena module imports `browser`.
 
 ## Play surfaces and the session

@@ -19,9 +19,9 @@ def selected_config():
 class TranslatedHalPolicyProvider:
     """Exploit ordinary turns; use DTH equilibrium during the leap window."""
 
-    def __init__(self, artifact_dir, *, agent=None):
+    def __init__(self, table):
         config = selected_config()
-        self.inner = PerfectHalPolicyProvider(artifact_dir, config, agent=agent,
+        self.inner = PerfectHalPolicyProvider(table, config,
             opponent_model=TranslatedHalOpponentModel(config))
         self._leap_pending = None
         self.leap_fallbacks = 0
@@ -39,9 +39,9 @@ class TranslatedHalPolicyProvider:
             raise ValueError("invalid canonical leap decision")
         if self.inner._pending is not None:
             raise RuntimeError("Hal has an unrevealed ordinary action")
-        stage = self.inner.agent.stage_game(project_to_dth_state(decision))
+        stage = self.inner.table.stage(project_to_dth_state(decision))
         _validate_stage(stage)
-        policy = stage.drop_policy if decision.role == "dropper" else stage.check_policy
+        policy = stage.drop if decision.role == "dropper" else stage.check
         self._leap_pending = decision
         self.leap_fallbacks += 1
         return {i + 1: float(p) for i, p in enumerate(policy) if p > 0}

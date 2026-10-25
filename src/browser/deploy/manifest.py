@@ -1,13 +1,10 @@
 """The one list of files that the hosted browser runtime needs.
 
 ``prepare_vercel`` copies each file to ``runtime/<path>`` in the Vercel
-bundle, so the bundle keeps the repository layout below ``runtime/``. The DTH
-``code_config_digest`` labels its inputs ``src/dth/...`` and ``uv.lock``, and
-``CompleteDTHAgent`` checks that digest at each cold start, so the layout must
-match.
+bundle, so the bundle keeps the repository layout below ``runtime/``.
 
 ``production`` hashes the files whose ``in_version`` flag is set into the
-hosted code version, together with the artifact's ``code_config_digest``. A
+hosted code version, together with the sha256 of the DTH table V.npy. A
 file enters the version only under the ``STL_HAL_POLICY`` values in its
 ``policies``. A new version ends every live hosted session, so a file stays
 out of the version when a change to it must not end games: ``names.py`` holds
@@ -21,8 +18,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-
-from dth.agent import runtime_source_files
 
 # The repository root, or the ``runtime/`` directory inside the bundle.
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -56,6 +51,8 @@ RUNTIME_FILES: tuple[RuntimeFile, ...] = (
     RuntimeFile("src/stl/engine/__init__.py"),
     RuntimeFile("src/stl/engine/actions.py", in_version=True),
     RuntimeFile("src/stl/engine/game.py", in_version=True),
+    # The certified DTH table reader: rules, scalar ladder, Table and Stage.
+    RuntimeFile("src/stl/dth.py", in_version=True),
     # The browser server, its hosted wrapper, and this deploy entry.
     RuntimeFile("src/browser/__init__.py"),
     RuntimeFile("src/browser/app.py", in_version=True),
@@ -76,9 +73,6 @@ RUNTIME_FILES: tuple[RuntimeFile, ...] = (
         "src/arena/config/translated_hal_v1_selection.json", in_version=True, policies=_TRANSLATED
     ),
     RuntimeFile("src/browser/opponent_memory.py", in_version=True, policies=_TRANSLATED),
-    # The certified DTH agent. code_config_digest stands for these files in
-    # the version.
-    *(RuntimeFile(path) for path in runtime_source_files()),
 )
 
 

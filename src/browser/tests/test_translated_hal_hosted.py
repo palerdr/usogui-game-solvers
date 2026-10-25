@@ -17,7 +17,7 @@ from browser.app import SessionConfig, SeriesConfig, create_app
 from browser.hosted import create_hosted_app
 from browser.opponent_memory import OpponentMemory
 from arena.testing import (
-    StageAgent as _StageAgent,
+    StageTable as _StageTable,
     make_decision as _decision,
     make_forecast as _forecast,
     make_reveal as _reveal,
@@ -27,7 +27,7 @@ from stl.engine.game import LS_WINDOW_START
 
 
 def provider():
-    return TranslatedHalPolicyProvider("unused", agent=_StageAgent())
+    return TranslatedHalPolicyProvider(_StageTable())
 
 
 def memory_app(p):
@@ -208,7 +208,7 @@ def test_hosted_package_imports_the_candidate_without_training_dependencies(tmp_
         "import sys; sys.path.insert(0, sys.argv[1]); "
         "from arena.translated_hal_adapter import TranslatedHalPolicyProvider; "
         "from browser.deploy.production import create_production_app; "
-        "p = TranslatedHalPolicyProvider('unused', agent=object()); "
+        "p = TranslatedHalPolicyProvider(object()); "
         "assert p.config.offset_retention == 0.97; "
         "assert 'torch' not in sys.modules; "
         "assert 'arena.policies.adaptive' not in sys.modules"
@@ -237,10 +237,8 @@ def test_corrupt_durable_memory_fails_closed():
 def test_production_requires_an_explicit_candidate_switch(monkeypatch, policy, label):
     from browser.deploy import production
 
-    agent = _StageAgent()
-    agent.tablebase = SimpleNamespace(metadata={"code_config_digest": "test"})
-    agent.decide = lambda state: SimpleNamespace(drop_policy=np.ones(60) / 60, check_policy=np.ones(60) / 60)
-    monkeypatch.setattr(production, "CompleteDTHAgent", lambda *args, **kwargs: agent)
+    table = _StageTable()
+    monkeypatch.setattr(production, "Table", SimpleNamespace(open=lambda *args, **kwargs: table))
     store = MemoryStore()
     monkeypatch.setattr(production, "RedisSessionStore", lambda *args: store)
     monkeypatch.setenv("KV_REST_API_URL", "https://example.invalid")
@@ -250,7 +248,7 @@ def test_production_requires_an_explicit_candidate_switch(monkeypatch, policy, l
         monkeypatch.delenv("STL_HAL_POLICY", raising=False)
     else:
         monkeypatch.setenv("STL_HAL_POLICY", policy)
-    with TestClient(production.create_production_app(Path("unused")), base_url="https://testserver") as client:
+    with TestClient(production.create_production_app(Path("unused"), "test"), base_url="https://testserver") as client:
         response = client.get("/api/health")
         assert response.status_code == 200
         assert response.json()["policy"] == label

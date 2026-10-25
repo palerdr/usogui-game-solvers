@@ -30,6 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
+from stl.dth import DEFAULT_PATH
 from stl.solver.leap_audit import PackedReader, certify_matrix, explicit_matrix, stage_inputs
 from stl.solver.leap_build import is_window, key_name
 from stl.solver.leap_profiles import WIN, profiles
@@ -43,7 +44,7 @@ DTH_ENV = "STL_LEAP_DTH"
 
 _PACKAGE = Path(__file__).resolve().parent
 DEFAULT_ARTIFACT = _PACKAGE / "outputs" / "leap-full-native"
-DEFAULT_DTH = _PACKAGE.parent / "dth_compact" / "artifacts" / "V.npy"
+DEFAULT_DTH = DEFAULT_PATH
 
 
 @dataclass(frozen=True)
@@ -148,7 +149,7 @@ def open_leap(
 
     ``artifact`` defaults to ``STL_LEAP_ARTIFACT``, else to
     ``src/stl/outputs/leap-full-native``. ``dth_values`` defaults to
-    ``STL_LEAP_DTH``, else to ``src/dth_compact/artifacts/V.npy``. Both
+    ``STL_LEAP_DTH``, else to ``artifacts/dth/V.npy``. Both
     defaults resolve from this package's directory, and an environment path
     must be absolute.
     """

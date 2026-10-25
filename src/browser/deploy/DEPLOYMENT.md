@@ -7,22 +7,16 @@ npm --prefix src/browser/webclient run build
 uv run --project src/browser python -m browser --port 8766
 ```
 
-The default path is `src/dth/artifacts/complete_full_v1`. The local v3 artifact
-at that path passes source checks and file hashes. We preserved the prior
-artifact at `src/dth/artifacts/complete_full_v1_pre_recurrence`. Its August
-build ceased to match the Rust source after a loop-syntax cleanup. We built
-a fresh tablebase; we did not change or bypass its manifest checks.
-
-For a new checkout, build the artifact before starting the server:
+The default table is `artifacts/dth/V.npy`. For a new checkout, build it
+before starting the server (about two minutes; sha256 `e43977b7...`):
 
 ```sh
-uv run python -m dth complete --config-name complete_fast_v1 output_dir=src/dth/artifacts/complete_full_v1
+uv run python -m stl.dth_kernel
 ```
 
-The build needs a C compiler. Requests use the Python policy reference,
-with a certified LP fallback. They do not invoke the tablebase sweep.
-See [the recurrence contract](../../dth/docs/FAST_TABLEBASE.md) for rebuild
-and resume details. Generated artifacts remain outside Git.
+`stl.dth.Table` opens it and fails closed on its shape and the six anchors.
+Each request rebuilds one stage matrix from the stored child values and
+certifies it with the scalar ladder. Generated artifacts remain outside Git.
 
 ## Scope of optimal play
 
@@ -49,16 +43,16 @@ You can deploy the game to the `surpassing-the-leader` project under
 `james-cenawoods-projects`. The serving package contains FastAPI and the
 certified DTH artifact. Vercel serves the browser and prepared art from its CDN.
 
-Build the artifact on your workstation. A Vercel build exceeded 45 minutes;
-packaging the existing artifact avoids that solve. The preparation command
-checks its source digest, array hashes, and opening policy before copying it.
-The deployed function opens that copy with `verify_hashes=False`: the bundle
-is immutable, and rehashing 2.3 GB at each cold start delayed the first
-answer by about ten seconds. The manifest, schema, source digest, and array
-contracts are still checked at every start.
+Build the table on your workstation. The preparation command checks the
+shape and the six anchors, rechecks 1,200 strided classes, certifies the
+opening stage, and hashes `V.npy` before it copies the table to
+`runtime/artifacts/dth/V.npy`. It writes the sha256 into the bundle's
+`app.py`, and the hosted code version includes it. The deployed function
+checks the shape and the anchors at each start and does not rehash: the
+bundle is immutable, and rehashing 2.3 GB at each cold start delayed the first
+answer by about ten seconds.
 Vercel CLI installs Linux dependencies for the deployment, including when you
-run the build on macOS. We checked that Vercel's Linux rule-profile digest
-matches the local artifact.
+run the build on macOS.
 
 ```sh
 uv run --project src/browser python -m browser.deploy.prepare_vercel
@@ -70,8 +64,7 @@ npx vercel deploy --cwd src/browser/build/vercel --prebuilt --archive=tgz --targ
 `manifest.py` lists each runtime file that the preparation command copies
 into `runtime/`, in the repository layout. `production.py` hashes the files
 that the list flags `in_version` into the hosted code version. The preparation
-command reads the pins of the function's packages from `src/browser/uv.lock`
-and copies the root `uv.lock` into `runtime/`, where the DTH digest reads it.
+command reads the pins of the function's packages from `src/browser/uv.lock`.
 
 Vercel ships no bytecode and sets `PYTHONDONTWRITEBYTECODE`, so a new process
 compiled numpy, scipy, and FastAPI from source. The `--bytecode` step compiles
@@ -82,7 +75,7 @@ the in-process share of a boot from about 4.3 s to about 2.7 s.
 You need a linked Vercel project at `src/browser/.vercel/project.json`;
 `npx vercel link --cwd src/browser` writes it. The preparation
 command copies that link into the generated directory. You can pass
-`--artifact PATH` to select a different complete artifact. Generated packages
+`--artifact PATH` to select a different `V.npy`. Generated packages
 and tablebases remain outside Git. Use the prebuilt archive upload; a direct
 upload of the 2.3 GB NumPy array exceeds the upload request limit.
 
@@ -224,7 +217,7 @@ Neither deployment mode changes the canonical referee or the leap rule.
 You can run the frozen candidate on the canonical local browser surface:
 
 ```sh
-uv run --project src/browser python -m browser --hal-agent translated --dth-complete-tablebase src/dth/artifacts/complete_full_v1 --conceal-hal-details
+uv run --project src/browser python -m browser --hal-agent translated --conceal-hal-details
 ```
 
 Add `--pure-dth` to use the benchmark's permanent 1..60 game. The selected
@@ -233,8 +226,7 @@ from `src/arena/config/translated_hal_v1_selection.json`.
 
 For hosted activation, set `STL_HAL_POLICY=translated-v1` in the target
 environment and use the existing preparation and preview commands above.
-The preparation command packages `src/dth/artifacts/complete_full_v1` by
-default. The package includes the candidate and its memory adapter. Its
+The preparation command packages `artifacts/dth/V.npy` by default. The package includes the candidate and its memory adapter. Its
 policy package uses direct imports so the serving process does not need Torch
 or training modules.
 

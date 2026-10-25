@@ -14,6 +14,7 @@ import time
 import numba
 import numpy as np
 
+from stl.dth import DEFAULT_PATH
 from stl.solver.leap_kernel import sweep_batch
 from stl.solver.leap_profiles import N, N_ALIVE, WIN, child_clock, profiles
 from stl.solver.leap_oracle import solve_lp, solve_stage
@@ -508,7 +509,7 @@ def validate_files(directory, files):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--dth-path', type=Path, default=Path('src/dth_compact/artifacts/V.npy'))
+    parser.add_argument('--dth-path', type=Path, default=DEFAULT_PATH)
     parser.add_argument('--output', type=Path, default=Path('src/stl/outputs/leap'))
     parser.add_argument('--min-clock', type=int, default=3420)
     parser.add_argument('--full', action=argparse.BooleanOptionalAction, default=False)

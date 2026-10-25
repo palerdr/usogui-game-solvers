@@ -64,22 +64,6 @@ jobs:
       - run: uv sync --project src/browser --frozen
       - run: uv run --project src/browser python -m pytest src/browser/tests -q
 
-  dth-compact:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: src/dth_compact
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v10.0.1
-        with:
-          enable-cache: true
-          # numba supports Python below 3.15; without a pin uv takes the newest CPython.
-          python-version: "3.13"
-      - run: uv sync --dev
-      - run: uv run pytest -q
-
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 30
