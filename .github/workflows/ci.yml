@@ -14,11 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The three shards partition the root suite: every test is either slow, or
-  # not slow and under tests/ or src/stl/tests, or not slow and elsewhere
-  # (src/arena and src/browser). The slow shard runs alone because test_forward_counts_full
-  # takes about 210 s on one core. CI sets the xdist width to the runner's
-  # logical cores.
+  # Two shards partition the suite: slow and not slow. The slow shard runs
+  # alone because test_forward_counts_full takes about 210 s on one core. CI
+  # sets the xdist width to the runner's logical cores.
   python:
     name: python (${{ matrix.shard }})
     runs-on: ubuntu-latest
@@ -27,10 +25,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: stl
-            select: -m "not slow" tests src/stl/tests
-          - shard: rest
-            select: -m "not slow" --ignore-glob='tests/*' --ignore-glob='src/stl/tests/*'
+          - shard: fast
+            select: -m "not slow"
           - shard: slow
             select: -m slow
     steps:
@@ -40,22 +36,22 @@ jobs:
           enable-cache: true
           python-version: "3.12"
       - run: uv sync --locked
-      - if: matrix.shard == 'stl'
+      - if: matrix.shard == 'fast'
         run: uv run python -m pytest --collect-only -q
       # The numba leap kernel must reproduce the retired Rust kernel's golden
       # fixture. This step also compiles the kernel into its cache. The kernel
       # passes its inputs read-only, so writable and memmapped tables share
       # that compile, and the workers of the shard below load it.
       - name: Check the numba leap kernel against the Rust golden fixture
-        if: matrix.shard == 'stl'
+        if: matrix.shard == 'fast'
         run: uv run python -m pytest tests/test_leap_kernel.py -q -n 0
       # worksteal lets an idle worker take a test that waits behind a long one.
       - run: uv run python -m pytest -q ${{ matrix.select }} -n logical --dist worksteal
       # The hosted runtime runs on Python 3.13, so the server tests run there
       # too. uv rebuilds the environment on 3.13 for this step.
       - name: Run the server tests on the hosted interpreter
-        if: matrix.shard == 'rest'
-        run: uv run --locked --python 3.13 python -m pytest src/browser/tests -q -n 0
+        if: matrix.shard == 'fast'
+        run: uv run --locked --python 3.13 python -m pytest tests/server -q -n 0
 
   browser:
     runs-on: ubuntu-latest

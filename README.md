@@ -4,11 +4,10 @@ This repository contains deliberately separate game-solving projects:
 
 | Project | Purpose | Rules |
 | --- | --- | --- |
-| `src/stl/` | Canonical leap-aware referee, the certified leap table, and the DTH solver `stl.dth` with its numba sweep `stl.dth_kernel`, which builds the complete 289,374,121-class table | L2 public game; only Baku as Dropper may use second 61. DTH: literal seconds 1..60 |
+| `src/stl/` | Canonical leap-aware referee, the certified leap table, the DTH solver `stl.dth` with its numba sweep `stl.dth_kernel`, which builds the complete 289,374,121-class table, Hal in `stl.hal`, and the browser game's server in `stl.server`. `python -m stl` runs the four commands `dth`, `leap`, `serve` and `deploy` | L2 public game; only Baku as Dropper may use second 61. DTH: literal seconds 1..60 |
 | `src/dth_ocaml/` | Hand-written exact OCaml reference; `play/` keeps the CS 3110 STL engine and terminal UI | Pure DTH with literal seconds 1..60 and the repository-wide frozen revival model |
 | `src/dth_cpp/` | In-progress native exact DTH implementation | Pure DTH; build order and root integration remain subtree-owned while work is active |
-| `src/arena/` | Game library: session, provider adapters, exact and translated Hal | Canonical STL referee with pluggable policy-provider adapters |
-| `src/browser/` | Browser game app: `python -m browser`, the TypeScript client, and the hosted Vercel deployment | Canonical STL, or pure DTH with `--pure-dth`, through `src/arena/` |
+| `src/browser/` | The browser game's TypeScript client and its deploy notes | Canonical STL through `stl.server` |
 
 Repository-wide game contracts live in [`docs/`](docs/). The mathematical
 paper, a certified exact solution of the complete DTH game, lives at
@@ -36,15 +35,15 @@ opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
 
 ```powershell
 # The certified STL leap table: artifacts/leap
-uv run python -m stl.leap
+uv run python -m stl leap
 
 # The certified DTH table: artifacts/dth/V.npy, sha256 e43977b7...
-uv run python -m stl.dth_kernel
+uv run python -m stl dth
 
-# Browser game on 127.0.0.1:8000, once the client is built; exact Hal is the default
+# Browser game on 127.0.0.1:8000, once the client is built; translated Hal is the default
 npm --prefix src/browser/webclient run build
-uv run python -m browser
-uv run python -m browser --hal-agent translated
+uv run python -m stl serve
+uv run python -m stl serve --hal exact
 ```
 
 Each project owns its `config/`, `docs/`, tests, checkpoints, and outputs.
@@ -63,8 +62,8 @@ value and equilibrium strategies, and describes the solver in
 the repository root in about two minutes:
 
 ```powershell
-uv run python -m stl.dth_kernel
-uv run python -m pytest src/stl/tests/test_dth.py src/stl/tests/test_dth_kernel.py -q
+uv run python -m stl dth
+uv run python -m pytest tests/test_dth.py tests/test_dth_kernel.py -q
 ```
 
 With the table built (`artifacts/dth/V.npy`), the figures and the PDF can be

@@ -1,11 +1,20 @@
 # STL Project Instructions
 
-This subtree contains the STL referee, the L2 leap builder, and the DTH solver: `dth.py` holds the rules, the
-certified ladder, `Table` and `Stage`, and `dth_kernel.py` holds the numba sweep that writes `artifacts/dth/V.npy`.
-We require the full artifact audit before claiming an L2 solve. We do
-not provide a learned model, opponent model, or gameplay agent. Git history is the archive for
-the removed experiments; do not restore them under `legacy`, `old`, or
+This subtree contains the STL referee, the L2 leap builder, the DTH solver, Hal and the browser game's
+server. `dth.py` holds the rules, the certified ladder, `Table` and `Stage`, and `dth_kernel.py` holds the
+numba sweep that writes `artifacts/dth/V.npy`. `hal.py` holds the two opponents: exact Hal, which plays the
+certified DTH equilibrium, and translated Hal, the production opponent model. `server/` holds the play
+session, the FastAPI routes, the hosted Vercel entry and the deploy pipeline. `__main__.py` runs the four
+commands `dth`, `leap`, `serve` and `deploy`.
+We require the full artifact audit before claiming an L2 solve. Git history is the archive for
+the removed experiments and the other Hal approaches; do not restore them under `legacy`, `old`, or
 version-suffixed names.
+
+`stl.server.session.PlaySession` samples Hal's action inside `submit`, after
+the human's second is accepted. That ordering is the hidden-information
+guarantee: while a client is deciding, Hal's second does not exist in the
+process, so no snapshot can leak it. Engine identities remain exactly `Hal`
+and `Baku`; a display label never replaces Baku's rule-bearing identity.
 
 ## Retained surfaces
 
@@ -39,7 +48,7 @@ and utility in the canonical documentation before adding implementation code.
 Then add the smallest implementation that realizes that contract. Do not add
 solver, learning, or play modules merely to preserve an earlier experiment.
 
-Run `uv run python -m pytest tests src/stl/tests -q` for the retained surface.
+Run `uv run python -m pytest -q` for the retained surface.
 
 ## Leap build
 
@@ -52,7 +61,7 @@ invalidates that cache. Set `NUMBA_CACHE_DIR` to move it, for example to a
 disk that a container keeps.
 
 For the full public game, run
-`uv run python -m stl.leap [--dth artifacts/dth/V.npy] [--output artifacts/leap]`.
+`uv run python -m stl leap [--dth artifacts/dth/V.npy] [--output artifacts/leap]`.
 This command sweeps through the clock-720 opening. Resume uses the same
 command and requires matching source, DTH, and checkpoint file hashes.
 The builder commits packed-file hashes before removing each cold dense table.
@@ -90,7 +99,7 @@ bits in row-major order. Each dense table keeps NaN in unreachable cells and
 -1 in its last column. The manifest records file hashes and marks this segment
 as incomplete. A complete L2 claim still requires the full audit.
 
-The slow leap tests require `artifacts/dth/V.npy`, which `uv run python -m stl.dth_kernel` writes. Run
+The slow leap tests require `artifacts/dth/V.npy`, which `uv run python -m stl dth` writes. Run
 `uv run python -m pytest tests/test_leap.py tests/test_leap_kernel.py -q`; its first run compiles the kernel
 in each worker. The full reachability test checks the measured state totals
 without performing a value sweep.

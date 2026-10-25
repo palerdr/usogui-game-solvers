@@ -1,34 +1,193 @@
-"""Unrestricted causal opponent exploitation for repeated pure-DTH play.
+"""Hal, the opponent: exact Hal and translated Hal.
 
-Perfect Hal is a policy label, not a claim that the DTH game has another
-solution.  The completed DTH tablebase remains the continuation-value and
-stage-matrix authority.  This provider uses only revealed public history to
-forecast the opponent, then plays an unrestricted best response in the exact
-continuation-adjusted matrix.
+Exact Hal plays the certified DTH equilibrium from ``stl.dth.Table``.
+Translated Hal, the production opponent, forecasts the human from public
+reveals and plays a best response in the exact stage matrix. In the leap
+window it plays the exact policy. Its opponent evidence dumps to a bounded
+JSON checkpoint, which the hosted server stores between games.
 
-The forecaster learns from public reveals. Translated Hal builds on it.
+``make_hal(kind, table)`` builds either one. A provider returns a policy over
+literal seconds; ``stl.server.session.PolicyDrivenAgent`` masks and samples it.
+The other opponent models of the Hal study are in git history; docs/HAL.md
+lists them.
 """
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+import base64
+import json
+import time
+import zlib
+from dataclasses import asdict, dataclass, field, replace
 from operator import index as integer_index
-from typing import Mapping
+from typing import Mapping, Protocol, runtime_checkable
 
 import numpy as np
 
-from arena.contracts import (
-    CanonicalDecision,
-    CanonicalPolicyProvider,
-    PublicGameOutcome,
-    PublicHalfRound,
-)
-from arena.dth_adapter import project_to_dth_state
 from stl.dth import MAX_SADDLE_GAP, Stage, Table
+from stl.game import legal_seconds, validate_action
+
+KINDS = ("translated", "exact")
+MEMORY_SCHEMA = "arena-translated-hal-memory-v1"
+MAX_MEMORY_BYTES = 4_000_000
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalDecision:
+    """Public canonical decision context passed to a policy provider.
+
+    The numeric fields are literal engine seconds. ``native_state`` is an
+    opaque escape hatch for a provider that natively understands the canonical
+    engine (for example the STL MCTS agent); abstraction adapters ignore it.
+    """
+
+    role: str
+    actor_name: str
+    turn_duration: int
+    legal_seconds: tuple[int, ...]
+    checker_cylinder_seconds: float
+    checker_ttd_seconds: float
+    dropper_cylinder_seconds: float
+    dropper_ttd_seconds: float
+    native_state: object
+
+
+@dataclass(frozen=True, slots=True)
+class PublicPlayerState:
+    """One player's public load state before a simultaneous decision."""
+
+    name: str
+    cylinder_seconds: float
+    ttd_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class PublicDecisionState:
+    """Public state captured before either half-round action is requested."""
+
+    game_clock_seconds: float
+    round_index: int
+    half_index: int
+    turn_duration: int
+    players: tuple[PublicPlayerState, PublicPlayerState]
+
+
+@dataclass(frozen=True, slots=True)
+class PublicHalfRound:
+    """Revealed public result delivered once to every session provider."""
+
+    game_index: int
+    half_round_index: int
+    pre_decision_state: PublicDecisionState
+    dropper_name: str
+    checker_name: str
+    drop_time: int
+    check_time: int
+    outcome: str
+    game_over: bool
+    winner_name: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class PublicGameOutcome:
+    """End-of-game notification, including capped games without a winner."""
+
+    game_index: int
+    winner_name: str | None
+    half_rounds: int
+
+
+@runtime_checkable
+class CanonicalPolicyProvider(Protocol):
+    """Provide an unnormalized literal-second policy for one decision."""
+
+    def policy(self, decision: CanonicalDecision) -> Mapping[int, float]: ...
+
+
+def reset_provider_game(provider: object) -> None:
+    """Start a fresh per-game lifecycle when a provider implements the hook."""
+
+    hook = getattr(provider, "reset_game", None)
+    if callable(hook):
+        hook()
+
+
+def observe_provider(provider: object, record: PublicHalfRound) -> None:
+    """Deliver one revealed public half-round to an interested provider."""
+
+    hook = getattr(provider, "observe", None)
+    if callable(hook):
+        hook(record)
+
+
+def end_provider_game(provider: object, outcome: PublicGameOutcome) -> None:
+    """Finish one game without requiring hooks on exact/stateless providers."""
+
+    hook = getattr(provider, "end_game", None)
+    if callable(hook):
+        hook(outcome)
+
+
+def project_to_dth_state(decision: CanonicalDecision) -> tuple[int, int, int, int]:
+    """Project the shared literal-second coordinates without approximation."""
+
+    coordinates = (
+        decision.checker_cylinder_seconds,
+        decision.checker_ttd_seconds,
+        decision.dropper_cylinder_seconds,
+        decision.dropper_ttd_seconds,
+    )
+    if any(value != int(value) for value in coordinates):
+        raise ValueError("canonical STL state is not on the literal-second DTH grid")
+    return tuple(int(value) for value in coordinates)  # type: ignore[return-value]
+
+
+@dataclass
+class ExactHal:
+    """Serve exact equilibrium policies from the certified DTH table.
+
+    ``table`` is one opened ``stl.dth.Table``; the hosted runtime shares it
+    between every player. Each decision records its stage and latency. With
+    ``record_decisions`` false the provider keeps no per-move record, so a
+    long-lived provider does not grow.
+    """
+
+    table: Table = field(repr=False)
+    decisions: list[tuple[Stage, float]] = field(default_factory=list, repr=False)
+    record_decisions: bool = True
+
+    def close(self) -> None:
+        """Match the provider lifecycle contract; memmaps need no explicit close."""
+
+    def policy(self, decision: CanonicalDecision) -> Mapping[int, float]:
+        started = time.monotonic()
+        stage = self.table.stage(project_to_dth_state(decision))
+        if self.record_decisions:
+            self.decisions.append((stage, time.monotonic() - started))
+        row = stage.drop if decision.role == "dropper" else stage.check
+        return {
+            second: float(probability)
+            for second, probability in enumerate(row, start=1)
+            if probability > 0.0
+        }
+
+    def match_summary(self) -> str:
+        if not self.decisions:
+            return "dth complete: no moves played"
+        latencies = np.asarray(
+            [elapsed for _stage, elapsed in self.decisions], dtype=np.float64
+        )
+        worst_gap = max(stage.gap for stage, _elapsed in self.decisions)
+        return (
+            f"dth complete: {len(self.decisions)} exact moves; "
+            f"worst saddle gap {worst_gap:.3g}; "
+            f"latency p95 {float(np.quantile(latencies, 0.95)):.3f}s "
+            f"max {float(np.max(latencies)):.3f}s"
+        )
+
 
 ACTION_COUNT = 60
 ACTIONS = tuple(range(1, ACTION_COUNT + 1))
-PERFECT_HAL_SCHEMA = "arena-perfect-hal-bayesian-v2"
 PERFECT_HAL_DIAGNOSTICS_SCHEMA = "arena-perfect-hal-diagnostics-v1"
 
 _BASE_EXPERT_NAMES = (
@@ -860,14 +1019,277 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         }
 
 
-__all__ = [
-    "ACTION_COUNT",
-    "ACTIONS",
-    "PERFECT_HAL_SCHEMA",
-    "PerfectHalConfig",
-    "PerfectHalContext",
-    "PerfectHalForecast",
-    "PerfectHalOpponentModel",
-    "PerfectHalDecision",
-    "PerfectHalPolicyProvider",
-]
+
+@dataclass(frozen=True, slots=True)
+class TranslatedHalConfig(PerfectHalConfig):
+    offset_retention: float = 0.9
+    translated: bool = True
+
+    def __post_init__(self):
+        super(TranslatedHalConfig, self).__post_init__()
+        if not np.isfinite(self.offset_retention) or not 0 < self.offset_retention <= 1:
+            raise ValueError("offset_retention must be in (0, 1]")
+        if not isinstance(self.translated, bool):
+            raise ValueError("translated must be boolean")
+        if self.expert_weight_floor * len(self.expert_names) >= 1:
+            raise ValueError("expert floor leaves no probability mass")
+
+    @property
+    def expert_names(self):
+        base = super(TranslatedHalConfig, self).expert_names
+        return base + (tuple(f"offset_{anchor}_{direction}_{rate}"
+            for anchor in ("role", "last") for direction in ("copy", "mirror")
+            for rate in ("global", "recent")) if self.translated else ())
+
+
+@dataclass(frozen=True, slots=True)
+class TranslatedContext(PerfectHalContext):
+    last_self_action: int | None = None
+
+
+class TranslatedHalOpponentModel(PerfectHalOpponentModel):
+    """Score Old's experts and offset experts before each public reveal."""
+
+    schema = "arena-translated-hal-v1"
+
+    def __init__(self, config=TranslatedHalConfig()):
+        super().__init__(config)
+        base = {key: value for key, value in asdict(config).items()
+                if key in PerfectHalConfig.__dataclass_fields__}
+        self._base = PerfectHalOpponentModel(PerfectHalConfig(**base))
+        self._offsets = {role: np.zeros((2, 2, 2, 119)) for role in self._roles}
+        self._last_self = None
+
+    def reset(self):
+        super().reset()
+        self._offsets = {role: np.zeros((2, 2, 2, 119)) for role in self._roles}
+        self._last_self = None
+
+    def break_sequence(self):
+        """Keep learned counts; clear references after an excluded leap reveal."""
+        self._last_self = None
+        for state in self._roles.values():
+            state.previous_self_action = None
+            state.previous_opponent_action = None
+
+    def _expert_policies(self, state, context):
+        base = self._base._expert_policies(state, context)
+        if not self.config.translated:
+            return base
+        policies = list(base)
+        prior = base[1]
+        offsets = self._offsets[context.opponent_role]
+        for anchor_index, anchor in enumerate((context.previous_self_action, self._last_self)):
+            for mirrored in range(2):
+                for rate in range(2):
+                    if anchor is None:
+                        policies.append(prior)
+                        continue
+                    reference = 61 - anchor if mirrored else anchor
+                    actions = np.clip(reference + np.arange(-59, 60), 1, 60) - 1
+                    counts = np.bincount(actions, weights=offsets[anchor_index, mirrored, rate], minlength=60)
+                    policies.append(self._predictive(counts, prior,
+                        strength=self.config.conditional_prior_strength))
+        return np.stack(policies)
+
+    def predict(self, *args, **kwargs):
+        forecast = super().predict(*args, **kwargs)
+        context = TranslatedContext(**asdict(forecast.context), last_self_action=self._last_self)
+        return replace(forecast, context=context)
+
+    def observe(self, forecast, *, opponent_action, self_action):
+        super().observe(forecast, opponent_action=opponent_action, self_action=self_action)
+        if self.config.translated:
+            offsets = self._offsets[forecast.context.opponent_role]
+            anchors = (forecast.context.previous_self_action, forecast.context.last_self_action)
+            for anchor_index, anchor in enumerate(anchors):
+                if anchor is None:
+                    continue
+                for mirrored in range(2):
+                    reference = 61 - anchor if mirrored else anchor
+                    offset = opponent_action - reference + 59
+                    offsets[anchor_index, mirrored, 1] *= self.config.offset_retention
+                    offsets[anchor_index, mirrored, :, offset] += 1
+        self._last_self = int(self_action)
+
+
+# The 13 values that the translated-Hal study selected (candidate
+# "offset_slow"). Before this module they lived in
+# src/arena/config/translated_hal_v1_selection.json.
+TRANSLATED_HAL_V1 = TranslatedHalConfig(
+    action_count=60,
+    prior_strength=0.02,
+    conditional_prior_strength=0.1,
+    recency_retentions=(0.995, 0.82, 0.3),
+    expert_learning_rate=1.25,
+    expert_weight_retention=0.97,
+    expert_weight_floor=0.002,
+    log_probability_floor=1e-09,
+    periodicities=(2, 3, 4, 5, 6, 8),
+    response_temperature=0.0,
+    best_response_tolerance=1e-12,
+    offset_retention=0.97,
+    translated=True,
+)
+
+
+class TranslatedHal:
+    """Exploit ordinary turns; use DTH equilibrium during the leap window."""
+
+    def __init__(self, table):
+        config = TRANSLATED_HAL_V1
+        self.inner = PerfectHalPolicyProvider(table, config,
+            opponent_model=TranslatedHalOpponentModel(config))
+        self._leap_pending = None
+        self.leap_fallbacks = 0
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def policy(self, decision):
+        if self._leap_pending is not None:
+            raise RuntimeError("Hal was asked to act twice before a leap reveal")
+        if decision.turn_duration == 60:
+            return self.inner.policy(decision)
+        if (decision.turn_duration != 61 or decision.role not in ("dropper", "checker")
+            or tuple(decision.legal_seconds) != legal_seconds(decision.actor_name, decision.role, 61)):
+            raise ValueError("invalid canonical leap decision")
+        if self.inner._pending is not None:
+            raise RuntimeError("Hal has an unrevealed ordinary action")
+        stage = self.inner.table.stage(project_to_dth_state(decision))
+        _validate_stage(stage)
+        policy = stage.drop if decision.role == "dropper" else stage.check
+        self._leap_pending = decision
+        self.leap_fallbacks += 1
+        return {i + 1: float(p) for i, p in enumerate(policy) if p > 0}
+
+    def observe(self, record):
+        pending = self._leap_pending
+        if pending is None:
+            return self.inner.observe(record)
+        name = record.dropper_name if pending.role == "dropper" else record.checker_name
+        if name != pending.actor_name or record.pre_decision_state.turn_duration != 61:
+            raise ValueError("leap reveal disagrees with the pending decision")
+        if record.game_index < 0 or record.half_round_index < 0:
+            raise ValueError("invalid leap reveal indices")
+        validate_action(record.drop_time, actor=record.dropper_name, role="dropper", turn_duration=61)
+        validate_action(record.check_time, actor=record.checker_name, role="checker", turn_duration=61)
+        self.inner.opponent_model.break_sequence()
+        self._leap_pending = None
+
+    def reset_game(self):
+        if self._leap_pending is not None:
+            raise RuntimeError("game reset with an unrevealed leap action")
+        self.inner.reset_game()
+        self.inner.decisions.clear()
+        self.inner._seen_reveals.clear()
+        self.leap_fallbacks = 0
+
+    def reset_session(self):
+        if self._leap_pending is not None:
+            raise RuntimeError("session reset with an unrevealed leap action")
+        self.inner.reset_session()
+        self.leap_fallbacks = 0
+
+    def end_game(self, outcome):
+        if self._leap_pending is not None:
+            raise RuntimeError("game ended with an unrevealed leap action")
+        self.inner.end_game(outcome)
+
+    def experiment_diagnostics(self):
+        return {**self.inner.experiment_diagnostics(), "pure_dth_only": False,
+            "leap_fallbacks": self.leap_fallbacks,
+            "leap_policy": "DTH equilibrium projection; no action-61 optimization claim"}
+
+    def dump_state(self):
+        """Return the opponent evidence as a bounded JSON checkpoint."""
+        if self.inner._pending is not None or self._leap_pending is not None:
+            raise RuntimeError("cannot checkpoint an unrevealed action")
+        model = self.opponent_model
+        roles = {}
+        for role, state in model._roles.items():
+            fields = asdict(state)
+            for key, value in fields.items():
+                if isinstance(value, np.ndarray):
+                    fields[key] = value.tolist()
+            fields["recency_counts"] = [a.tolist() for a in state.recency_counts]
+            for key in ("state_counts", "phase_counts"):
+                fields[key] = [[list(k), v.tolist()] for k, v in getattr(state, key).items()]
+            roles[role] = fields
+        data = {"schema": MEMORY_SCHEMA, "config": asdict(model.config), "roles": roles,
+            "offsets": {r: a.tolist() for r, a in model._offsets.items()},
+            "last_self": model._last_self}
+        raw = json.dumps(data, separators=(",", ":"), allow_nan=False).encode()
+        if len(raw) > MAX_MEMORY_BYTES:
+            raise ValueError("opponent checkpoint exceeds size limit")
+        return base64.b64encode(zlib.compress(raw)).decode("ascii")
+
+    def restore_state(self, memory):
+        """Replace the opponent evidence with a checkpoint, or raise ValueError."""
+        if not isinstance(memory, str) or len(memory) > MAX_MEMORY_BYTES:
+            raise ValueError("invalid opponent checkpoint")
+        try:
+            packed = base64.b64decode(memory, validate=True)
+            inflater = zlib.decompressobj()
+            raw = inflater.decompress(packed, MAX_MEMORY_BYTES + 1)
+            if len(raw) > MAX_MEMORY_BYTES or not inflater.eof or inflater.unused_data:
+                raise ValueError("invalid compressed opponent checkpoint")
+            data = json.loads(raw)
+            model = TranslatedHalOpponentModel(self.config)
+            expected_config = json.loads(json.dumps(asdict(model.config)))
+            if data["schema"] != MEMORY_SCHEMA or data["config"] != expected_config:
+                raise ValueError("opponent checkpoint version mismatch")
+
+            def array(value, shape, *, negative=False):
+                result = np.asarray(value, dtype=np.float64)
+                if result.shape != shape or not np.all(np.isfinite(result)) or (not negative and np.any(result < 0)):
+                    raise ValueError("invalid opponent evidence array")
+                return result.copy()
+
+            def action(value):
+                if value is not None and (type(value) is not int or not 1 <= value <= 60):
+                    raise ValueError("invalid opponent action reference")
+                return value
+
+            for role, state in model._roles.items():
+                fields = data["roles"][role]
+                count = fields["observations"]
+                if type(count) is not int or not 0 <= count <= 10**12:
+                    raise ValueError("invalid opponent observation count")
+                state.observations = count
+                for key in ("global_counts", "transition_counts", "response_counts", "delta_counts", "log_weights"):
+                    setattr(state, key, array(fields[key], getattr(state, key).shape, negative=key == "log_weights"))
+                recency = fields["recency_counts"]
+                if len(recency) != 3:
+                    raise ValueError("invalid recency evidence")
+                state.recency_counts = tuple(array(a, (60,)) for a in recency)
+                for key, width in (("state_counts", 4), ("phase_counts", 2)):
+                    counts = {}
+                    for k, v in fields[key]:
+                        if len(k) != width or any(type(i) is not int or i < 0 for i in k):
+                            raise ValueError("invalid opponent context")
+                        if key == "state_counts" and any(i > 5 for i in k):
+                            raise ValueError("invalid state band")
+                        if key == "phase_counts" and (k[0] not in model.config.periodicities or k[1] >= k[0]):
+                            raise ValueError("invalid periodic phase")
+                        if tuple(k) in counts:
+                            raise ValueError("duplicate opponent context")
+                        counts[tuple(k)] = array(v, (60,))
+                    setattr(state, key, counts)
+                for key in ("previous_self_action", "previous_opponent_action"):
+                    setattr(state, key, action(fields[key]))
+                model._offsets[role] = array(data["offsets"][role], (2, 2, 2, 119))
+            model._last_self = action(data["last_self"])
+        except (KeyError, TypeError, zlib.error, UnicodeError) as error:
+            raise ValueError("invalid opponent checkpoint") from error
+        self.inner.opponent_model = model
+
+
+def make_hal(kind: str, table: Table):
+    """Build Hal of one kind in ``KINDS`` over one opened DTH table."""
+
+    if kind == "exact":
+        return ExactHal(table)
+    if kind == "translated":
+        return TranslatedHal(table)
+    raise ValueError(f"unknown Hal kind {kind!r}; choose one of {', '.join(KINDS)}")

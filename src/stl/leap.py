@@ -7,13 +7,12 @@ one read path into a completed artifact. The numba sweep lives in
 tests hold the kernel to it. ``src/stl/docs/LEAP_CERTIFICATE.md``
 holds the certificate equations.
 
-Run ``python -m stl.leap [--dth artifacts/dth/V.npy] [--output artifacts/leap]``
+Run ``python -m stl leap [--dth artifacts/dth/V.npy] [--output artifacts/leap]``
 to build or resume the table. Resume needs the same builder hash, DTH table
 and checkpoint file hashes.
 """
 from __future__ import annotations
 
-import argparse
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -1337,15 +1336,3 @@ def open_leap(
     )
     return LeapTable(identity, np.load(dth_path, mmap_mode="r"))
 
-
-def main(argv=None):
-    """Build, or resume, the full certified sweep to the clock-720 opening."""
-    parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument('--dth', type=Path, default=DEFAULT_PATH)
-    parser.add_argument('--output', type=Path, default=DEFAULT_ARTIFACT)
-    args = parser.parse_args(argv)
-    run_full(args.dth, args.output)
-
-
-if __name__ == '__main__':
-    main()

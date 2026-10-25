@@ -1,4 +1,20 @@
-"""Durable per-player hosting around the existing arena HTTP contract."""
+"""The hosted game on Vercel: cookies, the Redis command log and the ledger.
+
+``create_production_app`` is the Vercel entry, and this is the only module
+that reads environment variables. Each player gets a secure cookie and one
+Redis record per game: the game's private seeds, the sequence its session
+starts at, and the commands accepted since. A worker replays those commands
+through the local app of ``stl.server.app`` and commits each mutation with a
+compare-and-set before it returns a reveal. Translated Hal's opponent evidence
+rides in the same record as a checkpoint taken at each game boundary.
+
+The game ledger is the permanent copy: one row per game in Supabase,
+rewritten after each resolved half-round, so a closed tab still leaves every
+move behind. Rows hold only what an outcome screen has already shown, plus the
+server's private seeds. The seeds never reach a browser; they let an offline
+job replay a game exactly. ``GET /api/leaderboard`` ranks each player's best
+win by the winner's seconds of life left.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +26,7 @@ import re
 import secrets
 import time
 from collections import OrderedDict
+from pathlib import Path
 from typing import Awaitable, Callable, Protocol
 
 import httpx
@@ -17,8 +34,16 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from browser.ledger import GameLedger, game_row
-from browser.schema import PlayerNameRequest, top_standings
+from stl.dth import Table
+from stl.hal import TranslatedHal
+from stl.server.app import (
+    PlayerNameRequest,
+    SeriesConfig,
+    SessionConfig,
+    create_app,
+    top_standings,
+)
+from stl.server.session import PolicyDrivenAgent
 
 COOKIE = "stl_session"
 TTL_SECONDS = 7 * 24 * 60 * 60
@@ -457,3 +482,240 @@ def create_hosted_app(
             )
 
     return app
+
+
+class RedisSessionStore:
+    """Use an atomic Redis compare-and-set to serialize competing mutations."""
+
+    def __init__(self, url: str, token: str):
+        if not url.startswith("https://") or not token:
+            raise ValueError("session storage requires an HTTPS URL and token")
+        self.url, self.token = url, token
+        self._client: httpx.AsyncClient | None = None
+
+    async def command(self, command: list):
+        # One client per worker keeps the TLS connection to the store open, so
+        # each command costs a round trip and not a fresh handshake.
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=15)
+        try:
+            response = await self._client.post(
+                self.url,
+                json=command,
+                headers={"Authorization": f"Bearer {self.token}"},
+            )
+        except (httpx.TransportError, RuntimeError):
+            # A suspended worker can wake with a dead connection or a closed
+            # event loop; open a fresh client once and retry.
+            self._client = httpx.AsyncClient(timeout=15)
+            response = await self._client.post(
+                self.url,
+                json=command,
+                headers={"Authorization": f"Bearer {self.token}"},
+            )
+        response.raise_for_status()
+        body = response.json()
+        if "error" in body:
+            raise RuntimeError("session storage command failed")
+        return body["result"]
+
+    async def get(self, key):
+        return await self.command(["GET", key])
+
+    async def compare_set(self, key, old, new):
+        script = """
+local current = redis.call('GET', KEYS[1])
+if (ARGV[1] == 'missing' and current) or
+   (ARGV[1] == 'present' and current ~= ARGV[2]) then return 0 end
+redis.call('SET', KEYS[1], ARGV[3], 'EX', ARGV[4])
+return 1
+"""
+        result = await self.command(
+            [
+                "EVAL",
+                script,
+                1,
+                key,
+                "missing" if old is None else "present",
+                old or "",
+                new,
+                TTL_SECONDS,
+            ]
+        )
+        return result == 1
+
+
+class GameLedger(Protocol):
+    async def record_game(self, row: dict[str, object]) -> None: ...
+    async def abandon_series(self, series_id: str) -> None: ...
+    async def set_player_name(self, player_id: str, name: str) -> str:
+        """Return ``ok``, ``no_game`` for a player with no recorded game, or
+        ``too_soon`` for a rename inside the hold period."""
+        ...
+    async def leaderboard(self, player_id: str) -> dict[str, object]: ...
+
+
+class SupabaseLedger:
+    """Call the ledger's Postgres functions through Supabase's REST gateway."""
+
+    def __init__(self, url: str, key: str):
+        if not url.startswith("https://") or not key:
+            raise ValueError("the game ledger requires an HTTPS URL and a secret key")
+        self.url, self.key = url.rstrip("/"), key
+        self._client: httpx.AsyncClient | None = None
+
+    async def _rpc(self, function: str, arguments: dict[str, object]):
+        # One client per worker keeps the TLS connection open, as the session
+        # store does; a suspended worker gets one fresh client and one retry.
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=5)
+        endpoint = f"{self.url}/rest/v1/rpc/{function}"
+        headers = {"apikey": self.key}
+        try:
+            response = await self._client.post(endpoint, json=arguments, headers=headers)
+        except (httpx.TransportError, RuntimeError):
+            self._client = httpx.AsyncClient(timeout=5)
+            response = await self._client.post(endpoint, json=arguments, headers=headers)
+        response.raise_for_status()
+        return response.json() if response.content else None
+
+    async def record_game(self, row):
+        await self._rpc("record_game", {"p": row})
+
+    async def abandon_series(self, series_id):
+        await self._rpc("abandon_series", {"p_series": series_id})
+
+    async def set_player_name(self, player_id, name):
+        return str(
+            await self._rpc("set_player_name", {"p_player": player_id, "p_name": name})
+        )
+
+    async def leaderboard(self, player_id):
+        return await self._rpc("leaderboard", {"p_player": player_id})
+
+
+def life_left(snapshot: dict) -> float | None:
+    """The leaderboard score: a winning human's distance from permanent death.
+
+    Capacity less accrued death time less the squandered time still waiting in
+    the cylinder. A game the human did not win has no score.
+    """
+
+    if not snapshot["winner_is_human"]:
+        return None
+    human = next(player for player in snapshot["players"] if player["is_human"])
+    return max(
+        0.0,
+        snapshot["ttd_max"] - human["ttd_seconds"] - human["cylinder_seconds"],
+    )
+
+
+def game_row(
+    *,
+    player_id: str,
+    series_id: str,
+    policy_seed: int,
+    version: str,
+    snapshot: dict,
+    transcript: dict,
+) -> dict[str, object] | None:
+    """One ledger row from a post-reveal snapshot and the inner transcript."""
+
+    outcome = snapshot["last_outcome"]
+    game = transcript["current_game"]
+    if outcome is None or not game["public_history"]:
+        return None
+    if outcome["game_over"]:
+        status = "finished"
+    elif outcome["session_ending"]:
+        status = "stopped"
+    else:
+        status = "active"
+    finished = status == "finished"
+    human = next(player for player in snapshot["players"] if player["is_human"])
+    hal = next(player for player in snapshot["players"] if not player["is_human"])
+    return {
+        "player_id": player_id,
+        "series_id": series_id,
+        "game_index": game["game_index"],
+        "status": status,
+        "human_won": bool(snapshot["winner_is_human"]) if finished else None,
+        "score": life_left(snapshot) if finished else None,
+        "half_rounds": snapshot["half_rounds"],
+        "human_cylinder_seconds": human["cylinder_seconds"],
+        "human_ttd_seconds": human["ttd_seconds"],
+        "human_deaths": human["deaths"],
+        "hal_cylinder_seconds": hal["cylinder_seconds"],
+        "hal_ttd_seconds": hal["ttd_seconds"],
+        "hal_deaths": hal["deaths"],
+        "start_clock": game["start_clock"],
+        # The ledger keeps this column from the retired pure-DTH variant.
+        "pure_dth": False,
+        "hal_agent": transcript["hal_agent"],
+        "code_version": version,
+        # The seeds are 128-bit; text keeps them exact in JSON and Postgres.
+        "game_seed": str(game["seed"]),
+        "policy_seed": str(policy_seed),
+        "public_history": game["public_history"],
+    }
+
+
+class OpponentMemory:
+    """Checkpoint the app's translated Hal evidence, which hal.py serializes."""
+
+    def dump(self, app: FastAPI) -> str:
+        return app.state.hal_provider.dump_state()
+
+    def restore(self, app: FastAPI, memory: str) -> None:
+        app.state.hal_provider.restore_state(memory)
+
+
+def create_production_app(artifact: Path, version: str) -> FastAPI:
+    """The Vercel entry: translated Hal over the bundled table.
+
+    ``stl.server.deploy`` rechecks 1,200 classes of the table and computes
+    ``version`` before it writes the bundle. A cold start checks only the
+    shape and the six anchors: rehashing 2.3 GB cost about ten seconds before
+    the first answer.
+    """
+    # httpx logs one INFO line for each call, the in-process game calls
+    # included. A move wrote up to forty lines to Vercel's log pipe.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    table = Table.open(artifact)
+
+    def factory(game_seed, policy_seed, sequence_start=0):
+        return create_app(
+            hal_factory=lambda: PolicyDrivenAgent(TranslatedHal(table), seed=policy_seed),
+            config=SessionConfig(seed=game_seed),
+            series=SeriesConfig(hal_agent="translated-v1", conceal_hal_details=True),
+            webclient_dist=None,
+            sequence_start=sequence_start,
+        )
+
+    url = os.environ.get("KV_REST_API_URL") or os.environ.get(
+        "UPSTASH_REDIS_REST_URL", ""
+    )
+    token = os.environ.get("KV_REST_API_TOKEN") or os.environ.get(
+        "UPSTASH_REDIS_REST_TOKEN", ""
+    )
+    # The ledger is optional: without its two settings the game plays as
+    # before, records nothing, and serves no leaderboard.
+    ledger_url = os.environ.get("SUPABASE_URL", "")
+    ledger_key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get(
+        "SUPABASE_SERVICE_ROLE_KEY", ""
+    )
+    ledger = None
+    if ledger_url and ledger_key:
+        try:
+            ledger = SupabaseLedger(ledger_url, ledger_key)
+        except ValueError:
+            # A bad ledger setting costs the leaderboard and never the game.
+            logging.getLogger(__name__).exception("game ledger is misconfigured")
+    return create_hosted_app(
+        RedisSessionStore(url, token),
+        factory,
+        version=version,
+        ledger=ledger,
+        memory=OpponentMemory(),
+        policy_label="translated-hal-v1",
+    )

@@ -1,16 +1,28 @@
-"""Phase-machine invariants for :mod:`arena.session`."""
+"""Phase-machine invariants of the play session, and the policy sampler."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import pytest
 
-from arena.session import Phase, PlaySession, SessionPhaseError
-from arena.testing import RecordingHal as _RecordingHal, make_session as _session
 from stl.game import (
     LS_WINDOW_START,
     PHYSICALITY_BAKU,
+    Game,
     Player,
+    Referee,
 )
+from stl.hal import CanonicalDecision
+from stl.server.session import (
+    Phase,
+    PlaySession,
+    PolicyDrivenAgent,
+    SessionPhaseError,
+    decision_from_game,
+    normalize_legal_policy,
+)
+from tests.conftest import RecordingHal as _RecordingHal, make_session as _session
 
 
 def test_session_starts_on_the_rules_phase_and_begins_into_action() -> None:
@@ -189,3 +201,38 @@ def test_only_a_human_dropper_may_use_the_leap_second() -> None:
             assert legal[-1] == 61
         else:
             assert legal[-1] == 60
+
+
+def test_policy_normalization_discards_illegal_zero_mass_entries() -> None:
+    actions, probabilities = normalize_legal_policy(
+        {0: 4.0, 1: 1.0, 2: 3.0, 61: 2.0}, (1, 2)
+    )
+    assert actions.tolist() == [1, 2]
+    assert probabilities.tolist() == pytest.approx([0.25, 0.75])
+
+
+@dataclass
+class _Provider:
+    def policy(self, decision: CanonicalDecision) -> dict[int, float]:
+        return {0: 100.0, 1: 1.0, 60: 5.0}
+
+
+def test_algorithm_agnostic_agent_samples_only_a_legal_engine_action() -> None:
+    game = Game(Player("Hal"), Player("Baku"), Referee())
+    agent = PolicyDrivenAgent(_Provider(), player_name="Hal", seed=4)
+    action = agent.choose_action(game, "dropper", game.get_turn_duration())
+    assert 1 <= action <= 60
+    assert action != 0
+
+
+def test_decision_uses_engine_role_relative_state() -> None:
+    game = Game(
+        Player("Hal", cylinder=20, ttd=30),
+        Player("Baku", cylinder=40, ttd=50),
+        Referee(),
+    )
+    game.first_dropper = game.player1
+    decision = decision_from_game(game, role="dropper", turn_duration=60)
+    assert decision.actor_name == "Hal"
+    assert decision.dropper_cylinder_seconds == 20
+    assert decision.checker_cylinder_seconds == 40

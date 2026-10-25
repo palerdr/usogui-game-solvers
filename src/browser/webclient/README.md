@@ -26,7 +26,7 @@ instruction file; the browser's binding guidance is `src/browser/README.md`.
   coarse pixel grid by a smooth downsample and then blown up with hard edges (`pixelated` in `scene.ts`). Sampling the
   full-size frame with nearest neighbour instead picked different source
   pixels on each idle frame, which shimmered white round Yakou's edge.
-- `src/types.ts` mirrors `src/browser/schema.py` by hand. A Python test
+- `src/types.ts` mirrors the wire models in `src/stl/server/app.py` by hand. A Python test
   asserts field names, types, nullability, and requiredness, so drift fails the
   suite. Update both.
 - Text received from the API must be assigned with `textContent` or passed
@@ -144,16 +144,15 @@ One process, once the client is built:
 
 ```bash
 npm --prefix src/browser/webclient run build       # writes dist/, gitignored
-uv run python -m browser    # game on 127.0.0.1:8000
+uv run python -m stl serve  # game on 127.0.0.1:8000
 ```
 
-`python -m browser` takes the same agent, seed, start-clock, label,
-transcript, and `--pure-dth` options as `python -m terminal play`. For client
-development run the Vite server instead, which serves `public/art` itself and
+`python -m stl serve` takes `--hal translated|exact`, `--host`, `--port` and
+`--seed`. For client development run the Vite server instead, which serves `public/art` itself and
 proxies `/api` to the Python server:
 
 ```bash
-uv run python -m browser    # server on 127.0.0.1:8000
+uv run python -m stl serve  # server on 127.0.0.1:8000
 npm --prefix src/browser/webclient run dev         # client on 127.0.0.1:5173
 ```
 

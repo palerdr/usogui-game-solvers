@@ -1,26 +1,53 @@
-"""Contract tests for the browser API.
+"""Contract tests for the browser API, its seat-scoped snapshot and the types.ts mirror.
 
 The load-bearing one is :func:`test_no_unrevealed_action_reaches_the_client`.
-Everything else guards the sequence protocol and legality delegation.
+Everything else guards the sequence protocol, legality delegation and schema
+drift.
 """
 
 from __future__ import annotations
 
 import json
+import re
+import types
+from enum import Enum
+from pathlib import Path
+from typing import Literal, Union, get_args, get_origin
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
-from browser.app import SeriesConfig, SessionConfig, create_app
-from browser.tests.fakes import StubHal as _StubHal, make_client as _client, play_out as _play_out
-from stl.game import LS_WINDOW_START, OPENING_START_CLOCK
+from stl.game import (
+    LS_WINDOW_START,
+    OPENING_START_CLOCK,
+    TOTAL_TTD_MAX,
+    HalfRoundResult,
+)
+from stl.server.app import (
+    Leaderboard,
+    LeaderboardEntry,
+    OutcomeView,
+    PlayerView,
+    SeriesConfig,
+    SessionConfig,
+    Snapshot,
+    create_app,
+    snapshot_from_session,
+)
+from stl.server.session import Phase
+from tests.conftest import (
+    StubHal as _StubHal,
+    make_client as _client,
+    make_session as _session,
+    play_out as _play_out,
+)
 
 
 _SNAPSHOT_FIELDS = {
     "sequence",
     "phase",
     "game_index",
-    "pure_dth",
     "human_name",
     "clock_display",
     "clock_seconds",
@@ -359,18 +386,7 @@ def test_rules_carry_the_public_hal_label_and_turn_contract() -> None:
     )
     payload = TestClient(app).get("/api/rules").json()
     assert payload["hal_label"] == "Opponent A"
-    assert payload["pure_dth"] is False
     assert _client().get("/api/rules").json()["hal_label"] == "dth"
-
-
-def test_pure_dth_never_opens_the_leap_window() -> None:
-    client = _client(start_clock=LS_WINDOW_START, pure_dth=True)
-    snapshot = client.get("/api/session").json()
-    assert snapshot["pure_dth"] is True
-    snapshot = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
-    assert snapshot["turn_duration"] == 60
-    assert snapshot["leap_window"] is False
-    assert snapshot["legal_seconds"][-1] == 60
 
 
 def test_the_reveal_names_its_own_round_and_half() -> None:
@@ -385,7 +401,7 @@ def test_the_reveal_names_its_own_round_and_half() -> None:
     assert (revealed["last_outcome"]["round"], revealed["last_outcome"]["half"]) == (1, 1)
 
 
-def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli(tmp_path) -> None:
+def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli() -> None:
     """Game N of a browser series is the CLI's game N: seed + N, one Hal."""
 
     class _LifecycleProvider:
@@ -405,11 +421,10 @@ def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli(tmp_path) -> None:
     provider = _LifecycleProvider()
     hal = _StubHal()
     hal.provider = provider
-    transcript_path = tmp_path / "series.json"
     app = create_app(
         hal_factory=lambda: hal,
         config=SessionConfig(seed=41, max_half_rounds=2),
-        series=SeriesConfig(hal_agent="dth", transcript_path=transcript_path),
+        series=SeriesConfig(hal_agent="dth"),
         webclient_dist=None,
     )
     client = TestClient(app)
@@ -417,7 +432,7 @@ def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli(tmp_path) -> None:
     first = client.get("/api/session").json()
     assert first["game_index"] == 0
     first = _play_out(client, first)
-    written = json.loads(transcript_path.read_text(encoding="utf-8"))
+    written = client.get("/api/transcript").json()
     assert written["schema_version"] == "arena-public-play-session-v1"
     assert written["base_seed"] == 41
     assert [game["seed"] for game in written["games"]] == [41]
@@ -434,7 +449,7 @@ def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli(tmp_path) -> None:
     assert served["tally"]["stopped"] == 1
 
     second = _play_out(client, second)
-    written = json.loads(transcript_path.read_text(encoding="utf-8"))
+    written = client.get("/api/transcript").json()
     assert [game["seed"] for game in written["games"]] == [41, 42]
     assert [game["game_index"] for game in written["games"]] == [0, 1]
     assert len(provider.outcomes) == 2
@@ -444,7 +459,7 @@ def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli(tmp_path) -> None:
     replaced = client.post("/api/session", json={"sequence": third["sequence"]}).json()
     assert replaced["game_index"] == 2
     assert client.get("/api/transcript").json()["current_game"]["seed"] == 43
-    assert len(json.loads(transcript_path.read_text(encoding="utf-8"))["games"]) == 2
+    assert len(client.get("/api/transcript").json()["games"]) == 2
 
 
 def test_transcript_never_carries_an_unrevealed_action() -> None:
@@ -532,3 +547,109 @@ def test_a_missing_build_is_explained_rather_than_a_404(tmp_path) -> None:
     response = TestClient(app).get("/")
     assert response.status_code == 200
     assert "npm --prefix src/browser/webclient run build" in response.text
+
+
+@pytest.mark.parametrize(
+    ("half", "human_second", "fatal_player", "winner_is_human"),
+    [
+        (1, 1, "human", False),
+        (2, 60, "hal", True),
+    ],
+)
+def test_snapshot_carries_authoritative_winner_seat(
+    half: int,
+    human_second: int,
+    fatal_player: str,
+    winner_is_human: bool,
+) -> None:
+    session = _session(human_display_name="A display label")
+    session.game.current_half = half
+    player = session.human if fatal_player == "human" else session.hal
+    player.ttd = TOTAL_TTD_MAX
+    session.begin()
+    session.submit(human_second)
+
+    snapshot = snapshot_from_session(session)
+    assert snapshot.last_outcome is not None
+    assert snapshot.last_outcome.game_over is True
+    assert snapshot.last_outcome.session_ending is True
+    assert snapshot.winner_is_human is winner_is_human
+
+
+_TYPES = Path(__file__).resolve().parents[2] / "src" / "browser" / "webclient" / "src" / "types.ts"
+
+
+def _interface_fields(source: str, name: str) -> dict[str, tuple[str, bool]]:
+    match = re.search(rf"export interface {name} \{{(.*?)\n\}}", source, re.DOTALL)
+    if match is None:
+        raise AssertionError(f"webclient/src/types.ts has no interface {name}")
+    fields: dict[str, tuple[str, bool]] = {}
+    for field, optional, annotation in re.findall(
+        r"^\s*(\w+)(\?)?:\s*([^;]+);", match.group(1), re.MULTILINE
+    ):
+        fields[field] = (" ".join(annotation.split()), not bool(optional))
+    return fields
+
+
+def _typescript_type(annotation: object) -> str:
+    origin = get_origin(annotation)
+    if origin is list:
+        return f"{_typescript_type(get_args(annotation)[0])}[]"
+    if origin in (types.UnionType, Union):
+        return " | ".join(_typescript_type(item) for item in get_args(annotation))
+    if origin is Literal:
+        return " | ".join(json.dumps(item) for item in get_args(annotation))
+    if annotation is type(None):
+        return "null"
+    if annotation in (int, float):
+        return "number"
+    if annotation is str:
+        return "string"
+    if annotation is bool:
+        return "boolean"
+    if annotation is Phase:
+        return "Phase"
+    if annotation is HalfRoundResult:
+        return "OutcomeResult"
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation.__name__
+    if isinstance(annotation, type) and issubclass(annotation, Enum):
+        raise AssertionError(f"TypeScript alias missing for enum {annotation.__name__}")
+    raise AssertionError(f"unsupported Python wire annotation {annotation!r}")
+
+
+def _model_fields(model: type[BaseModel]) -> dict[str, tuple[str, bool]]:
+    return {
+        name: (_typescript_type(field.annotation), field.is_required())
+        for name, field in model.model_fields.items()
+    }
+
+
+def _string_union(source: str, name: str) -> set[str]:
+    match = re.search(rf"export type {name}\s*=\s*(.*?);", source, re.DOTALL)
+    if match is None:
+        raise AssertionError(f"webclient/src/types.ts has no type alias {name}")
+    return set(re.findall(r'"([^"]+)"', match.group(1)))
+
+
+@pytest.mark.parametrize(
+    ("model", "interface"),
+    [
+        (Snapshot, "Snapshot"),
+        (PlayerView, "PlayerView"),
+        (OutcomeView, "OutcomeView"),
+        (Leaderboard, "Leaderboard"),
+        (LeaderboardEntry, "LeaderboardEntry"),
+    ],
+)
+def test_typescript_mirrors_the_python_schema(model, interface: str) -> None:
+    source = _TYPES.read_text(encoding="utf-8")
+    assert _model_fields(model) == _interface_fields(source, interface)
+
+
+def test_typescript_enum_aliases_match_python_values() -> None:
+    source = _TYPES.read_text(encoding="utf-8")
+    assert _string_union(source, "Phase") == {item.value for item in Phase}
+    assert _string_union(source, "OutcomeResult") == {
+        item.value for item in HalfRoundResult
+    }

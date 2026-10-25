@@ -1,8 +1,10 @@
-"""stl.dth: the profile tables and class encoding, the frozen rules, the scalar ladder, and Table."""
+"""stl.dth: the profile tables and class encoding, the frozen rules, the scalar ladder, Table, and
+revival parity with stl.game."""
 import numpy as np
 import pytest
 
 from stl import dth as m
+from stl.game import Player, Referee
 
 N = m.N
 ALIVE = m.N_ALIVE
@@ -290,3 +292,15 @@ def test_the_real_table_serves_a_certified_root():
     assert stage.value == table.value((0, 0, 0, 0)) == pytest.approx(m.ANCHORS[0][1], abs=m.MAX_SADDLE_GAP)
     assert stage.gap <= m.MAX_SADDLE_GAP
     assert np.count_nonzero(stage.drop) > 1 and np.count_nonzero(stage.check) > 1   # the root is mixed
+
+
+def test_stl_and_dth_revival_surfaces_match_over_the_full_domain() -> None:
+    referee = Referee(cprs_performed=17)
+    player = Player(name="Either", physicality=0.01)
+    for st_in_vial in range(300):
+        for ttd in range(301):
+            player.ttd = ttd
+            actual = referee.compute_survival_probability(
+                player, death_duration=st_in_vial + 60
+            )
+            assert actual == m.revival_probability(st_in_vial, ttd)

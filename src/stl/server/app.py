@@ -1,59 +1,67 @@
-"""Local HTTP surface for browser play.
-
-A front end onto the same session as the terminal app (``terminal.cli`` and
-``terminal.tui``). It imports only ``stl.game`` and ``arena``. The client
-serves its pre-rendered character frames from ``webclient/public/art``. The STL
-engine remains the only referee; this module sequences requests and serializes
-state.
+"""The browser game's HTTP routes, wire schema and leaderboard name filter.
 
 The server holds exactly one live session, because it is a local single-player
-surface, but that session sits inside one repeated-opponent series exactly as
-``terminal play --games N`` does: Hal is built once and keeps its opponent model
-across games, each finished game is appended to a public transcript in the
-CLI's ``arena-public-play-session-v1`` shape, and each new game receives a
-fresh canonical referee whose seed is the base seed plus the game index.
+surface, but that session sits inside one repeated-opponent series: Hal is built
+once and keeps its opponent model across games, each finished game is appended
+to a public transcript in the ``arena-public-play-session-v1`` shape, and each
+new game receives a fresh canonical referee whose seed is the base seed plus the
+game index. The STL engine remains the only referee; this module sequences
+requests and serializes state.
 
 Every mutating endpoint carries the sequence number the client last saw, so a
 double-submitted action or a stale second tab is rejected rather than silently
 replayed.
+
+``snapshot_from_session`` is the single seat-scoped serializer. Everything the
+browser is allowed to know passes through it and nothing else. The rule: an
+unrevealed action never leaves the process. Hal's second does not exist during
+``Phase.AWAITING_ACTION`` (see ``stl.server.session.PlaySession.submit``), and
+``last_outcome`` is populated only once the half-round has resolved.
+
+``is_offensive`` is a basic slur filter for names that every player reads on
+the leaderboard. It refuses slurs and a few hate terms; ordinary profanity
+passes. It is a word list, so it stops casual abuse and no determined writer.
+The terms are stored in rot13 so that no slur shows in the source, a diff, or a
+code search.
 """
 
 from __future__ import annotations
 
+import codecs
+import random
+import re
 import threading
+import unicodedata
 from dataclasses import dataclass
+from itertools import groupby
 from pathlib import Path
-from typing import Callable
+from typing import Annotated, Callable, Literal
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, field_validator
 
-from arena.session import (
+from stl.game import (
+    CYLINDER_MAX,
+    OPENING_START_CLOCK,
+    PHYSICALITY_BAKU,
+    PHYSICALITY_HAL,
+    TOTAL_TTD_MAX,
+    TURN_DURATION_LEAP,
+    Game,
+    HalfRoundResult,
+    Player,
+    Referee,
+)
+from stl.hal import reset_provider_game
+from stl.server.session import (
     CANONICAL_HAL_NAME,
     CANONICAL_HUMAN_NAME,
     Phase,
     PlaySession,
     SessionPhaseError,
     validate_human_display_name,
-)
-from arena.transcript import write_play_transcript
-from arena.variants import PureDTHGame
-from browser.schema import (
-    ActionRequest,
-    NewSessionRequest,
-    SequencedRequest,
-    Snapshot,
-    snapshot_from_session,
-)
-from stl.game import (
-    OPENING_START_CLOCK,
-    PHYSICALITY_BAKU,
-    PHYSICALITY_HAL,
-    Game,
-    Player,
-    Referee,
 )
 
 HalFactory = Callable[[], object]
@@ -78,12 +86,310 @@ RULES = (
     "Roles swap after every half-round that both players survive.",
 )
 
+# Refused wherever the letters occur inside a word.
+_ANYWHERE = (
+    "avttre", "avttn", "avtyrg", "snttbg", "jrgonpx", "gbjryurnq",
+    "enturnq", "puvatpubat", "wvtnobb", "cbepuzbaxrl", "mvccreurnq",
+    "furznyr", "ergneq", "uvgyre",
+)
+# Refused as a whole word only, because ordinary words and names contain them
+# ("raccoon", "spice", "Pakistan", "grape", "Benazir").
+_WHOLE_WORD = (
+    "fcvp", "pbba", "puvax", "tbbx", "cnxv", "snt", "xvxr", "xlxr", "urro",
+    "genaal", "genaavr", "ornare", "xxx", "anmv", "arbanmv", "encr",
+    "encvfg", "encvat",
+)
+# Ordinary words that hold a refused term.
+_ALLOWED = re.compile(r"snigger(s|ed|ing)?")
+# Words this short may be one word spelled with gaps ("k k k", "n i g ...").
+_SPELLED_OUT = 3
+
+# Digits and symbols that stand in for letters, then Cyrillic and Greek
+# letters that look like Latin ones.
+_LOOKALIKES = str.maketrans(
+    "013457@$!|" "\u0430\u0435\u043e\u0456\u0441\u0440\u0445\u0443\u043a\u0455\u0458\u0433"
+    "\u03bf\u03b1\u03b9\u03b5\u03ba\u03c1\u03c4\u03c5\u03bd",
+    "oieastasii" "aeoicpxyksjr" "oaiekptuv",
+)
+
+
+def _stretched(term: str) -> str:
+    """A pattern for the term with any letter held longer: ``coon`` matches
+    ``cooon`` and never ``con``, so a doubled letter stays part of the word."""
+
+    return "".join(
+        f"{letter}{{{len(list(run))},}}" for letter, run in groupby(term)
+    )
+
+
+_TERMS = [codecs.decode(term, "rot13") for term in _ANYWHERE]
+_WORDS = [codecs.decode(term, "rot13") for term in _WHOLE_WORD]
+_INSIDE = re.compile("|".join(_stretched(term) for term in _TERMS))
+_ENTIRE = re.compile("(?:" + "|".join(_stretched(term) for term in _WORDS) + ")s?")
+
+
+def _refused(word: str) -> bool:
+    if _ALLOWED.fullmatch(word):
+        return False
+    return bool(_ENTIRE.fullmatch(word) or _INSIDE.search(word))
+
+
+def is_offensive(name: str) -> bool:
+    """Whether a display name holds a refused term."""
+
+    folded = unicodedata.normalize("NFKD", name).casefold().translate(_LOOKALIKES)
+    words = [word for word in re.split(r"[^a-z]+", folded) if word]
+    if any(_refused(word) for word in words):
+        return True
+    # Join each run of short words, so a term spelled with gaps reads as one
+    # word. Long words stay apart: "Dana Zimmer" must not read as one string.
+    for short, run in groupby(words, key=lambda word: len(word) <= _SPELLED_OUT):
+        if short and _refused("".join(run)):
+            return True
+    return False
+
+
+# Phases in which the reveal is public and may be serialized.
+_REVEALED = (Phase.AWAITING_ACK, Phase.GAME_OVER)
+
+
+class PlayerView(BaseModel):
+    """One display row with server-owned seat, character, and current role."""
+
+    name: str
+    character: Literal["hal", "baku"]
+    role: Literal["dropper", "checker"]
+    cylinder_seconds: float
+    ttd_seconds: float
+    deaths: int
+    is_human: bool
+
+
+class OutcomeView(BaseModel):
+    """A reveal with distinct engine-game-over and session-ending signals.
+
+    ``round`` and ``half`` are the resolved half-round's own, not the next
+    half's: the engine has already advanced by the time the reveal is shown.
+    """
+
+    round: int
+    half: int
+    dropper: str
+    checker: str
+    drop_time: int
+    check_time: int
+    result: HalfRoundResult
+    st_gained: float
+    death_duration: float
+    survived: bool | None
+    survival_probability: float | None
+    game_over: bool
+    session_ending: bool
+    winner_name: str | None
+
+
+class Snapshot(BaseModel):
+    sequence: int
+    phase: Phase
+    game_index: int
+    human_name: str
+    clock_display: str
+    clock_seconds: float
+    round: int
+    half: int
+    turn_duration: int
+    leap_window: bool
+    dropper_name: str
+    checker_name: str
+    human_role: Literal["dropper", "checker"]
+    legal_seconds: list[int]
+    players: list[PlayerView]
+    cylinder_max: float
+    ttd_max: float
+    half_rounds: int
+    last_outcome: OutcomeView | None
+    winner_name: str | None
+    winner_is_human: bool | None
+    stopped: bool
+
+
+class ActionRequest(BaseModel):
+    sequence: Annotated[int, Field(strict=True, ge=0)]
+    second: Annotated[int, Field(strict=True, ge=1, le=61)]
+
+
+class SequencedRequest(BaseModel):
+    sequence: Annotated[int, Field(strict=True, ge=0)]
+
+
+class NewSessionRequest(BaseModel):
+    sequence: Annotated[int, Field(strict=True, ge=0)]
+    human_name: str | None = None
+    seed: Annotated[int, Field(strict=True)] | None = None
+    start_clock: Annotated[int, Field(strict=True, ge=0)] | None = None
+    max_half_rounds: Annotated[int, Field(strict=True, ge=1)] | None = None
+
+    @field_validator("human_name")
+    @classmethod
+    def _valid_human_name(cls, value: str | None) -> str | None:
+        return None if value is None else validate_human_display_name(value)
+
+
+LEADERBOARD_NAME_LENGTH = 16
+LEADERBOARD_SIZE = 10
+# Control, format (bidi and zero-width), surrogate, private-use, unassigned,
+# and line or paragraph separators.
+_HIDDEN_CATEGORIES = {"Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp"}
+# Blank glyphs that Unicode files as letters or symbols: the Hangul fillers
+# and the empty braille cell.
+_BLANK_GLYPHS = {"\u115f", "\u1160", "\u3164", "\uffa0", "\u2800"}
+
+
+class LeaderboardEntry(BaseModel):
+    """One standing: a player's best win."""
+
+    rank: int
+    name: str
+    score: float
+    half_rounds: int
+    is_you: bool
+
+
+class Leaderboard(BaseModel):
+    """The top standings plus the requesting player's own.
+
+    Player identifiers and seeds stay in the ledger. ``your_score`` is the player's
+    best win, if one exists; ``your_rank`` also needs a posted name.
+    """
+
+    entries: list[LeaderboardEntry]
+    your_rank: int | None
+    your_name: str | None
+    your_score: float | None
+
+
+def top_standings(payload: dict[str, object]) -> Leaderboard:
+    """The board a browser may see: the ledger's answer, cut to the top ten."""
+
+    board = Leaderboard.model_validate(payload)
+    board.entries = board.entries[:LEADERBOARD_SIZE]
+    return board
+
+
+class PlayerNameRequest(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def _valid_name(cls, value: str) -> str:
+        # Every player reads this name, so it must show as the text it holds:
+        # no direction overrides, no invisible characters, no stacked marks.
+        name = validate_human_display_name(unicodedata.normalize("NFC", value))
+        if len(name) > LEADERBOARD_NAME_LENGTH:
+            raise ValueError(
+                f"a leaderboard name has at most {LEADERBOARD_NAME_LENGTH} characters"
+            )
+        categories = [unicodedata.category(character) for character in name]
+        if any(category in _HIDDEN_CATEGORIES for category in categories) or any(
+            character in _BLANK_GLYPHS for character in name
+        ):
+            raise ValueError("a leaderboard name must use visible characters")
+        # Fullwidth and styled letters fold to plain ones, so they cannot spell Hal.
+        if unicodedata.normalize("NFKC", name).casefold() == CANONICAL_HAL_NAME.casefold():
+            raise ValueError(f"{CANONICAL_HAL_NAME!r} is reserved for the opponent")
+        if not any(category[0] in "LN" for category in categories):
+            raise ValueError("a leaderboard name needs a letter or a digit")
+        marks = 0
+        for category in categories:
+            marks = marks + 1 if category[0] == "M" else 0
+            if marks > 2:
+                raise ValueError("a leaderboard name has too many combining marks")
+        if is_offensive(name):
+            raise ValueError("choose another leaderboard name")
+        return name
+
+
+def _outcome_view(session: PlaySession) -> OutcomeView | None:
+    record = session.last_record
+    if record is None or session.phase not in _REVEALED:
+        return None
+    return OutcomeView(
+        round=int(record.round_num + 1),
+        half=int(record.half),
+        dropper=session.display_canonical_name(record.dropper),
+        checker=session.display_canonical_name(record.checker),
+        drop_time=int(record.drop_time),
+        check_time=int(record.check_time),
+        result=record.result,
+        st_gained=float(record.st_gained),
+        death_duration=float(record.death_duration),
+        survived=record.survived,
+        survival_probability=record.survival_probability,
+        game_over=bool(session.game.game_over),
+        session_ending=session.terminal,
+        winner_name=session.display_canonical_name(session.winner_name),
+    )
+
+
+def snapshot_from_session(session: PlaySession) -> Snapshot:
+    """Serialize everything the browser may see, and nothing more."""
+
+    game = session.game
+    dropper, checker = session.roles()
+    turn_duration = session.turn_duration()
+    # Legality is the engine's call and is only meaningful while the human is
+    # on the clock; sending it otherwise would invite the client to act early.
+    legal = (
+        list(session.legal_actions()) if session.phase is Phase.AWAITING_ACTION else []
+    )
+    return Snapshot(
+        sequence=session.sequence,
+        phase=session.phase,
+        game_index=session.game_index,
+        human_name=session.human_display_name,
+        clock_display=game.format_game_clock(),
+        clock_seconds=float(game.game_clock),
+        round=int(game.round_num + 1),
+        half=int(game.current_half),
+        turn_duration=int(turn_duration),
+        # The leap turn is in effect only when the engine lengthened the turn.
+        leap_window=turn_duration == TURN_DURATION_LEAP,
+        dropper_name=session.display_name(dropper),
+        checker_name=session.display_name(checker),
+        human_role=session.human_role(),
+        legal_seconds=legal,
+        players=[
+            PlayerView(
+                name=session.display_name(player),
+                character="baku" if player is session.human else "hal",
+                role="dropper" if player is dropper else "checker",
+                cylinder_seconds=float(player.cylinder),
+                ttd_seconds=float(player.ttd),
+                deaths=int(player.deaths),
+                is_human=player is session.human,
+            )
+            for player in (game.player1, game.player2)
+        ],
+        cylinder_max=float(CYLINDER_MAX),
+        ttd_max=float(TOTAL_TTD_MAX),
+        half_rounds=session.half_rounds,
+        last_outcome=_outcome_view(session),
+        winner_name=session.display_canonical_name(session.winner_name),
+        winner_is_human=(
+            None if game.winner is None else game.winner is session.human
+        ),
+        stopped=session.stopped,
+    )
+
+
 TRANSCRIPT_SCHEMA = "arena-public-play-session-v1"
 
 # The built browser client. ``npm --prefix src/browser/webclient run build``
 # writes it; when it exists the Python server serves it alone, with no Vite
 # process, and when it does not the root route explains how to get it.
-DEFAULT_WEBCLIENT_DIST = Path(__file__).resolve().parent / "webclient" / "dist"
+DEFAULT_WEBCLIENT_DIST = (
+    Path(__file__).resolve().parents[3] / "src" / "browser" / "webclient" / "dist"
+)
 
 _NO_CLIENT_PAGE = """<!doctype html>
 <meta charset="utf-8">
@@ -102,13 +408,12 @@ npm --prefix src/browser/webclient run build</pre>
 
 @dataclass
 class SessionConfig:
-    """Per-game settings. ``pure_dth`` is fixed for the whole server."""
+    """Per-game settings."""
 
     human_name: str = CANONICAL_HUMAN_NAME
     seed: int | None = None
     start_clock: int = OPENING_START_CLOCK
     max_half_rounds: int | None = None
-    pure_dth: bool = False
 
     def __post_init__(self) -> None:
         self.human_name = validate_human_display_name(self.human_name)
@@ -127,18 +432,15 @@ class SessionConfig:
                 raise TypeError("max_half_rounds must be an integer or None")
             if self.max_half_rounds <= 0:
                 raise ValueError("max_half_rounds must be positive")
-        if not isinstance(self.pure_dth, bool):
-            raise TypeError("pure_dth must be a boolean")
 
 
 @dataclass
 class SeriesConfig:
-    """Session-wide presentation and record-keeping, as ``terminal play`` takes it."""
+    """Session-wide presentation: Hal's label and whether its details stay private."""
 
     hal_agent: str = "dth"
     public_hal_label: str | None = None
     conceal_hal_details: bool = False
-    transcript_path: Path | None = None
 
     @property
     def hal_label(self) -> str:
@@ -154,16 +456,9 @@ def _new_session(
     sequence_start: int = 0,
     reset_provider: bool = True,
 ) -> PlaySession:
-    import random
-
-    from arena.contracts import reset_provider_game
-
     hal = Player(name=CANONICAL_HAL_NAME, physicality=PHYSICALITY_HAL)
     human = Player(name=CANONICAL_HUMAN_NAME, physicality=PHYSICALITY_BAKU)
-    game_type: type[Game] = Game
-    if config.pure_dth:
-        game_type = PureDTHGame
-    game = game_type(
+    game = Game(
         player1=hal,
         player2=human,
         referee=Referee(),
@@ -183,12 +478,11 @@ def _new_session(
         start_clock=config.start_clock,
         max_half_rounds=config.max_half_rounds,
         sequence_start=sequence_start,
-        pure_dth=config.pure_dth,
     )
 
 
 def _game_seed(base_seed: int | None, game_index: int) -> int | None:
-    """The CLI's per-game seed rule: base seed plus game index."""
+    """The per-game seed rule: base seed plus game index."""
 
     return None if base_seed is None else base_seed + game_index
 
@@ -207,19 +501,11 @@ def create_app(
     fresh app after a restart and continues the player's sequence there, so a
     request from before the restart stays stale.
 
-    Provider construction can memory-map a multi-gigabyte artifact, and the
-    ``abstract`` provider can even build a tablebase from scratch. Neither
-    belongs on a request path, so both happen here at startup.
+    Provider construction memory-maps a multi-gigabyte table, which does not
+    belong on a request path, so it happens here at startup.
     """
 
     app = FastAPI(title="Surpassing The Leader")
-    # The Vite dev server is a different origin; the API is bound to loopback.
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
 
     base_config = config or SessionConfig()
     series_config = series or SeriesConfig()
@@ -245,10 +531,6 @@ def create_app(
         "human_name": base_config.human_name,
         "base_seed": base_config.seed,
         "start_clock": base_config.start_clock,
-        "start_clock_sequence": None,
-        # A browser series is open-ended; the CLI records its --games count here.
-        "requested_games": None,
-        "pure_dth": base_config.pure_dth,
         "games": [],
     }
     tally = {"human_wins": 0, "hal_wins": 0, "no_winner": 0, "stopped": 0}
@@ -283,7 +565,7 @@ def create_app(
         return details
 
     def _record_finished_game(session: PlaySession) -> None:
-        """Append a terminal game to the series once, then persist the file."""
+        """Append a terminal game to the series once."""
 
         if state["recorded"]:
             return
@@ -300,17 +582,12 @@ def create_app(
         else:
             tally["hal_wins"] += 1
         state["recorded"] = True
-        if series_config.transcript_path is not None:
-            write_play_transcript(
-                series_config.transcript_path, {**transcript, **_hal_details()}
-            )
 
     @app.get("/api/rules")
     def rules() -> dict[str, object]:
         return {
             "human_name": _session().human_display_name,
             "hal_label": series_config.hal_label,
-            "pure_dth": base_config.pure_dth,
             "lines": list(RULES),
         }
 
@@ -351,7 +628,6 @@ def create_app(
                     if request.max_half_rounds is not None
                     else base_config.max_half_rounds
                 ),
-                pure_dth=base_config.pure_dth,
             )
             game_seed = (
                 request.seed
@@ -472,7 +748,7 @@ def create_app(
                 response.headers["Cache-Control"] = "no-cache"
             return response
 
-        # Registered last so the API and art routes above take precedence.
+        # Registered last so the API routes above take precedence.
         app.mount("/", StaticFiles(directory=webclient_dist, html=True), name="webclient")
     else:
 

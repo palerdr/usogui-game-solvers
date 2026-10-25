@@ -1,18 +1,35 @@
-"""Exercise player isolation and commits across stateless HTTP workers."""
+"""Exercise player isolation and commits across stateless HTTP workers.
+
+The second part plays translated Hal through the hosted app: its opponent
+memory survives game boundaries and worker replacement, and the production
+entry serves it.
+"""
 
 import asyncio
 import codecs
 import json
 import random
+from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
-from browser.app import SessionConfig, create_app
-from browser.hosted import COOKIE, PLAYER_COOKIE, create_hosted_app
-from browser.ledger import game_row, life_left
-from browser.names import is_offensive
-from browser.tests.fakes import MemoryStore, begin
+from stl.game import LS_WINDOW_START
+from stl.hal import TranslatedHal
+from stl.server import hosted as production
+from stl.server.app import SeriesConfig, SessionConfig, create_app, is_offensive
+from stl.server.hosted import (
+    COOKIE,
+    PLAYER_COOKIE,
+    OpponentMemory,
+    create_hosted_app,
+    game_row,
+    life_left,
+)
+from stl.server.session import PolicyDrivenAgent
+from tests.conftest import MemoryStore, StageTable as _StageTable, begin
 
 
 class Hal:
@@ -451,7 +468,7 @@ def test_a_row_that_cannot_be_built_does_not_hide_a_committed_reveal(monkeypatch
     def broken(**_):
         raise KeyError("current_game")
 
-    monkeypatch.setattr("browser.hosted.game_row", broken)
+    monkeypatch.setattr("stl.server.hosted.game_row", broken)
     client = TestClient(hosted(MemoryStore(), ledger=MemoryLedger()))
     state = begin(client)
     response = client.post(
@@ -659,7 +676,7 @@ def test_one_process_builds_a_game_once_and_a_new_process_replays_the_same_game(
     # The hosted app draws each session's game and policy seeds at random, and a
     # short game records fewer than five events. Seeded draws fix the game; with
     # seed 7 it records 19 events. The seeds still pass through the store.
-    monkeypatch.setattr("browser.hosted.secrets.randbits", random.Random(7).getrandbits)
+    monkeypatch.setattr("stl.server.hosted.secrets.randbits", random.Random(7).getrandbits)
     store, built = MemoryStore(), []
     client = TestClient(counted(store, built))
     final = play([client], random.Random(7))
@@ -730,3 +747,149 @@ def test_the_warm_up_read_builds_one_game_for_every_caller():
     assert [answer.status_code for answer in answers] == [200, 200, 200]
     assert answers[0].json() == answers[2].json() and len(built) == 1
     assert all(COOKIE not in answer.cookies for answer in answers)
+
+
+# Translated Hal in the hosted app.
+
+def translated_hal():
+    return TranslatedHal(_StageTable())
+
+
+def translated_hosted(store, *, start_clock=720, max_half_rounds=6):
+    def factory(game_seed, policy_seed, sequence_start):
+        return create_app(hal_factory=lambda: PolicyDrivenAgent(translated_hal(), seed=policy_seed),
+            config=SessionConfig(seed=game_seed, start_clock=start_clock, max_half_rounds=max_half_rounds),
+            series=SeriesConfig(conceal_hal_details=True), webclient_dist=None,
+            sequence_start=sequence_start)
+    return create_hosted_app(store, factory, version="translated-test", secure_cookie=False,
+        memory=OpponentMemory(), policy_label="translated-hal-v1")
+
+
+def move(client, state, action=12):
+    response = client.post("/api/session/action", json={"sequence": state["sequence"], "second": action})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def observations(store):
+    record = json.loads(next(iter(store.rows.values())))
+    p = translated_hal()
+    p.restore_state(record["opponent_memory"])
+    return p.opponent_model.total_observations
+
+
+@pytest.mark.parametrize("boundary", ["restart", "next_game"])
+def test_memory_survives_game_boundaries_and_worker_replacement(boundary):
+    store = MemoryStore()
+    client = TestClient(translated_hosted(store, max_half_rounds=1))
+    revealed = move(client, begin(client))
+    if boundary == "restart":
+        path, state = "/api/session/restart", revealed
+    else:
+        state = client.post("/api/session/ack", json={"sequence": revealed["sequence"]}).json()
+        assert state["phase"] == "game_over"
+        path = "/api/session"
+    response = client.post(path, json={"sequence": state["sequence"]})
+    assert response.status_code == 200, response.text
+    assert observations(store) == 1
+    recovered = TestClient(translated_hosted(store, max_half_rounds=1))
+    recovered.cookies.update(client.cookies)
+    assert recovered.get("/api/session").json() == response.json()
+    revealed = move(recovered, begin(recovered))
+    restarted = recovered.post("/api/session/restart", json={"sequence": revealed["sequence"]})
+    assert restarted.status_code == 200
+    assert observations(store) == 2
+    stranger = TestClient(translated_hosted(store))
+    assert stranger.get("/api/session").json()["sequence"] == 0
+    records = [json.loads(r) for r in store.rows.values()]
+    assert sum("opponent_memory" in r for r in records) == 1
+    transcript = recovered.get("/api/transcript").text
+    assert "offsets" not in transcript and "opponent_memory" not in transcript
+
+
+def test_cold_replay_and_warm_worker_produce_the_same_next_reveal():
+    store = MemoryStore()
+    warm = TestClient(translated_hosted(store))
+    state = move(warm, begin(warm))
+    warm.post("/api/session/restart", json={"sequence": state["sequence"]})
+    state = move(warm, begin(warm), 17)
+    state = warm.post("/api/session/ack", json={"sequence": state["sequence"]}).json()
+    fork_store = MemoryStore()
+    fork_store.rows = dict(store.rows)
+    cold = TestClient(translated_hosted(fork_store))
+    cold.cookies.update(warm.cookies)
+    assert cold.get("/api/session").json() == state
+    assert move(cold, state, 21) == move(warm, state, 21)
+    assert fork_store.rows == store.rows
+
+
+def test_failed_commit_does_not_learn_or_reveal_a_speculative_move():
+    class RejectStore(MemoryStore):
+        reject = False
+
+        async def compare_set(self, key, old, new):
+            return False if self.reject else await super().compare_set(key, old, new)
+
+    store = RejectStore()
+    client = TestClient(translated_hosted(store))
+    state = begin(client)
+    before = dict(store.rows)
+    store.reject = True
+    refused = client.post("/api/session/action", json={"sequence": state["sequence"], "second": 8})
+    assert refused.status_code == 409
+    assert "last_outcome" not in refused.text
+    assert store.rows == before
+    store.reject = False
+    revealed = move(client, state, 8)
+    client.post("/api/session/restart", json={"sequence": revealed["sequence"]})
+    assert observations(store) == 1
+
+
+def test_canonical_leap_61_resolves_and_does_not_enter_the_60_action_model():
+    store = MemoryStore()
+    client = TestClient(translated_hosted(store, start_clock=LS_WINDOW_START - 60))
+    state = begin(client)
+    first = move(client, state, 60)
+    state = client.post("/api/session/ack", json={"sequence": first["sequence"]}).json()
+    assert state["human_role"] == "dropper"
+    assert state["legal_seconds"][-1] == 61
+    revealed = move(client, state, 61)
+    assert revealed["last_outcome"] is not None
+    client.post("/api/session/restart", json={"sequence": revealed["sequence"]})
+    assert observations(store) == 1
+
+
+
+def test_corrupt_durable_memory_fails_closed():
+    store = MemoryStore()
+    client = TestClient(translated_hosted(store))
+    state = move(client, begin(client))
+    client.post("/api/session/restart", json={"sequence": state["sequence"]})
+    key = next(iter(store.rows))
+    record = json.loads(store.rows[key])
+    record["opponent_memory"] = "invalid"
+    store.rows[key] = json.dumps(record)
+    fresh = TestClient(translated_hosted(store))
+    fresh.cookies.update(client.cookies)
+    response = fresh.get("/api/session")
+    assert response.status_code == 503
+    assert "last_outcome" not in response.text
+
+
+def test_production_serves_translated_hal_and_checkpoints_its_memory(monkeypatch):
+    table = _StageTable()
+    monkeypatch.setattr(production, "Table", SimpleNamespace(open=lambda *args, **kwargs: table))
+    store = MemoryStore()
+    monkeypatch.setattr(production, "RedisSessionStore", lambda *args: store)
+    monkeypatch.setenv("KV_REST_API_URL", "https://example.invalid")
+    monkeypatch.setenv("KV_REST_API_TOKEN", "test")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    with TestClient(production.create_production_app(Path("unused"), "test"), base_url="https://testserver") as client:
+        response = client.get("/api/health")
+        assert response.status_code == 200
+        assert response.json()["policy"] == "translated-hal-v1"
+        state = move(client, begin(client))
+        response = client.post("/api/session/restart", json={"sequence": state["sequence"]})
+        assert response.status_code == 200
+        record = json.loads(next(iter(store.rows.values())))
+        assert "opponent_memory" in record

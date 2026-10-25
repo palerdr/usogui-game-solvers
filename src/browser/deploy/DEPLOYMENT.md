@@ -1,17 +1,17 @@
 # Optimal play and deployment
 
-You can run the browser against the complete policy provider:
+You can run the browser against Hal locally:
 
 ```sh
 npm --prefix src/browser/webclient run build
-uv run python -m browser --port 8766
+uv run python -m stl serve --port 8766
 ```
 
 The default table is `artifacts/dth/V.npy`. For a new checkout, build it
 before starting the server (about two minutes; sha256 `e43977b7...`):
 
 ```sh
-uv run python -m stl.dth_kernel
+uv run python -m stl dth
 ```
 
 `stl.dth.Table` opens it and fails closed on its shape and the six anchors.
@@ -20,10 +20,9 @@ certifies it with the scalar ladder. Generated artifacts remain outside Git.
 
 ## Scope of optimal play
 
-The provider certifies pure DTH on actions 1..60. Use `--pure-dth` for that
-game. Without the flag, the STL referee retains Baku's legal Dropper action
-61 in the leap window. The DTH artifact gives no whole-game optimality
-claim for that extra action.
+Exact Hal (`--hal exact`) certifies pure DTH on actions 1..60. The STL
+referee retains Baku's legal Dropper action 61 in the leap window. The DTH
+artifact gives no whole-game optimality claim for that extra action.
 
 We tested a browser submission with the real provider. The server returned
 Hal's revealed action after the human committed, then continued the game.
@@ -43,11 +42,12 @@ You can deploy the game to the `surpassing-the-leader` project under
 `james-cenawoods-projects`. The serving package contains FastAPI and the
 certified DTH artifact. Vercel serves the browser and prepared art from its CDN.
 
-Build the table on your workstation. The preparation command checks the
+Build the table on your workstation. The deploy command checks the
 shape and the six anchors, rechecks 1,200 strided classes, certifies the
 opening stage, and hashes `V.npy` before it copies the table to
-`runtime/artifacts/dth/V.npy`. It writes the sha256 into the bundle's
-`app.py`, and the hosted code version includes it. The deployed function
+`runtime/artifacts/dth/V.npy`. It computes the hosted code version from the
+sha256 of every `src/stl` Python file it copies and of `V.npy`, and writes
+the version into the bundle's `app.py`. The deployed function
 checks the shape and the anchors at each start and does not rehash: the
 bundle is immutable, and rehashing 2.3 GB at each cold start delayed the first
 answer by about ten seconds.
@@ -55,26 +55,27 @@ Vercel CLI installs Linux dependencies for the deployment, including when you
 run the build on macOS.
 
 ```sh
-uv run python -m browser.deploy.prepare_vercel
-npx vercel build --cwd src/browser/build/vercel --yes
-uv run --isolated --python 3.13 python -m browser.deploy.prepare_vercel --bytecode
-npx vercel deploy --cwd src/browser/build/vercel --prebuilt --archive=tgz --target preview
+uv run --isolated --python 3.13 python -m stl deploy
 ```
 
-`manifest.py` lists each runtime file that the preparation command copies
-into `runtime/`, in the repository layout. `production.py` hashes the files
-that the list flags `in_version` into the hosted code version. The preparation
-command reads the pins of the function's packages from the root `uv.lock`.
+The command builds the client, writes the bundle to the ignored
+`artifacts/vercel/`, runs `npx vercel build`, adds the bytecode, runs
+`npx vercel deploy --prebuilt --archive=tgz --target preview`, and prints the
+preview URL.
+
+The bundle holds every `src/stl` Python file under `runtime/src/`. The
+deploy command reads the pins of the function's packages from the root
+`uv.lock`.
 
 Vercel ships no bytecode and sets `PYTHONDONTWRITEBYTECODE`, so a new process
-compiled numpy, scipy, and FastAPI from source. The `--bytecode` step compiles
+compiled numpy, scipy, and FastAPI from source. The bytecode step compiles
 each Python file that the built function maps, with Python 3.13 and the
 `unchecked-hash` mode, and adds the results to the function's file map. It cut
 the in-process share of a boot from about 4.3 s to about 2.7 s.
 
-You need a linked Vercel project at `src/browser/.vercel/project.json`;
-`npx vercel link --cwd src/browser` writes it. The preparation
-command copies that link into the generated directory. You can pass
+You need a linked Vercel project at `.vercel/project.json`; `npx vercel link`
+at the repository root writes it. The deploy command copies that link into
+the bundle. You can pass
 `--artifact PATH` to select a different `V.npy`. Generated packages
 and tablebases remain outside Git. Use the prebuilt archive upload; a direct
 upload of the 2.3 GB NumPy array exceeds the upload request limit.
@@ -169,7 +170,7 @@ a different referee or sampler.
 
 ## Game ledger and leaderboard
 
-`ledger.py` writes one Supabase row for each game. The server rewrites the
+`SupabaseLedger` in `stl/server/hosted.py` writes one Supabase row for each game. The server rewrites the
 row after each resolved half-round, once the session store has committed that
 half-round, so a closed tab leaves its moves behind and a losing concurrent
 request writes nothing. A restart marks the old series' open game `abandoned`.
@@ -192,10 +193,10 @@ facts only, so it holds in the leap window, where DTH has no value for 61. The
 browser shows the board after the win screen. A winner posts a name of at most
 16 characters. The server normalizes it to NFC and refuses control, format, and
 other invisible characters, names with no letter or digit, and runs of more
-than two combining marks. `names.py` refuses slurs and a few hate terms,
+than two combining marks. The name filter in `stl/server/app.py` refuses slurs and a few hate terms,
 through spacing, repeated letters, digit substitutions, and Cyrillic or Greek
-lookalikes; ordinary profanity passes. `names.py` stays out of the version
-digest on purpose, because a word-list change must not end active games. A
+lookalikes; ordinary profanity passes. The filter is part of the version
+digest, so a word-list change ends active games at the next deploy. A
 review left three known gaps in the filter. A short word beside a whole-word
 term spelled with gaps hides that term. One stem in the inside-a-word tier
 refuses ordinary derivatives such as "Retardant". A doubled letter lets
@@ -207,28 +208,24 @@ it never stops the game.
 Both tables enable row level security with no policy, and the four database
 functions grant execute to `service_role` alone.
 
-The local `python -m browser` surface retains its one-player process model.
+The local `python -m stl serve` surface retains its one-player process model.
 It keeps no ledger, answers 404 for the leaderboard, and the browser then skips
 that screen.
 Neither deployment mode changes the canonical referee or the leap rule.
 
-## Translated Hal candidate
+## Translated Hal
 
-You can run the frozen candidate on the canonical local browser surface:
+You can run translated Hal, the default, on the canonical local browser
+surface:
 
 ```sh
-uv run python -m browser --hal-agent translated --conceal-hal-details
+uv run python -m stl serve
 ```
 
-Add `--pure-dth` to use the benchmark's permanent 1..60 game. The selected
-variant reads its frozen parameters
-from `src/arena/config/translated_hal_v1_selection.json`.
-
-For hosted activation, set `STL_HAL_POLICY=translated-v1` in the target
-environment and use the existing preparation and preview commands above.
-The preparation command packages `artifacts/dth/V.npy` by default. The package includes the candidate and its memory adapter. Its
-policy package uses direct imports so the serving process does not need Torch
-or training modules.
+Its 13 selected values are `TRANSLATED_HAL_V1` in `src/stl/hal.py`. The
+hosted entry serves translated Hal alone and reads no policy variable; roll
+back by promoting an earlier deployment. The bundle needs no Torch or
+training module.
 
 On 2026-09-29 the `exploit_continuation_v1` study (commit `938fb25`) compared
 translated and exact Hal in canonical STL against the human emulators:
@@ -241,14 +238,14 @@ Production and promoted that preview on the same day. The production
 deployment `dpl_Eabb5CnY7ZBuLuEt897PiscMbUvY` reports
 `policy: "translated-hal-v1"`. To roll back, set the variable to `exact`
 and promote the earlier exact deployment `dpl_7nY4TagiKXs1tiiLTvDuVWZDA4KS`.
+Those deployments predate this code, which no longer reads `STL_HAL_POLICY`.
 
 Check that `/api/health` reports `policy: "translated-hal-v1"` on your preview.
 Play through a reload and a next game, then use another browser to check
 isolation. The tests cover worker replacement and rejected compare-and-set
 requests. After you review the preview, you can use the existing promotion
-command. Set `STL_HAL_POLICY=exact` and redeploy to restore hosted exact Hal.
-An unset variable also selects exact Hal. A policy or source-version change
-invalidates old session records and their memory.
+command. A source-version change invalidates old session records and their
+memory.
 
 The memory boundary is the secure `stl_session` cookie, with the existing
 seven-day session lifetime. Reloads and next games retain revealed evidence;
@@ -267,7 +264,7 @@ reveals from its 60-action model and clears stale sequence references.
 Run these checks after a change to the hosted Hal:
 
 ```sh
-uv run python -m pytest src/browser/tests src/arena/tests -q
+uv run python -m pytest tests/server tests/test_hal.py -q
 npm --prefix src/browser/webclient run typecheck
 ```
 
@@ -286,5 +283,5 @@ passed 837, skipped one, and failed eight checks against the stale Rust
 extensions and `src/dth/artifacts/complete_fast_v1` of that time. We preserved
 those artifacts and the solver validation gates.
 
-A change to `manifest.py` or `production.py` changes the code version of every
-policy, so the deploy that ships it ends every live hosted session.
+A change to any `src/stl` Python file changes the code version, so the
+deploy that ships it ends every live hosted session.

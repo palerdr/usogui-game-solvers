@@ -1,13 +1,12 @@
 """Build the DTH table: one backward pass of the numba ladder over the potential layers phi = 1200..0.
 
 The sweep writes artifacts/dth/V.npy (17,011 x 17,012 float64, sha256 e43977b7...), the value the leap
-manifest binds. Run it with `uv run python -m stl.dth_kernel [--output PATH]`. The rules, the scalar
+manifest binds. Run it with `uv run python -m stl dth [--output PATH]`. The rules, the scalar
 ladder and the checks live in stl.dth, which the hosted game imports without numba.
 """
 
 from __future__ import annotations
 
-import argparse
 import time
 from pathlib import Path
 
@@ -17,7 +16,7 @@ from numba import njit, prange
 
 from stl.dth import (
     CLASSES, DEFAULT_PATH, LAGS, LP, MAX_LAYER, MAX_PHI, MAX_SADDLE_GAP, N, PURE, RECHECK_SAMPLES, SUPPORT,
-    UNSOLVED, WIN, ProfileTable, build_table, class_values, decode_class, recheck, try_rung3, verify_anchors,
+    UNSOLVED, WIN, ProfileTable, class_values, decode_class, recheck, try_rung3,
 )
 
 
@@ -186,19 +185,3 @@ def write(V: np.ndarray, path: str | Path = DEFAULT_PATH) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, V)
 
-
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m stl.dth_kernel", description=__doc__)
-    parser.add_argument("--output", type=Path, default=DEFAULT_PATH)
-    output = parser.parse_args(argv).output
-    table = build_table()
-    V, K, counts = build(table)
-    finalize(V, K, table)
-    for state, expected, got, ok in verify_anchors(V, table):
-        print(f"anchor {state}: expected {expected:.16f} got {got:.16f} {'ok' if ok else 'MISMATCH'}")
-    print(f"pure={counts[0]} support={counts[1]} lp={counts[2]} total={counts.sum()}")
-    write(V, output)
-
-
-if __name__ == "__main__":
-    main()

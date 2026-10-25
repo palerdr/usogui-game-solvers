@@ -1,56 +1,53 @@
 # Browser App Instructions
 
-`src/browser/` is the browser STL game. It holds the FastAPI game server, the
-hosted wrapper that Vercel runs, the TypeScript client in
-[`webclient/`](webclient/README.md), and the deploy pipeline in `deploy/`.
-Build the client once, then run the local server:
+`src/browser/` holds the browser game's TypeScript client in
+[`webclient/`](webclient/README.md) and the deploy notes in
+[`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md). The game's Python side lives in
+`src/stl/server/`. Build the client once, then run the local server:
 
 ```powershell
 npm --prefix src/browser/webclient run build
-uv run python -m browser
+uv run python -m stl serve
 ```
 
 ## Boundaries
 
-- Browser imports `arena`, `stl.game`, and `stl.dth`. No project imports
-  browser.
-- Browser imports no `torch`, `gymnasium`, `stable_baselines3`, or
-  `sb3_contrib`. `tests/test_runtime_imports.py` and `tests/test_manifest.py`
-  check the hosted runtime in a fresh interpreter.
-- `arena.policies.registry` builds Hal for `python -m browser`:
-  `--hal-agent exact` (the default) or `--hal-agent translated`.
-- `app.py` holds the player-facing rules text. The client's character frames
-  are static files under `webclient/public/art/`.
-- `tests/fakes.py` holds the fakes that more than one browser test shares.
+- `stl.server` imports `stl.hal`, `stl.dth` and `stl.game`. No other module
+  imports it.
+- The hosted entry `stl.server.hosted` loads no numba and no training stack.
+  `tests/server/test_deploy.py` checks this in a fresh interpreter, from a
+  copy of the sources as the bundle holds them.
+- `python -m stl serve` builds Hal with `stl.hal.make_hal`: `--hal translated`
+  (the default) or `--hal exact` (the certified DTH equilibrium).
+- `stl/server/app.py` holds the player-facing rules text. The client's
+  character frames are static files under `webclient/public/art/`.
+- `tests/conftest.py` holds the fakes that more than one test shares.
 
 ## Server invariants
 
-`app.py` serves the TypeScript client in `webclient/`. It builds its
-provider once at startup, because provider construction memory-maps a
-multi-gigabyte artifact, which must not happen on a request path. `schema.py` holds the only
-serializer that faces the browser, so the seat-scoping rule has exactly one
-place to be enforced and one place to be tested. `arena.session.PlaySession`
-samples Hal's action inside `submit`, after the human's second is accepted;
-`src/arena/README.md` states that hidden-information guarantee.
+`stl/server/app.py` serves the TypeScript client in `webclient/`. It builds
+its provider once at startup, because provider construction memory-maps a
+multi-gigabyte artifact, which must not happen on a request path.
+`snapshot_from_session` in the same module is the only serializer that faces
+the browser, so the seat-scoping rule has exactly one place to be enforced and
+one place to be tested. `stl.server.session.PlaySession` samples Hal's action
+inside `submit`, after the human's second is accepted; `src/stl/README.md`
+states that hidden-information guarantee.
 
-The browser server is one repeated-opponent series: one Hal is retained across games, game
-`N` is seeded with the base seed plus `N`, and every finished game is appended
-to a public transcript in the `arena-public-play-session-v1` shape. `GET
-/api/transcript` serves that transcript plus the live game's resolved
-half-rounds, and `--transcript PATH` rewrites the same JSON after every
-finished game. It also accepts `--public-hal-label`, `--conceal-hal-details`,
-and `--pure-dth`.
-When `webclient/dist/` has been built, the Python server serves it at `/`, so
-one process is the whole game.
+The browser server is one repeated-opponent series: one Hal is retained across
+games, game `N` is seeded with the base seed plus `N`, and every finished game
+is appended to a public transcript in the `arena-public-play-session-v1`
+shape. `GET /api/transcript` serves that transcript plus the live game's
+resolved half-rounds. When `webclient/dist/` has been built, the Python server
+serves it at `/`, so one process is the whole game.
 
-`--human-name` and the web session's `human_name` are presentation labels
-only; they never replace Baku's rule-bearing identity. `Hal` is reserved as a
-display label. Browser session
-replacement is a sequenced mutation, is allowed only before play or after a
-terminal acknowledgement, and advances the sequence across the replacement.
-Browser snapshots carry
-server-owned character, role, and winner-seat fields, so the client never
-infers identity from presentation labels.
+The web session's `human_name` is a presentation label only; it never
+replaces Baku's rule-bearing identity. `Hal` is reserved as a display label.
+Browser session replacement is a sequenced mutation, is allowed only before
+play or after a terminal acknowledgement, and advances the sequence across the
+replacement. Browser snapshots carry server-owned character, role, and
+winner-seat fields, so the client never infers identity from presentation
+labels.
 
 The browser requests a sequenced restart on page load. This abandons the active
 game and clears the visible series before returning the title page. Ordinary
@@ -58,56 +55,43 @@ session reads still recover state for stale-request handling and worker replay.
 
 ## Hosted sessions
 
-The Vercel entrypoint uses `hosted.py` and `deploy/production.py` to isolate
-players with secure cookies and Redis command logs. `redis_store.py` holds the
-Upstash store and its atomic compare-and-set. The entrypoint replays accepted commands
-through the same local HTTP adapter and commits each mutation before returning
-a reveal. A process keeps the game it last served and rebuilds it from the
-command log only when Redis shows that the game moved on elsewhere.
-`ledger.py` then writes the game's public history to Supabase,
-and `GET /api/leaderboard` ranks each player's best win by the winner's
-seconds of life left. A restart and a next game each replace the record with fresh seeds, an empty
-command list, and the next sequence number, so replay covers only the current
-game. The hosted exact Hal keeps no memory. You can opt into translated Hal
-with `STL_HAL_POLICY=translated-v1`. The hosted adapter then stores a private
-opponent checkpoint with each game record and restores it before command
-replay. Reload and next-game requests retain that evidence. Separate cookies
-keep separate models; workers share the immutable tablebase. The local server
+The Vercel entry `stl.server.hosted.create_production_app` serves translated
+Hal. It isolates players with secure cookies and Redis command logs, and
+`RedisSessionStore` holds the Upstash store and its atomic compare-and-set.
+The entry replays accepted commands through the same local HTTP app and
+commits each mutation before returning a reveal. A process keeps the game it
+last served and rebuilds it from the command log only when Redis shows that
+the game moved on elsewhere. `SupabaseLedger` writes the game's public history
+to Supabase, and `GET /api/leaderboard` ranks each player's best win by the
+winner's seconds of life left. A restart and a next game each replace the
+record with fresh seeds, an empty command list, and the next sequence number,
+so replay covers only the current game. Translated Hal's opponent evidence is
+stored as a private checkpoint with each game record and restored before
+command replay, so reload and next-game requests retain it. Separate cookies
+keep separate models; workers share the immutable table. The local server
 keeps one repeated-opponent series.
 
 ## Deployment
 
-[`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md) holds the certified recurrence
-build, the local launch commands, and the Vercel pipeline. The browser keeps
-the existing commit-before-sampling and reveal contracts.
+[`deploy/DEPLOYMENT.md`](deploy/DEPLOYMENT.md) holds the certified table
+build, the local launch commands, and the Vercel pipeline.
 
-- `deploy/manifest.py` is the one list of the hosted runtime's files.
-  `deploy/prepare_vercel.py` copies each file to `runtime/<path>` in the
-  bundle, and `deploy/production.py` hashes the files with an `in_version`
-  flag into the hosted code version. `tests/test_manifest.py` fails when the
-  production entry imports a first-party module that the list omits. Add a
-  runtime file to the list in the change that adds its import.
-- The bundle keeps the repository layout below `runtime/` and ships the DTH
-  table at `runtime/artifacts/dth/V.npy`. `prepare_vercel` rechecks 1,200
-  classes, hashes `V.npy`, and passes the sha256 to `create_production_app`,
-  which adds it to the hosted code version.
-- A change to a file in the version ends every live hosted session at the
-  next deploy. `names.py` stays out of the version, so a word-list change does
-  not end games.
-- `prepare_vercel` reads the pins of the bundle's packages from the root
-  `uv.lock`, writes the bundle to the ignored `build/vercel/`, and
+- `uv run --isolated --python 3.13 python -m stl deploy` builds the bundle in
+  the ignored `artifacts/vercel/`, runs `vercel build`, adds 3.13 bytecode,
+  and deploys a preview.
+- The bundle holds every `src/stl` Python file under `runtime/src/` and the
+  DTH table at `runtime/artifacts/dth/V.npy`. `stl.server.deploy.prepare`
+  rechecks 1,200 classes and computes the hosted code version from the
+  sha256 of the copied Python files and of `V.npy`, and writes it into the
+  bundle's `app.py`.
+- A change to any `src/stl` Python file ends every live hosted session at the
+  next deploy.
+- The bundle takes the pins of its packages from the root `uv.lock` and
   copies the ignored Vercel project link from `.vercel/project.json`.
-
-## Environment
-
-The root `pyproject.toml` declares FastAPI, uvicorn, httpx, and pydantic, and
-the root `uv.lock` pins them. The browser code ships in the root `stl-solver`
-package.
 
 ## Working in this subtree
 
-Run `uv run python -m pytest src/browser/tests -q`. The root suite collects
-these tests too. The client is not covered by
+Run `uv run python -m pytest tests/server -q`. The client is not covered by
 `pytest`; run `npm --prefix src/browser/webclient test`,
 `npm --prefix src/browser/webclient run typecheck`, and
 `npm --prefix src/browser/webclient run build` after a client change. The

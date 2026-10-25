@@ -32,8 +32,8 @@ paper/*.aux
 paper/*.fdb_latexmk
 paper/*.fls
 paper/*.out
-# Built tables: artifacts/dth/V.npy from python -m stl.dth_kernel and
-# artifacts/leap from python -m stl.leap.
+# Built tables and the deploy bundle: artifacts/dth/V.npy from python -m stl dth,
+# artifacts/leap from python -m stl leap, and artifacts/vercel from python -m stl deploy.
 artifacts/
 
 # Training artifacts
@@ -59,12 +59,10 @@ src/dth_ocaml/bisect*.coverage
 !src/browser/webclient/public/art/**/*.png
 !web/public/art/**/*.png
 
-# Browser app: client dependencies and build, and the Vercel bundle. The
-# unanchored outputs/ and .vercel patterns cover src/browser/outputs/ and the
-# project link in src/browser/.vercel/.
+# Browser client: dependencies and build. The .vercel pattern below covers
+# the Vercel project link in .vercel/.
 src/browser/webclient/node_modules/
 src/browser/webclient/dist/
-src/browser/build/
 
 # OS/editor noise
 .DS_Store

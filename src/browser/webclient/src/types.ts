@@ -1,4 +1,4 @@
-// Mirrors browser/schema.py. Kept by hand; a Python test asserts field names,
+// Mirrors the wire models in src/stl/server/app.py. Kept by hand; a Python test asserts field names,
 // types, nullability, and requiredness so drift fails before browser runtime.
 
 export type Phase = "rules" | "awaiting_action" | "awaiting_ack" | "game_over";
@@ -40,7 +40,6 @@ export interface Snapshot {
   sequence: number;
   phase: Phase;
   game_index: number;
-  pure_dth: boolean;
   human_name: string;
   clock_display: string;
   clock_seconds: number;
@@ -82,7 +81,6 @@ export interface Leaderboard {
 export interface Rules {
   human_name: string;
   hal_label: string;
-  pure_dth: boolean;
   lines: string[];
 }
 
@@ -123,7 +121,7 @@ export interface Tally {
   stopped: number;
 }
 
-/** GET /api/transcript: the CLI's play-session transcript plus the live game. */
+/** GET /api/transcript: the public series transcript plus the live game. */
 export interface Transcript {
   schema_version: string;
   hal_agent: string;
@@ -131,7 +129,6 @@ export interface Transcript {
   human_name: string;
   base_seed: number | null;
   start_clock: number;
-  pure_dth: boolean;
   games: FinishedGame[];
   tally: Tally;
   current_game: {

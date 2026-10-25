@@ -13,17 +13,14 @@
   leap artifact through `stl.leap` and the DTH table through `stl.dth`,
   and import no other project module.
 - `docs/papers/` owns primary evidence and cited literature.
-- `src/stl/` and `src/dth_ocaml/` are peer projects. They must not import one another. `src/arena/` is the game library
-  that the browser app uses: it may consume their public interfaces, but they
-  must not import it or one another.
+- `src/stl/` and `src/dth_ocaml/` are peer projects. They must not import one another.
 - `src/formal/` is a Lean project that machine-checks the solvers' mathematics.
   It imports no other project, and no project imports it.
-- `src/browser/` is the browser game app, `python -m browser`: the FastAPI
-  server, the TypeScript client in `src/browser/webclient/`, and the Vercel
-  deploy pipeline in `src/browser/deploy/`. It may import `arena`,
-  `stl.game`, and `stl.dth`, and no project imports it. The client renders
-  state and collects input; it never derives game rules and never receives an
-  unrevealed action.
+- `src/stl/server/` is the browser game's Python side: the session, the
+  FastAPI routes, the hosted Vercel entry and the deploy pipeline. `python -m
+  stl serve` runs it locally. `src/browser/webclient/` holds the TypeScript
+  client. The client renders state and collects input; it never derives game
+  rules and never receives an unrevealed action.
 - Each project owns its configs, docs, tests, checkpoints, and outputs.
 - Generated data must remain gitignored. The character frames under
   `src/browser/webclient/public/art/` are source art, not generated data, and
@@ -44,23 +41,20 @@ The table lists the import rules of each project. No test enforces them.
 | --- | --- | --- |
 | Peers | `stl`, `dth_ocaml`, `dth_cpp` | No other project |
 | Proofs | `formal` | Nothing |
-| Library | `arena` | `stl.game`, `stl.leap`, `stl.dth` |
-| App | `browser` | `arena`, `stl.game`, `stl.dth` |
 | Consumer | `paper` | `stl.leap`, `stl.dth` |
 
-- No project imports `browser`, and `arena` imports no `browser` module.
+- Inside `stl`, `hal.py` imports `stl.dth` and `stl.game`, and `server/`
+  imports `hal`, `dth` and `game`. No module below `server/` imports it.
 - `paper` owns no importable module. `stl.leap.open_leap` is the one read
   path into a completed leap artifact.
-- Inside `arena`, `contracts.py`, `agent.py`, `session.py`, and
-  `variants.py` import `stl.game` and each other alone. `stl.dth` enters
-  through the adapters and `arena/policies/`.
-- No project imports `torch`, `gymnasium`, `stable_baselines3`, or
-  `sb3_contrib`. `arena/policies/__init__.py` imports nothing.
+- No module imports `torch`, `gymnasium`, `stable_baselines3`, or
+  `sb3_contrib`. The hosted entry `stl.server.hosted` loads no numba;
+  `tests/server/test_deploy.py` checks both in a fresh interpreter.
 - The `file:line` citations in `src/formal` read against commit `938fb25`.
 
 ## Fingerprints and locks
 
-- `python -m stl.dth_kernel` writes the ignored `artifacts/dth/V.npy`
+- `python -m stl dth` writes the ignored `artifacts/dth/V.npy`
   (sha256 `e43977b7...`), which the leap manifest binds by hash.
   `stl.dth.Table.open` fails closed on its shape and the six anchors. No
   lock enters a DTH digest.
@@ -70,7 +64,7 @@ The table lists the import rules of each project. No test enforces them.
   `leap_kernel.py` by package-relative name, and a resume refuses a changed
   hash. Do not start or resume a leap build across an edit to those three
   files.
-- `python -m stl.leap` writes the ignored `artifacts/leap` (82 GB), whose
+- `python -m stl leap` writes the ignored `artifacts/leap` (82 GB), whose
   manifest binds the sha256 of `artifacts/dth/V.npy`.
 - The STL leap kernel `src/stl/leap_kernel.py` is numba code. Its first call
   compiles it into the ignored `src/stl/__pycache__/`; `NUMBA_CACHE_DIR`
@@ -78,8 +72,11 @@ The table lists the import rules of each project. No test enforces them.
   Rust kernel's outputs.
 - One root `pyproject.toml` and one `uv.lock` cover every Python package,
   the browser server included. The deploy bundle takes its package pins from
-  that lock. A leap resume refuses a changed Python, numpy, numba or HiGHS
-  version through its checkpoint identity.
+  that lock. `python -m stl deploy` computes the hosted code version from the
+  sha256 of every `src/stl` Python file and of `V.npy`, so any change to
+  them ends live hosted sessions once at the next deploy. A leap resume
+  refuses a changed Python, numpy, numba or HiGHS version through its
+  checkpoint identity.
 
 ## Frozen global rules
 
@@ -104,7 +101,7 @@ The table lists the import rules of each project. No test enforces them.
   `src/dth_ocaml/play/` is a second dune package that holds the CS 3110 STL
   engine and its terminal UI. The solver library does not link it.
 - `stl.dth` and `stl.dth_kernel` are the paper's solver of **pure DTH**, held
-  to the 1e-6 saddle-gap gate, and `stl.dth.Table` is the arena's one DTH
+  to the 1e-6 saddle-gap gate, and `stl.dth.Table` is Hal's one DTH
   table. `src/c/fast_kernel.c` is the retired C recurrence kernel; no code
   calls it.
 - `docs/FORMULATION_LADDER.md` fixes which games are claimed at all. Work that
@@ -131,7 +128,7 @@ unchecked.
 
 `pytest` runs distributed at `-n 8`. Add `-n 0` for a readable serial
 traceback when something fails. The hosted runtime runs on Python 3.13, so CI
-also runs `uv run --locked --python 3.13 python -m pytest src/browser/tests -q -n 0`.
+also runs `uv run --locked --python 3.13 python -m pytest tests/server -q -n 0`.
 
 Everything runs by default, including the `slow` tests that build real complete
 artifacts end to end — they are the only coverage of resume and backend

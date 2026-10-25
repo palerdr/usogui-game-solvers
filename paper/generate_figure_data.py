@@ -3,7 +3,7 @@
 Both come from the DTH solver in ``stl.dth``: the layer widths are a census of
 its profile buckets, and the root strategies are the equalizer pair
 (Proposition "One recurrence, both strategies") re-derived from the finished
-table ``artifacts/dth/V.npy``, which ``uv run python -m stl.dth_kernel``
+table ``artifacts/dth/V.npy``, which ``uv run python -m stl dth``
 writes. Run from the repository root:
 
     uv run python paper/generate_figure_data.py
@@ -51,7 +51,7 @@ def write_root_strategies(table, V: np.ndarray) -> None:
 def main() -> None:
     values = solver.DEFAULT_PATH
     if not values.is_file():
-        raise SystemExit(f"missing {values}; run `uv run python -m stl.dth_kernel` first")
+        raise SystemExit(f"missing {values}; run `uv run python -m stl dth` first")
     table = solver.build_table()
     V = np.load(values, mmap_mode="r")
     if V.shape != (solver.N, solver.N + 1):
