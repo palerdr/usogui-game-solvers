@@ -7,8 +7,8 @@
     use. Both negate a live child's value, because every live edge swaps the
     seats. *)
 
-(** Canonical role-relative order, matching [src/dth/solver.py]:
-    [(checker_load, checker_ttd, dropper_load, dropper_ttd)]. *)
+(** Canonical role-relative order, documented in [docs/DTH.md] sections 2 and
+    4.2: [(checker_load, checker_ttd, dropper_load, dropper_ttd)]. *)
 type state = int * int * int * int
 
 type outcome =

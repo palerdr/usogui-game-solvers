@@ -1,6 +1,6 @@
-(* Canonical role-relative order, matching the Python authority in
-   src/dth/solver.py and the class encoding further down this file: Checker
-   load, Checker TTD, Dropper load, Dropper TTD. *)
+(* Canonical role-relative order, documented in docs/DTH.md sections 2 and 4.2
+   and matching the class encoding further down this file: Checker load, Checker
+   TTD, Dropper load, Dropper TTD. *)
 type state = int * int * int * int
 
 type outcome =

@@ -1,7 +1,7 @@
 # Claims ledger
 
 This file maps the core DTH and STL claims, and the extended library, to the
-Lean declarations that prove them. `lake -d src/lean build` checks every declaration and fails if
+Lean declarations that prove them. `(cd src/lean && lake build)` checks every declaration and fails if
 one depends on `sorry` or on an axiom other than `propext`,
 `Classical.choice`, and `Quot.sound`.
 

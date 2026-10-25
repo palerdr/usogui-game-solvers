@@ -22,7 +22,7 @@ let action_count = 60
    more than rounding slack means the caller built the matrix wrong. *)
 let payoff_slack = 1e-9
 
-(* The bound src/dth/docs/GAME_AND_SOLVER.md publishes for the peer solver. *)
+(* The historical peer bound in src/dth/docs/GAME_AND_SOLVER.md at 938fb25. *)
 let saddle_gap_tolerance = 1e-6
 
 (* GLPK's default primal feasibility tolerance is 1e-7, so an optimal basis

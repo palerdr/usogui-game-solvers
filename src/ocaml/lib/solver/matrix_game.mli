@@ -14,8 +14,9 @@ exception Uncertified of string
 
 (** The gate every accepted certificate must satisfy,
     [max_d (Mq)_d - min_c (M^T p)_c <= 1e-6]. This is the bound
-    [src/dth/docs/GAME_AND_SOLVER.md] states for the peer DTH solver; the two
-    projects stay independent but are held to the same number. *)
+    [src/dth/docs/GAME_AND_SOLVER.md] states at commit [938fb25] for the peer
+    DTH solver; the two projects stay independent but are held to the same
+    number. *)
 val saddle_gap_tolerance : float
 
 (** [solve_certified m] solves both players' linear programs with GLPK and
