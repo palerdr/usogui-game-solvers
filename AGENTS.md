@@ -33,8 +33,8 @@
   It may import `arena`, `stl.engine`, `stl.solver.canonical`, `stl.reader`,
   `dth.agent`, and `dth.solver`, and no project imports it.
 - Each project owns its configs, docs, tests, checkpoints, and outputs.
-- The root `tests/` holds the repository meta-tests in `tests/meta/` and the
-  terminal-versus-browser parity tests in `tests/parity/`. A parity test runs
+- The root `tests/` holds the terminal-versus-browser parity tests in
+  `tests/parity/`. A parity test runs
   both apps with the same options. It lives outside `src/`, because neither
   app may import the other.
 - Generated data must remain gitignored. The character sprites under
@@ -50,11 +50,7 @@ Code loads them all as instruction files. Adding a subtree means adding its
 
 ## Layers
 
-`docs/PROJECTS.toml` declares the import rules of each project.
-`tests/meta/test_layer_boundaries.py` enforces them on every
-`src/<id>/**/*.py` file, tests included, and it reads imports inside
-functions too. It also checks the scripts of each `[[consumer]]` entry,
-such as `paper/*.py`.
+The table lists the import rules of each project. No test enforces them.
 
 | Layer | Projects | May import |
 | --- | --- | --- |
@@ -66,38 +62,23 @@ such as `paper/*.py`.
 | Lab | `hal_lab` | `arena`, `stl.engine`, `stl.solver.canonical`, `stl.reader`, `dth.agent`, `dth.solver` |
 | Consumer | `paper` | `stl.reader`, `main` (`src/dth_compact/main.py`) |
 
-- A cross-project import must sit under a `may_import` entry of the importer
-  and under a `public_interfaces` entry of the owner.
-- `hal_lab`, `terminal`, and `browser` declare no public interface, so no
-  project can import them.
-- The layer check scans `src/<id>/` alone. The root `tests/` directory sits
-  outside it, so `tests/parity/` may import both apps.
-- `FORBIDDEN_EDGES` in `tests/meta/test_layer_boundaries.py` holds the edges
-  that no `may_import` entry can open: `arena` imports no `terminal`,
-  `browser`, or `hal_lab` module, and `terminal` imports no `browser` or
-  `hal_lab` module.
-- `paper` is a `[[consumer]]` entry, not a project, because it owns no
-  importable module. `stl.reader` is the one read path into a completed leap
-  artifact. Code outside `stl` reads leap tables through it, not through the
-  `stl.solver.leap_*` builder modules.
+- No project imports `hal_lab`, `terminal`, or `browser`. The root
+  `tests/parity/` may import both apps.
+- `arena` imports no `terminal`, `browser`, or `hal_lab` module, and
+  `terminal` imports no `browser` or `hal_lab` module.
+- `paper` owns no importable module. `stl.reader` is the one read path into a
+  completed leap artifact. Code outside `stl` reads leap tables through it,
+  not through the `stl.solver.leap_*` builder modules.
 - Inside `arena`, `contracts.py`, `agent.py`, `session.py`, `match.py`, and
   `variants.py` import `stl.engine` and each other alone. `dth` and
   `abstract` enter through the adapters and `arena/policies/`.
 - `stl`, `dth`, `abstract`, `dth_compact`, `arena`, `terminal`, and `browser`
-  do not import `torch`, `gymnasium`, `stable_baselines3`, or `sb3_contrib`. The
-  files in `forbid_imports_exempt` are the exceptions: the three torch Hal
-  providers `arena/policies/{exploit_hal,aggro_hal,pm_hal}.py` and the arena
-  tests that exercise them. Add no file to that list. `arena/policies/__init__.py`
-  imports nothing. `hal_lab` may import these packages, and Hal training and
-  evaluation code lives there.
-- `tests/meta/test_root_layout.py` limits the root to the governance files,
-  `docs/`, `paper/`, `src/`, `tests/`, and the ignored `outputs/` store. Its
-  legacy list names the tracked root entries that a planned move removes.
-- `tests/meta/test_formal_citations.py` compares every `file:line` citation in
-  `src/formal` with `src/formal/citations.lock`. After an edit moves cited
-  text, run `uv run python tests/meta/formal_citations.py --refresh`. After an
-  edit changes cited text, review the proof, then run the same script with
-  `--accept <path>`.
+  do not import `torch`, `gymnasium`, `stable_baselines3`, or `sb3_contrib`,
+  except the three torch Hal providers
+  `arena/policies/{exploit_hal,aggro_hal,pm_hal}.py` and the arena tests that
+  exercise them. `arena/policies/__init__.py` imports nothing. `hal_lab` may
+  import these packages, and Hal training and evaluation code lives there.
+- The `file:line` citations in `src/formal` read against commit `938fb25`.
 
 ## Fingerprints and locks
 

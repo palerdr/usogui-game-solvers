@@ -11,11 +11,9 @@ plan.
 
 ## Boundaries
 
-- [`docs/PROJECTS.toml`](../../docs/PROJECTS.toml) lists the modules that
-  hal_lab may import: `arena`, `stl.engine`, `stl.solver.canonical`,
-  `stl.reader`, `dth.agent`, and `dth.solver`.
-  `tests/meta/test_layer_boundaries.py` enforces the list, and it fails any
-  other project that imports hal_lab.
+- hal_lab may import `arena`, `stl.engine`, `stl.solver.canonical`,
+  `stl.reader`, `dth.agent`, and `dth.solver`. No other project imports
+  hal_lab.
 - hal_lab may import `torch`, `gymnasium`, `stable_baselines3`, and
   `sb3_contrib`. The torch firewall of the other projects stops at this
   directory.

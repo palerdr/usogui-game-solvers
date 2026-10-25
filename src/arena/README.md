@@ -75,7 +75,6 @@ projects must not import it.
 - `testing.py` holds the fakes that the tests of more than one project share,
   such as `StageAgent` and `make_session`. No runtime module imports it.
 - No arena module imports `terminal`, `browser`, or `hal_lab`.
-  `tests/meta/test_layer_boundaries.py` enforces this rule.
 
 ## Play surfaces and the session
 

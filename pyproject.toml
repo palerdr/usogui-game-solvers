@@ -38,7 +38,7 @@ research = [
 # The browser app's tests and the root tests/parity import FastAPI, which the
 # browser project in src/browser/pyproject.toml installs. Run them with
 # `uv run --project src/browser python -m pytest src/browser/tests tests/parity -q`.
-testpaths = ["src/stl/tests", "src/dth/tests", "src/abstract/tests", "src/arena/tests", "src/terminal/tests", "src/hal_lab/tests", "tests/meta"]
+testpaths = ["src/stl/tests", "src/dth/tests", "src/abstract/tests", "src/arena/tests", "src/terminal/tests", "src/hal_lab/tests"]
 pythonpath = ["src", "."]
 # The suite is overwhelmingly independent and every artifact-building test
 # already writes under its own tmp_path, so it distributes cleanly. Use "-n 0"

@@ -1,8 +1,7 @@
 """Local HTTP surface for browser play.
 
 A front end onto the same session as the terminal app (``terminal.cli`` and
-``terminal.tui``). It imports only ``stl.engine`` and ``arena``, the imports
-that ``docs/PROJECTS.toml`` allows the browser app. It shares the
+``terminal.tui``). It imports only ``stl.engine`` and ``arena``. It shares the
 rules text and the prepared art with the terminal through
 ``arena.presentation``, and it never imports the terminal renderer. The STL
 engine remains the only referee; this module sequences requests and serializes

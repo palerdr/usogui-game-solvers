@@ -22,9 +22,6 @@ paper, a certified exact solution of the complete DTH game, lives at
 [`docs/game-sources/reference-art/`](docs/game-sources/reference-art/), and
 cited research lives in [`docs/papers/`](docs/papers/). The OCaml project
 records its authorship in [`src/dth_ocaml/AUTHORS.md`](src/dth_ocaml/AUTHORS.md).
-The machine-readable project catalog is [`docs/PROJECTS.toml`](docs/PROJECTS.toml),
-and [`docs/PROJECT_TEMPLATE.md`](docs/PROJECT_TEMPLATE.md) defines the common
-language-neutral project envelope.
 
 ## Setup
 

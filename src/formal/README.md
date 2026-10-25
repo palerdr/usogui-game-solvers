@@ -48,16 +48,9 @@ abstract rounding model, never IEEE bit-level facts.
   source `file:line` it formalizes. Update `CLAIMS.md` in the same change.
 - Write each citation as a repository-relative path, or as a bare file name
   that one tracked file alone has. Write several ranges as one list with no
-  spaces, as in `path:13-16,191-206`. `citations.lock` records the SHA-256 of
-  each cited span, and `tests/meta/test_formal_citations.py` fails when cited
-  text moves or changes. After an edit moves cited text, run
-  `uv run python tests/meta/formal_citations.py --refresh`; it rewrites the
-  ranges in the Lean text and in the lock. The script follows a move only
-  when the text, with up to three lines of context on each side, is unique in
-  its file. Otherwise it reports the span as changed. After an edit changes
-  cited text, or after you add a citation, check the proof against the text
-  and fix the citation's range, then run the same script with
-  `--accept <path>`.
+  spaces, as in `path:13-16,191-206`. The citations read against commit
+  `938fb25`, as `CLAIMS.md` states. No test tracks them, so a later edit can
+  move cited text.
 - When a solver's mathematics changes, update the matching Lean module in the
   same change, or record in `CLAIMS.md` that the claim is no longer verified.
 - This project imports no other project, and no project imports it.

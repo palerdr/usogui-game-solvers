@@ -281,7 +281,7 @@ You can repeat the local operational check with a new output path:
 ```sh
 uv run --project src/browser python -m browser.deploy.check_translated_hal --artifact src/dth/artifacts/complete_full_v1 --output src/hal_lab/outputs/translated-hal-v1/runtime-review.json
 uv run --project src/browser python -m pytest src/browser/tests tests/parity -q
-uv run python -m pytest src/arena/tests tests/meta -q
+uv run python -m pytest src/arena/tests -q
 npm --prefix src/browser/webclient run typecheck
 ```
 

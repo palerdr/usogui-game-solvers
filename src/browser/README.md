@@ -12,10 +12,8 @@ uv run --project src/browser python -m browser
 
 ## Boundaries
 
-- [`docs/PROJECTS.toml`](../../docs/PROJECTS.toml) lets browser import
-  `arena`, `stl.engine`, and `dth.agent`. `tests/meta/test_layer_boundaries.py`
-  enforces that list. No project imports browser, and browser imports neither
-  `terminal` nor `hal_lab`.
+- Browser imports `arena`, `stl.engine`, and `dth.agent`. No project imports
+  browser, and browser imports neither `terminal` nor `hal_lab`.
 - Browser imports no `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`. `tests/test_runtime_imports.py` and `tests/test_manifest.py`
   check the hosted runtime in a fresh interpreter.

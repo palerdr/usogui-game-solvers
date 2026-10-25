@@ -15,9 +15,8 @@ draws the full-screen ANSI scene that `--tui` selects.
 
 ## Boundaries
 
-- [`docs/PROJECTS.toml`](../../docs/PROJECTS.toml) lets terminal import `arena`
-  and `stl.engine`. `tests/meta/test_layer_boundaries.py` enforces that list
-  and fails any import of `browser` or `hal_lab`. No project imports terminal.
+- Terminal imports `arena` and `stl.engine`, and no `browser` or `hal_lab`
+  module. No project imports terminal.
 - Terminal imports no `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`.
 - `arena.policies.registry` builds Hal. It holds the play choices, the agent

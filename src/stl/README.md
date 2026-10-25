@@ -24,8 +24,8 @@ version-suffixed names.
   `solver/leap_oracle.py` and `solver/leap_support.py` remain its scalar
   authorities, and `tests/test_leap_golden.py` holds it to the outputs of the
   retired Rust kernel.
-- `reader.py` is the public read path into a completed leap artifact
-  (`stl.reader` in `docs/PROJECTS.toml`). Other projects and the paper's
+- `reader.py` is the public read path into a completed leap artifact.
+  Other projects and the paper's
   figure scripts read leap tables through it, not through `solver/`.
   `open_leap()` checks the manifest schema, the complete flag, and the SHA-256
   of the DTH tail before it returns a table. `verify="files"` also re-hashes

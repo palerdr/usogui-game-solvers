@@ -5,6 +5,11 @@ Lean declarations that prove them. `lake -d src/formal build` checks every decla
 one depends on `sorry` or on an axiom other than `propext`,
 `Classical.choice`, and `Quot.sound`.
 
+Every `file:line` citation in the Lean docstrings and in this file reads
+against commit `938fb25` (`938fb25162f2cbf32b7b4e80982f60b6bc42f7b9`). Later
+commits move and delete the cited files, so open a citation with
+`git show 938fb25:<path>`.
+
 ## Pure DTH (`paper/dth_exact_solution.tex`)
 
 | Claim | Source | Lean |
