@@ -10,8 +10,8 @@ link. Each bundle gets a new session version. Hosted replay discards records
 from an older deployment so it cannot replay old games through changed rules.
 
 ``ship`` runs ``vercel build``, adds Python 3.13 bytecode to the built
-function, and uploads it as a preview. Promote a preview by hand after one
-game on it.
+function, and uploads it as a preview. After preview checks, follow the
+README's staged-production procedure to preserve the prepared bytecode.
 """
 
 from __future__ import annotations
