@@ -340,16 +340,6 @@ def test_rules_text_is_served_for_the_opening_screen() -> None:
     assert len(payload["lines"]) > 0
 
 
-def test_missing_art_is_a_404_rather_than_a_crash() -> None:
-    class _EmptyArt:
-        def frame(self, character, pose, index):
-            del character, pose, index
-            return None
-
-    app = create_app(hal_factory=_StubHal, art_loader=_EmptyArt, webclient_dist=None)
-    assert TestClient(app).get("/art/baku/idle/0.png").status_code == 404
-
-
 @pytest.mark.parametrize("phase_endpoint", ["ack", "action"])
 def test_transitions_are_refused_from_the_rules_phase(phase_endpoint: str) -> None:
     client = _client()
@@ -542,16 +532,3 @@ def test_a_missing_build_is_explained_rather_than_a_404(tmp_path) -> None:
     response = TestClient(app).get("/")
     assert response.status_code == 200
     assert "npm --prefix src/browser/webclient run build" in response.text
-
-
-def test_only_known_panels_are_served() -> None:
-    client = _client()
-    assert client.get("/art/panel/nope").status_code == 404
-    assert client.get("/art/panel/stl_rules.png").status_code == 404
-    assert client.get("/art/panel/../stl_rules").status_code in (404, 422)
-    response = client.get("/art/panel/stl_rules")
-    if response.status_code == 200:
-        assert response.headers["content-type"] == "image/png"
-        assert response.content[:8] == b"\x89PNG\r\n\x1a\n"
-    else:
-        assert response.status_code == 404

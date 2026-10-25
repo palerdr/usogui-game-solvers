@@ -15,8 +15,6 @@ public interfaces from `stl` and `dth`, and those projects must not import it.
   window; arena keeps that canonical action even though DTH has no 61 policy.
 - Projection adapters may not alter canonical game state or transitions.
 - Keep generated artifacts in the owning project, never under `src/arena/`.
-  The ignored prepared-frame cache `art/.sprite-cache/` is the one exception,
-  because it derives from the art beside it.
 - `policies/` holds the two Hal providers. `perfect_hal.py` is the base
   opponent model and `translated_hal.py` the production translated Hal, which
   `translated_hal_adapter.py` wraps with the exact leap-window fallback.
@@ -26,15 +24,6 @@ public interfaces from `stl` and `dth`, and those projects must not import it.
 - `policies/__init__.py` imports nothing. Import each provider from its own
   module. `src/browser/tests/test_runtime_imports.py` checks this in
   a fresh interpreter.
-- `presentation/` holds the sprite pipeline (`sprites.py`, `scene_art.py`) and
-  the player-facing rules text (`rules_text.py`). The browser reads it. Art
-  paths resolve from the package, so the art loads from any working directory.
-- `art/` holds the runtime art that `presentation/scene_art.py` reads: the
-  character sprites in `art/sprites/` and the rules spread
-  `art/panels/stl_rules.png`, which the browser server serves. Git tracks both.
-  `browser.deploy.prepare_vercel` pre-renders them into the Vercel bundle.
-  The manga reference images live in
-  [`docs/game-sources/reference-art/`](../../docs/game-sources/reference-art/).
 - `variants.py` holds `PureDTHGame`. `contracts.py`, `agent.py`, `session.py`,
   and `variants.py` import no project except `stl.engine`; `dth` enters
   through the adapters and `policies/`.

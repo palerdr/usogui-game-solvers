@@ -1,9 +1,8 @@
 """Local HTTP surface for browser play.
 
 A front end onto the same session as the terminal app (``terminal.cli`` and
-``terminal.tui``). It imports only ``stl.engine`` and ``arena``. It shares the
-rules text and the prepared art with the terminal through
-``arena.presentation``, and it never imports the terminal renderer. The STL
+``terminal.tui``). It imports only ``stl.engine`` and ``arena``. The client
+serves its pre-rendered character frames from ``webclient/public/art``. The STL
 engine remains the only referee; this module sequences requests and serializes
 state.
 
@@ -26,14 +25,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from arena.presentation.rules_text import rules_body
-from arena.presentation.scene_art import PANEL_ROOT, SceneArt
-from arena.presentation.sprites import encode_png
 from arena.session import (
     CANONICAL_HAL_NAME,
     CANONICAL_HUMAN_NAME,
@@ -62,9 +58,25 @@ from stl.engine.game import (
 
 HalFactory = Callable[[], object]
 
-# Manga panels the client may request by name, under PANEL_ROOT. The rules
-# spread opens the game; it is the page the chapter states its rules on.
-PANELS = {"stl_rules": ("stl_rules.png", "image/png")}
+# The player-facing rules that the opening screen shows.
+RULES = (
+    "GOAL — Be the last player alive.",
+    "",
+    "EACH HALF-ROUND",
+    "Dropper secretly chooses a handkerchief-drop second from 1..60.",
+    "Checker independently chooses a check second from 1..60 (1 is immediate).",
+    "Second 0 and passing are illegal; check succeeds when check >= drop.",
+    "ST means Squandered Time.",
+    "A success adds ST = check - drop + 1 to the Checker's vial.",
+    "",
+    "FAILED CHECK, DEATH, AND REVIVAL",
+    "A failed check injects q = current vial ST + 60 seconds.",
+    "q >= 300 or TTD + q > 300 is fatal; equality is eligible when q < 300.",
+    "TTD means Total Time Dead; every revived dose is added to it.",
+    "Revival chance falls as vial ST and prior TTD rise.",
+    "A revival clears vial ST.",
+    "Roles swap after every half-round that both players survive.",
+)
 
 TRANSCRIPT_SCHEMA = "arena-public-play-session-v1"
 
@@ -186,7 +198,6 @@ def create_app(
     hal_factory: HalFactory,
     config: SessionConfig | None = None,
     series: SeriesConfig | None = None,
-    art_loader: Callable[[], object] | None = None,
     webclient_dist: Path | None = DEFAULT_WEBCLIENT_DIST,
     sequence_start: int = 0,
 ) -> FastAPI:
@@ -241,7 +252,6 @@ def create_app(
         "games": [],
     }
     tally = {"human_wins": 0, "hal_wins": 0, "no_winner": 0, "stopped": 0}
-    art_cache: dict[str, object] = {}
 
     def _session() -> PlaySession:
         session = state["session"]
@@ -301,7 +311,7 @@ def create_app(
             "human_name": _session().human_display_name,
             "hal_label": series_config.hal_label,
             "pure_dth": base_config.pure_dth,
-            "lines": list(rules_body()),
+            "lines": list(RULES),
         }
 
     @app.get("/api/session", response_model=Snapshot)
@@ -449,36 +459,6 @@ def create_app(
             if not series_config.conceal_hal_details:
                 payload.update(_hal_details())
             return payload
-
-    @app.get("/art/panel/{name}")
-    def panel(name: str) -> Response:
-        """A manga panel from ``PANEL_ROOT``, by bare name; only known names."""
-
-        entry = PANELS.get(name)
-        if entry is None:
-            raise HTTPException(status_code=404, detail=f"no panel {name}")
-        filename, media_type = entry
-        path = PANEL_ROOT / filename
-        if not path.is_file():
-            raise HTTPException(status_code=404, detail=f"panel {name} is not on disk")
-        return Response(
-            content=path.read_bytes(),
-            media_type=media_type,
-            headers={"Cache-Control": "no-cache"},
-        )
-
-    @app.get("/art/{character}/{pose}/{index}.png")
-    def frame(character: str, pose: str, index: int) -> Response:
-        if "art" not in art_cache:
-            art_cache["art"] = (art_loader or SceneArt.load)()
-        sprite = art_cache["art"].frame(character, pose, index)
-        if sprite is None:
-            raise HTTPException(status_code=404, detail=f"no art for {character}/{pose}")
-        return Response(
-            content=encode_png(sprite),
-            media_type="image/png",
-            headers={"Cache-Control": "no-cache"},
-        )
 
     if webclient_dist is not None and (webclient_dist / "index.html").is_file():
 

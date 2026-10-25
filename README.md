@@ -9,7 +9,7 @@ This repository contains deliberately separate game-solving projects:
 | `src/dth_compact/` | The paper's solver: one numba file that builds the complete 289,374,121-class table in about 49 s | Pure DTH; literal seconds 1..60 |
 | `src/dth_ocaml/` | Hand-written exact OCaml reference; `play/` keeps the CS 3110 STL engine and terminal UI | Pure DTH with literal seconds 1..60 and the repository-wide frozen revival model |
 | `src/dth_cpp/` | In-progress native exact DTH implementation | Pure DTH; build order and root integration remain subtree-owned while work is active |
-| `src/arena/` | Game library: session, provider adapters, exact and translated Hal, shared presentation and its art | Canonical STL referee with pluggable policy-provider adapters |
+| `src/arena/` | Game library: session, provider adapters, exact and translated Hal | Canonical STL referee with pluggable policy-provider adapters |
 | `src/browser/` | Browser game app: `python -m browser`, the TypeScript client, and the hosted Vercel deployment | Canonical STL, or pure DTH with `--pure-dth`, through `src/arena/` |
 
 Repository-wide game contracts live in [`docs/`](docs/). The mathematical

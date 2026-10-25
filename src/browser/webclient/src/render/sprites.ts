@@ -1,12 +1,6 @@
-// Frames come from the Python server already keyed, mirrored, and split.
-//
-// That is deliberate. `Sprite.keyed` (src/arena/presentation/sprites.py) clears
-// the paper by flood-filling inward from the border, not by thresholding
-// brightness — a threshold would punch holes through Baku's white coat and the
-// handkerchief.
-// The sheet splitter also repairs figures that straddle a quarter boundary.
-// Reimplementing either here would be a second, divergent implementation of
-// art the terminal front end has already validated, so we do not.
+// Frames are static PNGs under public/art/<character>/<pose>/0.png, already
+// keyed, mirrored, and split. The Python sprite pipeline that prepared them is
+// in git history at commit 938fb25 (src/arena/presentation/).
 
 export type Character = "baku" | "hal" | "yakou";
 export type Pose = "idle" | "dropping" | "seated" | "standing" | "win_screen";
@@ -21,9 +15,8 @@ function key(character: Character, pose: Pose, index: number): string {
 /**
  * A frame, or null while it loads or if the art is absent.
  *
- * Art is optional by design — the terminal degrades to labelled placeholders
- * and so does this. Returning null rather than throwing keeps a missing sprite
- * from taking down the frame loop.
+ * A missing frame draws a labelled placeholder. Returning null rather than
+ * throwing keeps a missing sprite from taking down the frame loop.
  */
 export function frame(character: Character, pose: Pose, index: number): HTMLImageElement | null {
   const id = key(character, pose, index);

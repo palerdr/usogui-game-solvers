@@ -19,8 +19,8 @@ uv run --project src/browser python -m browser
   check the hosted runtime in a fresh interpreter.
 - `arena.policies.registry` builds Hal for `python -m browser`:
   `--hal-agent exact` (the default) or `--hal-agent translated`.
-- The browser reads the rules text and the prepared art from
-  `arena.presentation`.
+- `app.py` holds the player-facing rules text. The client's character frames
+  are static files under `webclient/public/art/`.
 - `tests/fakes.py` holds the fakes that more than one browser test shares.
 
 ## Server invariants

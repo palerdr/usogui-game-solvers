@@ -19,12 +19,11 @@ instruction file; the browser's binding guidance is `src/browser/README.md`.
   reach the client only in `last_outcome`, after the half-round has resolved.
   If a screen needs a value that is not in the snapshot, the answer is that it
   is not knowable yet, not that the schema needs widening.
-- **Sprites are prepared server-side.** `/art/{character}/{pose}/{index}.png`
-  returns frames that are already keyed, mirrored, and split. Do not re-implement
-  `Sprite.keyed` or the sheet splitter in TypeScript; both are subtle
-  (`src/arena/presentation/`) and already validated by the terminal front end.
-  Frames are reduced once to a coarse pixel grid by a smooth downsample and
-  then blown up with hard edges (`pixelated` in `scene.ts`). Sampling the
+- **Sprites are static files.** `public/art/{character}/{pose}/0.png` holds
+  frame 0 of each of the 10 poses the scene draws, already keyed, mirrored, and
+  split. The Python pipeline that prepared them is in git history at commit
+  `938fb25`, under `src/arena/presentation/`. Frames are reduced once to a
+  coarse pixel grid by a smooth downsample and then blown up with hard edges (`pixelated` in `scene.ts`). Sampling the
   full-size frame with nearest neighbour instead picked different source
   pixels on each idle frame, which shimmered white round Yakou's edge.
 - `src/types.ts` mirrors `src/browser/schema.py` by hand. A Python test
@@ -150,8 +149,8 @@ uv run --project src/browser python -m browser    # game on 127.0.0.1:8000
 
 `python -m browser` takes the same agent, seed, start-clock, label,
 transcript, and `--pure-dth` options as `python -m terminal play`. For client
-development run the Vite server instead, which proxies `/api` and `/art` to the
-Python server:
+development run the Vite server instead, which serves `public/art` itself and
+proxies `/api` to the Python server:
 
 ```bash
 uv run --project src/browser python -m browser    # server on 127.0.0.1:8000

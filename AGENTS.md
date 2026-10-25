@@ -26,9 +26,9 @@
   state and collects input; it never derives game rules and never receives an
   unrevealed action.
 - Each project owns its configs, docs, tests, checkpoints, and outputs.
-- Generated data must remain gitignored. The character sprites under
-  `src/arena/art/sprites/` and the rules spread in `src/arena/art/panels/` are
-  source art, not generated data, and are tracked.
+- Generated data must remain gitignored. The character frames under
+  `src/browser/webclient/public/art/` are source art, not generated data, and
+  are tracked.
 
 Read the nearest nested `README.md` only when working in that subtree. Do not
 place subsystem status, plans, or invariants in the repository root.

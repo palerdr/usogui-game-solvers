@@ -55,14 +55,11 @@ src/dth_ocaml/bisect*.coverage
 
 # Generated media
 *.png
-# Character sprites are source art, not generated output: the browser front end
-# and the terminal scene both read them, and a fresh clone without them renders
-# labelled placeholders instead of a game.
-!src/arena/art/sprites/**/*.png
-# The chapter's rules spread is source art too: the browser's opening slide.
-!src/arena/art/panels/stl_rules.png
-# The prepared-frame cache stays derived. Its filenames carry a pipeline hash.
-src/arena/art/.sprite-cache/
+# The character frames the web client draws are committed source art. Without
+# them a fresh clone draws labelled placeholders and no test fails. The second
+# line covers the client's later home in web/.
+!src/browser/webclient/public/art/**/*.png
+!web/public/art/**/*.png
 
 # Browser app: client dependencies and build, and the Vercel bundle. The
 # unanchored outputs/ and .vercel patterns cover src/browser/outputs/ and the

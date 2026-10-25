@@ -1,7 +1,8 @@
 import { defineConfig } from "vite";
 
 // The Python server is the only referee and the only source of game state, so
-// everything under /api and /art is proxied to it rather than mocked here.
+// everything under /api is proxied to it rather than mocked here. The character
+// frames under public/art are static files that Vite serves itself.
 const BACKEND = "http://127.0.0.1:8000";
 
 export default defineConfig({
@@ -9,7 +10,6 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": { target: BACKEND, changeOrigin: true },
-      "/art": { target: BACKEND, changeOrigin: true },
     },
   },
 });
