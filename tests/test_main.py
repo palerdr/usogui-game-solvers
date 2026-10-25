@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """The four commands of python -m stl and their lazy imports."""
 
 from __future__ import annotations
@@ -12,7 +13,9 @@ from stl.__main__ import main
 
 
 @pytest.mark.parametrize("command", ["dth", "leap", "serve", "deploy"])
-def test_each_command_has_help(command, capsys) -> None:
+def test_each_command_has_help(
+    command: str, capsys: pytest.CaptureFixture[str]
+) -> None:
     with pytest.raises(SystemExit) as stop:
         main([command, "--help"])
     assert stop.value.code == 0
@@ -22,7 +25,7 @@ def test_each_command_has_help(command, capsys) -> None:
 def test_serve_accepts_only_the_two_hal_kinds() -> None:
     with pytest.raises(SystemExit) as stop:
         main(["serve", "--hal", "perfect"])
-    assert stop.value.code == 2
+    assert stop.value.code == 2  # noqa: PLR2004
 
 
 def test_help_lists_the_commands_and_imports_no_solver() -> None:
@@ -37,7 +40,7 @@ def test_help_lists_the_commands_and_imports_no_solver() -> None:
         "        pass\n"
         "print(json.dumps({'help': out.getvalue(), 'modules': sorted(sys.modules)}))\n"
     )
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         [sys.executable, "-I", "-c", code], capture_output=True, text=True, check=False
     )
     assert result.returncode == 0, result.stderr

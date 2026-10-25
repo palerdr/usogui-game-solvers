@@ -37,6 +37,18 @@ jobs:
           python-version: "3.12"
       - run: uv sync --locked
       - if: matrix.shard == 'fast'
+        run: uv run ruff check
+      - if: matrix.shard == 'fast'
+        run: uv run ruff format --check
+      - if: matrix.shard == 'fast'
+        run: uv run lint-imports
+      - if: matrix.shard == 'fast'
+        run: uv run deptry src
+      - if: matrix.shard == 'fast'
+        run: uv run vulture
+      - if: matrix.shard == 'fast'
+        run: uv run pyright
+      - if: matrix.shard == 'fast'
         run: uv run python -m pytest --collect-only -q
       # The numba leap kernel must reproduce the retired Rust kernel's golden
       # fixture. This step also compiles the kernel into its cache. The kernel
@@ -46,7 +58,7 @@ jobs:
         if: matrix.shard == 'fast'
         run: uv run python -m pytest tests/test_leap_kernel.py -q -n 0
       # worksteal lets an idle worker take a test that waits behind a long one.
-      - run: uv run python -m pytest -q ${{ matrix.select }} -n logical --dist worksteal
+      - run: uv run pytest -q ${{ matrix.select }} -n logical --dist worksteal
       # The hosted runtime runs on Python 3.13, so the server tests run there
       # too. uv rebuilds the environment on 3.13 for this step.
       - name: Run the server tests on the hosted interpreter

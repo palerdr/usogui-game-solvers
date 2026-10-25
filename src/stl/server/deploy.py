@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """Build the prebuilt Vercel bundle and ship it as a preview.
 
 ``prepare`` rechecks the DTH table, builds the browser client, and writes the
@@ -5,9 +6,8 @@ bundle: the client under ``public/``, every ``src/stl`` Python file and the
 table under ``runtime/``, an ``app.py`` that calls
 ``stl.server.hosted.create_production_app``, a ``pyproject.toml`` with the
 package pins of the root ``uv.lock``, ``vercel.json`` and the Vercel project
-link. It returns the hosted code version: the sha256 of the copied Python
-files and of the table. A new version ends every live hosted session at the
-next deploy, because ``hosted.py`` discards a record from another version.
+link. Each bundle gets a new session version. Hosted replay discards records
+from an older deployment so it cannot replay old games through changed rules.
 
 ``ship`` runs ``vercel build``, adds Python 3.13 bytecode to the built
 function, and uploads it as a preview. Promote a preview by hand after one
@@ -16,7 +16,6 @@ game on it.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import py_compile
 import shutil
@@ -24,6 +23,7 @@ import subprocess
 import sys
 import tomllib
 from pathlib import Path
+from uuid import uuid4
 
 from stl.dth import RECHECK_SAMPLES, Table
 
@@ -53,17 +53,9 @@ def copy_sources(root: Path, runtime: Path) -> list[Path]:
     return copied
 
 
-def code_version(runtime: Path, sources: list[Path], dth_sha256: str) -> str:
-    """The hosted code version: sha256 over each source's path and bytes, and the table."""
-    digest = hashlib.sha256()
-    for relative in sources:
-        digest.update(relative.as_posix().encode() + b"\0")
-        digest.update((runtime / relative).read_bytes())
-    digest.update(dth_sha256.encode())
-    return digest.hexdigest()
-
-
-def locked_versions(lock: Path, names: tuple[str, ...] = BUNDLE_PACKAGES) -> dict[str, str]:
+def locked_versions(
+    lock: Path, names: tuple[str, ...] = BUNDLE_PACKAGES
+) -> dict[str, str]:
     """Return the one version that ``lock`` pins for each package in ``names``."""
     found: dict[str, set[str]] = {name: set() for name in names}
     for package in tomllib.loads(lock.read_text(encoding="utf-8")).get("package", []):
@@ -71,7 +63,10 @@ def locked_versions(lock: Path, names: tuple[str, ...] = BUNDLE_PACKAGES) -> dic
             found[package["name"]].add(str(package["version"]))
     for name, versions in found.items():
         if len(versions) != 1:
-            raise SystemExit(f"{lock} must pin one version of {name}; it pins {sorted(versions)}")
+            message = (
+                f"{lock} must pin one version of {name}; it pins {sorted(versions)}"
+            )
+            raise SystemExit(message)
     return {name: versions.pop() for name, versions in found.items()}
 
 
@@ -79,20 +74,17 @@ def prepare(artifact: Path, bundle: Path = BUNDLE) -> str:
     """Write the prebuilt bundle to ``bundle`` and return the hosted code version."""
     table = Table.open(artifact, rechecks=RECHECK_SAMPLES)
     opening = table.stage((0, 0, 0, 0))
-    with artifact.open("rb") as file:
-        dth_sha256 = hashlib.file_digest(file, "sha256").hexdigest()
-    print(
-        f"Certified table: opening value={opening.value}, gap={opening.gap}, "
-        f"sha256={dth_sha256}"
+    print(  # noqa: T201 - CLI progress output
+        f"Certified table: opening value={opening.value}, gap={opening.gap}"
     )
     if bundle.exists():
         shutil.rmtree(bundle)
     bundle.mkdir(parents=True)
-    subprocess.run(["npm", "--prefix", str(WEB), "run", "build"], check=True)
+    subprocess.run(["npm", "--prefix", str(WEB), "run", "build"], check=True)  # noqa: S603, S607 - fixed deployment command, no shell; use the installed npm/npx command
     shutil.copytree(WEB / "dist", bundle / "public")
     runtime = bundle / "runtime"
-    sources = copy_sources(ROOT, runtime)
-    version = code_version(runtime, sources, dth_sha256)
+    copy_sources(ROOT, runtime)
+    version = uuid4().hex
     table_copy = runtime / "artifacts" / "dth" / "V.npy"
     table_copy.parent.mkdir(parents=True)
     shutil.copy2(artifact, table_copy)
@@ -101,13 +93,15 @@ def prepare(artifact: Path, bundle: Path = BUNDLE) -> str:
         "root = Path(__file__).resolve().parent\n"
         'sys.path.insert(0, str(root / "runtime/src"))\n'
         "from stl.server.hosted import create_production_app\n"
-        f'app = create_production_app(root / "runtime/artifacts/dth/V.npy", "{version}")\n'
+        'app = create_production_app(root / "runtime/artifacts/dth/V.npy", '
+        f'"{version}")\n'
     )
     pins = locked_versions(ROOT / "uv.lock")
     dependencies = ", ".join(f'"{name}=={pin}"' for name, pin in pins.items())
     (bundle / "pyproject.toml").write_text(
         '[project]\nname = "stl-browser"\nversion = "0.1.0"\n'
-        f'requires-python = ">={RUNTIME[0]}.{RUNTIME[1]},<{RUNTIME[0]}.{RUNTIME[1] + 1}"\n'
+        f'requires-python = ">={RUNTIME[0]}.{RUNTIME[1]},'
+        f'<{RUNTIME[0]}.{RUNTIME[1] + 1}"\n'
         f"dependencies = [{dependencies}]\n"
     )
     config = {
@@ -119,7 +113,7 @@ def prepare(artifact: Path, bundle: Path = BUNDLE) -> str:
     if VERCEL_LINK.exists():
         (bundle / ".vercel").mkdir()
         shutil.copy2(VERCEL_LINK, bundle / ".vercel" / "project.json")
-    print(f"Prepared {bundle} at version {version}.")
+    print(f"Prepared {bundle} at version {version}.")  # noqa: T201 - CLI progress output
     return version
 
 
@@ -132,7 +126,8 @@ def add_bytecode(bundle: Path) -> int:
     the sources. Run this after `vercel build` and before `vercel deploy`.
     """
     if sys.version_info[:2] != RUNTIME:
-        raise SystemExit(f"bytecode must come from Python {RUNTIME[0]}.{RUNTIME[1]}")
+        message = f"bytecode must come from Python {RUNTIME[0]}.{RUNTIME[1]}"
+        raise SystemExit(message)
     written = 0
     for config in (bundle / ".vercel/output/functions").glob("*.func/.vc-config.json"):
         settings = json.loads(config.read_text())
@@ -167,12 +162,22 @@ def ship(bundle: Path = BUNDLE) -> str:
     The prebuilt archive upload is required: a direct upload of the 2.3 GB
     table exceeds the upload request limit.
     """
-    subprocess.run(["npx", "vercel", "build", "--cwd", str(bundle), "--yes"], check=True)
-    print(f"Added {add_bytecode(bundle)} bytecode files to the built function.")
-    deployed = subprocess.run(
-        [
-            "npx", "vercel", "deploy", "--cwd", str(bundle),
-            "--prebuilt", "--archive=tgz", "--target", "preview",
+    subprocess.run(  # noqa: S603 - fixed deployment command, no shell
+        ["npx", "vercel", "build", "--cwd", str(bundle), "--yes"],  # noqa: S607 - installed CLI
+        check=True,
+    )
+    print(f"Added {add_bytecode(bundle)} bytecode files to the built function.")  # noqa: T201 - CLI progress output
+    deployed = subprocess.run(  # noqa: S603 - fixed deployment command, no shell
+        [  # noqa: S607 - use the installed npm/npx command
+            "npx",
+            "vercel",
+            "deploy",
+            "--cwd",
+            str(bundle),
+            "--prebuilt",
+            "--archive=tgz",
+            "--target",
+            "preview",
         ],
         check=True,
         stdout=subprocess.PIPE,

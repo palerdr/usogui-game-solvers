@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """Headless, resumable play session for one canonical STL game.
 
 A browser needs the server to suspend at "waiting for the human" and resume
@@ -25,7 +26,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Mapping
+from typing import TYPE_CHECKING, Literal, Protocol, cast, overload
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 import numpy as np
 
@@ -42,9 +46,12 @@ from stl.hal import (
 )
 
 
-def decision_from_game(game: Game, *, role: str, turn_duration: int) -> CanonicalDecision:
+def decision_from_game(
+    game: Game, *, role: str, turn_duration: int
+) -> CanonicalDecision:
     if role not in {"dropper", "checker"}:
-        raise ValueError(f"role must be 'dropper' or 'checker', got {role!r}")
+        message = f"role must be 'dropper' or 'checker', got {role!r}"
+        raise ValueError(message)
     dropper, checker = game.get_roles_for_half(game.current_half)
     actor = dropper if role == "dropper" else checker
     return CanonicalDecision(
@@ -56,7 +63,6 @@ def decision_from_game(game: Game, *, role: str, turn_duration: int) -> Canonica
         checker_ttd_seconds=checker.ttd,
         dropper_cylinder_seconds=dropper.cylinder,
         dropper_ttd_seconds=dropper.ttd,
-        native_state=game,
     )
 
 
@@ -68,13 +74,16 @@ def public_state_from_game(game: Game, *, turn_duration: int) -> PublicDecisionS
         round_index=int(game.round_num),
         half_index=int(game.current_half),
         turn_duration=int(turn_duration),
-        players=tuple(
-            PublicPlayerState(
-                name=player.name,
-                cylinder_seconds=float(player.cylinder),
-                ttd_seconds=float(player.ttd),
-            )
-            for player in (game.player1, game.player2)
+        players=cast(
+            "tuple[PublicPlayerState, PublicPlayerState]",
+            tuple(
+                PublicPlayerState(
+                    name=player.name,
+                    cylinder_seconds=float(player.cylinder),
+                    ttd_seconds=float(player.ttd),
+                )
+                for player in (game.player1, game.player2)
+            ),
         ),
     )
 
@@ -86,20 +95,26 @@ def normalize_legal_policy(
     """Validate then normalize a provider policy on canonical legal seconds."""
 
     if not raw_policy:
-        raise ValueError("policy provider returned an empty policy")
+        message = "policy provider returned an empty policy"
+        raise ValueError(message)
     legal_set = set(legal)
     actions: list[int] = []
     weights: list[float] = []
     for action, weight in raw_policy.items():
         if isinstance(action, bool) or int(action) != action:
-            raise ValueError(f"policy action must be an integer second, got {action!r}")
+            message = f"policy action must be an integer second, got {action!r}"
+            raise ValueError(message)
         if not np.isfinite(weight) or weight < 0.0:
-            raise ValueError(f"policy weight for action {action!r} must be finite and nonnegative")
+            message = (
+                f"policy weight for action {action!r} must be finite and nonnegative"
+            )
+            raise ValueError(message)
         if int(action) in legal_set and weight > 0.0:
             actions.append(int(action))
             weights.append(float(weight))
     if not actions:
-        raise ValueError(f"policy provider assigned no positive mass to legal actions {legal}")
+        message = f"policy provider assigned no positive mass to legal actions {legal}"
+        raise ValueError(message)
     probabilities = np.asarray(weights, dtype=np.float64)
     probabilities /= probabilities.sum()
     return np.asarray(actions, dtype=np.int64), probabilities
@@ -120,9 +135,11 @@ class PolicyDrivenAgent:
     def choose_action(self, game: Game, role: str, turn_duration: int) -> int:
         decision = decision_from_game(game, role=role, turn_duration=turn_duration)
         if decision.actor_name.lower() != self.player_name.lower():
-            raise ValueError(
-                f"PolicyDrivenAgent({self.player_name}) asked to act for {decision.actor_name}"
+            message = (
+                f"PolicyDrivenAgent({self.player_name}) asked to act "
+                f"for {decision.actor_name}"
             )
+            raise ValueError(message)
         actions, probabilities = normalize_legal_policy(
             self.provider.policy(decision), decision.legal_seconds
         )
@@ -134,7 +151,7 @@ CANONICAL_HUMAN_NAME = "Baku"
 MAX_DISPLAY_NAME_LENGTH = 64
 
 
-class Phase(str, Enum):
+class Phase(str, Enum):  # noqa: UP042 - preserve the session phase enum interface
     """Where a session is waiting."""
 
     RULES = "rules"
@@ -151,18 +168,23 @@ def validate_human_display_name(name: str) -> str:
     """Validate a presentation label without changing rule-bearing identity."""
 
     if not isinstance(name, str):
-        raise TypeError("human display name must be a string")
+        message = "human display name must be a string"
+        raise TypeError(message)
     normalized = name.strip()
     if not normalized:
-        raise ValueError("human display name must not be empty")
+        message = "human display name must not be empty"
+        raise ValueError(message)
     if len(normalized) > MAX_DISPLAY_NAME_LENGTH:
-        raise ValueError(
+        message = (
             f"human display name must be at most {MAX_DISPLAY_NAME_LENGTH} characters"
         )
+        raise ValueError(message)
     if normalized.casefold() == CANONICAL_HAL_NAME.casefold():
-        raise ValueError(f"{CANONICAL_HAL_NAME!r} is reserved for the opponent")
-    if any(ord(character) < 32 or ord(character) == 127 for character in normalized):
-        raise ValueError("human display name must not contain control characters")
+        message = f"{CANONICAL_HAL_NAME!r} is reserved for the opponent"
+        raise ValueError(message)
+    if any(ord(character) < 32 or ord(character) == 127 for character in normalized):  # noqa: PLR2004 - fixed game or wire-format boundary
+        message = "human display name must not contain control characters"
+        raise ValueError(message)
     return normalized
 
 
@@ -177,6 +199,10 @@ def public_player_state(player: Player) -> dict[str, float | int | str]:
     }
 
 
+class HalAgent(Protocol):
+    def choose_action(self, game: Game, role: str, turn_duration: int) -> int: ...
+
+
 @dataclass(slots=True)
 class PlaySession:
     """One canonical game, advanced a half-round at a time by a caller.
@@ -186,7 +212,7 @@ class PlaySession:
     """
 
     game: Game
-    hal_agent: object
+    hal_agent: HalAgent
     hal: Player
     human: Player
     human_display_name: str = CANONICAL_HUMAN_NAME
@@ -206,18 +232,28 @@ class PlaySession:
     def __post_init__(self) -> None:
         players = (self.game.player1, self.game.player2)
         if self.hal is self.human or not any(player is self.hal for player in players):
-            raise ValueError("hal and human must be distinct players owned by the game")
+            message = "hal and human must be distinct players owned by the game"
+            raise ValueError(message)
         if not any(player is self.human for player in players):
-            raise ValueError("hal and human must be distinct players owned by the game")
-        if self.hal.name != CANONICAL_HAL_NAME or self.human.name != CANONICAL_HUMAN_NAME:
-            raise ValueError(
+            message = "hal and human must be distinct players owned by the game"
+            raise ValueError(message)
+        if (
+            self.hal.name != CANONICAL_HAL_NAME
+            or self.human.name != CANONICAL_HUMAN_NAME
+        ):
+            message = (
                 "Arena engine players must retain the canonical Hal and Baku identities"
             )
+            raise ValueError(message)
         self.human_display_name = validate_human_display_name(self.human_display_name)
-        if isinstance(self.sequence_start, bool) or not isinstance(self.sequence_start, int):
-            raise TypeError("sequence_start must be an integer")
+        if isinstance(self.sequence_start, bool) or not isinstance(
+            self.sequence_start, int
+        ):
+            message = "sequence_start must be an integer"
+            raise TypeError(message)
         if self.sequence_start < 0:
-            raise ValueError("sequence_start must be nonnegative")
+            message = "sequence_start must be nonnegative"
+            raise ValueError(message)
         self.sequence = self.sequence_start
 
     def display_name(self, player: Player) -> str:
@@ -227,7 +263,14 @@ class PlaySession:
             return self.human_display_name
         if player is self.hal:
             return self.hal.name
-        raise ValueError("player is not owned by this session")
+        message = "player is not owned by this session"
+        raise ValueError(message)
+
+    @overload
+    def display_canonical_name(self, name: str) -> str: ...
+
+    @overload
+    def display_canonical_name(self, name: None) -> None: ...
 
     def display_canonical_name(self, name: str | None) -> str | None:
         """Map a canonical engine name to its public presentation label."""
@@ -247,7 +290,7 @@ class PlaySession:
     def turn_duration(self) -> int:
         return self.game.get_turn_duration()
 
-    def human_role(self) -> str:
+    def human_role(self) -> Literal["dropper", "checker"]:
         dropper, _ = self.roles()
         return "dropper" if dropper is self.human else "checker"
 
@@ -277,7 +320,10 @@ class PlaySession:
         return self.game.winner.name if self.game.winner is not None else None
 
     def _cap_reached(self) -> bool:
-        return self.max_half_rounds is not None and self.half_rounds >= self.max_half_rounds
+        return (
+            self.max_half_rounds is not None
+            and self.half_rounds >= self.max_half_rounds
+        )
 
     def _terminal(self) -> bool:
         return self.game.game_over or self._cap_reached()
@@ -295,7 +341,8 @@ class PlaySession:
         """Leave the rules screen and start play."""
 
         if self.phase is not Phase.RULES:
-            raise SessionPhaseError(f"begin() requires {Phase.RULES}, in {self.phase}")
+            message = f"begin() requires {Phase.RULES}, in {self.phase}"
+            raise SessionPhaseError(message)
         self.phase = Phase.GAME_OVER if self._terminal() else Phase.AWAITING_ACTION
         self.sequence += 1
 
@@ -307,9 +354,8 @@ class PlaySession:
         """
 
         if self.phase is not Phase.AWAITING_ACTION:
-            raise SessionPhaseError(
-                f"submit() requires {Phase.AWAITING_ACTION}, in {self.phase}"
-            )
+            message = f"submit() requires {Phase.AWAITING_ACTION}, in {self.phase}"
+            raise SessionPhaseError(message)
 
         turn_duration = self.turn_duration()
         human_role = self.human_role()
@@ -332,20 +378,22 @@ class PlaySession:
         # The human's action is validated before Hal is consulted, so a rejected
         # second costs nothing and reveals nothing.
         if isinstance(second, bool) or not isinstance(second, int):
-            raise ValueError(
-                f"Illegal action second={second!r}; seconds must be integers"
-            )
+            message = f"Illegal action second={second!r}; seconds must be integers"
+            raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
         validate_action(
             second,
             actor=self.human.name,
             role=human_role,
             turn_duration=turn_duration,
         )
-        hal_second = self.hal_agent.choose_action(self.game, self.hal_role(), turn_duration)
+        hal_second = self.hal_agent.choose_action(
+            self.game, self.hal_role(), turn_duration
+        )
         if isinstance(hal_second, bool) or not isinstance(hal_second, int):
-            raise ValueError(
+            message = (
                 f"Illegal Hal action second={hal_second!r}; seconds must be integers"
             )
+            raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
         validate_action(
             hal_second,
             actor=self.hal.name,
@@ -398,9 +446,8 @@ class PlaySession:
         """Dismiss the reveal and either continue or end the game."""
 
         if self.phase is not Phase.AWAITING_ACK:
-            raise SessionPhaseError(
-                f"acknowledge() requires {Phase.AWAITING_ACK}, in {self.phase}"
-            )
+            message = f"acknowledge() requires {Phase.AWAITING_ACK}, in {self.phase}"
+            raise SessionPhaseError(message)
         self.phase = Phase.GAME_OVER if self._terminal() else Phase.AWAITING_ACTION
         self.sequence += 1
 
@@ -408,9 +455,8 @@ class PlaySession:
         """Notify the provider once and return this game's public transcript."""
 
         if self.phase is not Phase.GAME_OVER:
-            raise SessionPhaseError(
-                f"finish() requires {Phase.GAME_OVER}, in {self.phase}"
-            )
+            message = f"finish() requires {Phase.GAME_OVER}, in {self.phase}"
+            raise SessionPhaseError(message)
         if not self._finished:
             end_provider_game(
                 getattr(self.hal_agent, "provider", None),

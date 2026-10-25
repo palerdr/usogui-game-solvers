@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """Contract tests for the browser API, its seat-scoped snapshot and the types.ts mirror.
 
 The load-bearing one is :func:`test_no_unrevealed_action_reaches_the_client`.
@@ -12,7 +13,7 @@ import re
 import types
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Literal, Union, get_args, get_origin
 
 import pytest
 from fastapi.testclient import TestClient
@@ -38,11 +39,19 @@ from stl.server.app import (
 from stl.server.session import Phase
 from tests.conftest import (
     StubHal as _StubHal,
+)
+from tests.conftest import (
     make_client as _client,
+)
+from tests.conftest import (
     make_session as _session,
+)
+from tests.conftest import (
     play_out as _play_out,
 )
 
+if TYPE_CHECKING:
+    from stl.hal import PublicGameOutcome
 
 _SNAPSHOT_FIELDS = {
     "sequence",
@@ -95,7 +104,7 @@ _OUTCOME_FIELDS = {
 }
 
 
-def _walk(payload) -> list:
+def _walk(payload: object) -> list:
     """Every scalar anywhere in a JSON payload, at any depth."""
 
     if isinstance(payload, dict):
@@ -120,7 +129,9 @@ def test_no_unrevealed_action_reaches_the_client() -> None:
 
     client = _client()
     snapshot = client.get("/api/session").json()
-    begun = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
+    begun = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    ).json()
 
     assert begun["phase"] == "awaiting_action"
     assert begun["last_outcome"] is None
@@ -148,12 +159,16 @@ def test_no_unrevealed_action_reaches_the_client() -> None:
 def test_the_reveal_is_dropped_again_once_acknowledged() -> None:
     client = _client()
     snapshot = client.get("/api/session").json()
-    snapshot = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
+    snapshot = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    ).json()
     snapshot = client.post(
         "/api/session/action",
         json={"sequence": snapshot["sequence"], "second": snapshot["legal_seconds"][0]},
     ).json()
-    snapshot = client.post("/api/session/ack", json={"sequence": snapshot["sequence"]}).json()
+    snapshot = client.post(
+        "/api/session/ack", json={"sequence": snapshot["sequence"]}
+    ).json()
     if snapshot["phase"] == "awaiting_action":
         assert snapshot["last_outcome"] is None
         assert "drop_time" not in _walk(snapshot)
@@ -168,64 +183,75 @@ def test_a_stale_sequence_is_rejected() -> None:
     client = _client()
     snapshot = client.get("/api/session").json()
     client.post("/api/session/begin", json={"sequence": snapshot["sequence"]})
-    replayed = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]})
-    assert replayed.status_code == 409
+    replayed = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    )
+    assert replayed.status_code == 409  # noqa: PLR2004
 
 
 def test_session_replacement_is_sequenced_and_cannot_abandon_live_play() -> None:
     client = _client()
     initial = client.get("/api/session").json()
-    assert client.post("/api/session", json={}).status_code == 422
+    assert client.post("/api/session", json={}).status_code == 422  # noqa: PLR2004
 
     begun = client.post(
         "/api/session/begin", json={"sequence": initial["sequence"]}
     ).json()
     assert (
         client.post("/api/session", json={"sequence": initial["sequence"]}).status_code
-        == 409
+        == 409  # noqa: PLR2004
     )
     assert (
         client.post("/api/session", json={"sequence": begun["sequence"]}).status_code
-        == 409
+        == 409  # noqa: PLR2004
     )
 
 
 @pytest.mark.parametrize("steps", [0, 1, 2, 3])
-def test_restart_clears_each_phase_and_rejects_previous_moves(steps) -> None:
+def test_restart_clears_each_phase_and_rejects_previous_moves(
+    steps: int,
+) -> None:
     client = _client(max_half_rounds=1)
     initial = client.get("/api/session").json()
     state = initial
     for route, extra in [
-        ("begin", {}), ("action", {"second": 60}), ("ack", {}),
+        ("begin", {}),
+        ("action", {"second": 60}),
+        ("ack", {}),
     ][:steps]:
         state = client.post(
             f"/api/session/{route}", json={"sequence": state["sequence"], **extra}
         ).json()
-    response = client.post(
-        "/api/session/restart", json={"sequence": state["sequence"]}
-    )
-    assert response.status_code == 200
+    response = client.post("/api/session/restart", json={"sequence": state["sequence"]})
+    assert response.status_code == 200  # noqa: PLR2004
     fresh = response.json()
     assert fresh == {**initial, "sequence": state["sequence"] + 1}
     history = client.get("/api/transcript").json()
     assert history["games"] == []
     assert history["current_game"]["public_history"] == []
     assert not any(history["tally"].values())
-    assert history["current_game"]["seed"] != 41
+    assert history["current_game"]["seed"] != 41  # noqa: PLR2004
     assert history["base_seed"] == history["current_game"]["seed"]
     for route in ("action", "restart"):
-        assert client.post(
-            f"/api/session/{route}",
-            json={"sequence": state["sequence"], "second": 1} if route == "action"
-            else {"sequence": state["sequence"]},
-        ).status_code == 409
+        assert (
+            client.post(
+                f"/api/session/{route}",
+                json={"sequence": state["sequence"], "second": 1}
+                if route == "action"
+                else {"sequence": state["sequence"]},
+            ).status_code
+            == 409  # noqa: PLR2004
+        )
 
     finished = _play_out(client, fresh)
     next_game = client.post(
         "/api/session", json={"sequence": finished["sequence"]}
     ).json()
     assert next_game["game_index"] == 1
-    assert client.get("/api/transcript").json()["current_game"]["seed"] == history["base_seed"] + 1
+    assert (
+        client.get("/api/transcript").json()["current_game"]["seed"]
+        == history["base_seed"] + 1
+    )
 
 
 def test_session_replacement_keeps_a_monotonic_sequence_and_display_only_name() -> None:
@@ -256,7 +282,7 @@ def test_hal_is_a_reserved_human_display_name() -> None:
     response = client.post(
         "/api/session", json={"sequence": sequence, "human_name": " hAl "}
     )
-    assert response.status_code == 422
+    assert response.status_code == 422  # noqa: PLR2004
 
 
 @pytest.mark.parametrize(
@@ -270,8 +296,10 @@ def test_hal_is_a_reserved_human_display_name() -> None:
         ("/api/session", {"sequence": 0, "max_half_rounds": False}),
     ],
 )
-def test_mutation_requests_reject_coercible_non_integer_values(endpoint, body) -> None:
-    assert _client().post(endpoint, json=body).status_code == 422
+def test_mutation_requests_reject_coercible_non_integer_values(
+    endpoint: str, body: dict
+) -> None:
+    assert _client().post(endpoint, json=body).status_code == 422  # noqa: PLR2004
 
 
 def test_terminal_replacement_finishes_then_resets_provider_once() -> None:
@@ -283,7 +311,7 @@ def test_terminal_replacement_finishes_then_resets_provider_once() -> None:
         def reset_game(self) -> None:
             self.resets += 1
 
-        def end_game(self, outcome) -> None:
+        def end_game(self, outcome: PublicGameOutcome) -> None:
             self.outcomes.append(outcome)
 
     provider = _LifecycleProvider()
@@ -317,18 +345,20 @@ def test_terminal_replacement_finishes_then_resets_provider_once() -> None:
     ).json()
     assert replacement["phase"] == "rules"
     assert replacement["sequence"] > snapshot["sequence"]
-    assert provider.resets == 2
+    assert provider.resets == 2  # noqa: PLR2004
     assert len(provider.outcomes) == 1
 
 
 def test_an_illegal_second_is_refused_without_advancing_the_game() -> None:
     client = _client()
     snapshot = client.get("/api/session").json()
-    snapshot = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
+    snapshot = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    ).json()
     refused = client.post(
         "/api/session/action", json={"sequence": snapshot["sequence"], "second": 99}
     )
-    assert refused.status_code == 422
+    assert refused.status_code == 422  # noqa: PLR2004
     assert client.get("/api/session").json()["sequence"] == snapshot["sequence"]
 
 
@@ -337,22 +367,29 @@ def test_only_a_human_dropper_is_offered_the_leap_second() -> None:
 
     client = _client(start_clock=LS_WINDOW_START)
     snapshot = client.get("/api/session").json()
-    snapshot = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
-    assert snapshot["turn_duration"] == 61
+    snapshot = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    ).json()
+    assert snapshot["turn_duration"] == 61  # noqa: PLR2004
     if snapshot["human_role"] == "dropper":
-        assert snapshot["legal_seconds"][-1] == 61
+        assert snapshot["legal_seconds"][-1] == 61  # noqa: PLR2004
     else:
-        assert snapshot["legal_seconds"][-1] == 60
+        assert snapshot["legal_seconds"][-1] == 60  # noqa: PLR2004
 
 
 def test_a_full_game_reaches_a_terminal_phase() -> None:
     client = _client(max_half_rounds=6)
     snapshot = client.get("/api/session").json()
-    snapshot = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
+    snapshot = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    ).json()
     while snapshot["phase"] == "awaiting_action":
         snapshot = client.post(
             "/api/session/action",
-            json={"sequence": snapshot["sequence"], "second": snapshot["legal_seconds"][0]},
+            json={
+                "sequence": snapshot["sequence"],
+                "second": snapshot["legal_seconds"][0],
+            },
         ).json()
         snapshot = client.post(
             "/api/session/ack", json={"sequence": snapshot["sequence"]}
@@ -374,7 +411,7 @@ def test_transitions_are_refused_from_the_rules_phase(phase_endpoint: str) -> No
     body = {"sequence": sequence}
     if phase_endpoint == "action":
         body["second"] = 30
-    assert client.post(f"/api/session/{phase_endpoint}", json=body).status_code == 409
+    assert client.post(f"/api/session/{phase_endpoint}", json=body).status_code == 409  # noqa: PLR2004
 
 
 def test_rules_carry_the_public_hal_label_and_turn_contract() -> None:
@@ -392,13 +429,18 @@ def test_rules_carry_the_public_hal_label_and_turn_contract() -> None:
 def test_the_reveal_names_its_own_round_and_half() -> None:
     client = _client()
     snapshot = client.get("/api/session").json()
-    snapshot = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
+    snapshot = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    ).json()
     assert (snapshot["round"], snapshot["half"]) == (1, 1)
     revealed = client.post(
         "/api/session/action",
         json={"sequence": snapshot["sequence"], "second": snapshot["legal_seconds"][0]},
     ).json()
-    assert (revealed["last_outcome"]["round"], revealed["last_outcome"]["half"]) == (1, 1)
+    assert (revealed["last_outcome"]["round"], revealed["last_outcome"]["half"]) == (
+        1,
+        1,
+    )
 
 
 def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli() -> None:
@@ -412,7 +454,7 @@ def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli() -> None:
         def reset_game(self) -> None:
             self.resets += 1
 
-        def end_game(self, outcome) -> None:
+        def end_game(self, outcome: PublicGameOutcome) -> None:
             self.outcomes.append(outcome)
 
         def match_summary(self) -> str:
@@ -434,17 +476,17 @@ def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli() -> None:
     first = _play_out(client, first)
     written = client.get("/api/transcript").json()
     assert written["schema_version"] == "arena-public-play-session-v1"
-    assert written["base_seed"] == 41
+    assert written["base_seed"] == 41  # noqa: PLR2004
     assert [game["seed"] for game in written["games"]] == [41]
     assert written["hal_summary"] == "stub: 1 games"
 
     second = client.post("/api/session", json={"sequence": first["sequence"]}).json()
     assert second["game_index"] == 1
     assert second["phase"] == "rules"
-    assert provider.resets == 2
+    assert provider.resets == 2  # noqa: PLR2004
     served = client.get("/api/transcript").json()
     assert served["current_game"]["game_index"] == 1
-    assert served["current_game"]["seed"] == 42
+    assert served["current_game"]["seed"] == 42  # noqa: PLR2004
     assert served["current_game"]["public_history"] == []
     assert served["tally"]["stopped"] == 1
 
@@ -452,20 +494,22 @@ def test_a_series_keeps_hal_and_seeds_each_game_like_the_cli() -> None:
     written = client.get("/api/transcript").json()
     assert [game["seed"] for game in written["games"]] == [41, 42]
     assert [game["game_index"] for game in written["games"]] == [0, 1]
-    assert len(provider.outcomes) == 2
+    assert len(provider.outcomes) == 2  # noqa: PLR2004
 
     # Replacing an unstarted game does not consume a game index or a seed.
     third = client.post("/api/session", json={"sequence": second["sequence"]}).json()
     replaced = client.post("/api/session", json={"sequence": third["sequence"]}).json()
-    assert replaced["game_index"] == 2
-    assert client.get("/api/transcript").json()["current_game"]["seed"] == 43
-    assert len(client.get("/api/transcript").json()["games"]) == 2
+    assert replaced["game_index"] == 2  # noqa: PLR2004
+    assert client.get("/api/transcript").json()["current_game"]["seed"] == 43  # noqa: PLR2004
+    assert len(client.get("/api/transcript").json()["games"]) == 2  # noqa: PLR2004
 
 
 def test_transcript_never_carries_an_unrevealed_action() -> None:
     client = _client()
     snapshot = client.get("/api/session").json()
-    snapshot = client.post("/api/session/begin", json={"sequence": snapshot["sequence"]}).json()
+    snapshot = client.post(
+        "/api/session/begin", json={"sequence": snapshot["sequence"]}
+    ).json()
     payload = client.get("/api/transcript").json()
     assert payload["current_game"]["public_history"] == []
     assert "drop_second" not in _walk(payload)
@@ -488,7 +532,7 @@ def test_hal_details_are_withheld_when_concealed() -> None:
         def experiment_diagnostics(self) -> dict:
             return {"secret": 1}
 
-    def _factory(conceal: bool) -> TestClient:
+    def _factory(conceal: bool) -> TestClient:  # noqa: FBT001
         hal = _StubHal()
         hal.provider = _TalkativeProvider()
         app = create_app(
@@ -499,10 +543,10 @@ def test_hal_details_are_withheld_when_concealed() -> None:
         )
         return TestClient(app)
 
-    open_payload = _factory(False).get("/api/transcript").json()
+    open_payload = _factory(False).get("/api/transcript").json()  # noqa: FBT003
     assert open_payload["hal_summary"] == "dth complete: 0 moves"
     assert open_payload["hal_diagnostics"] == {"secret": 1}
-    concealed = _factory(True).get("/api/transcript").json()
+    concealed = _factory(True).get("/api/transcript").json()  # noqa: FBT003
     assert "hal_summary" not in concealed
     assert "hal_diagnostics" not in concealed
 
@@ -512,11 +556,15 @@ def test_new_session_accepts_a_start_clock_and_explicit_seed() -> None:
     initial = client.get("/api/session").json()
     replaced = client.post(
         "/api/session",
-        json={"sequence": initial["sequence"], "start_clock": LS_WINDOW_START, "seed": 7},
+        json={
+            "sequence": initial["sequence"],
+            "start_clock": LS_WINDOW_START,
+            "seed": 7,
+        },
     ).json()
     assert replaced["clock_seconds"] == LS_WINDOW_START
     assert replaced["leap_window"] is True
-    assert client.get("/api/transcript").json()["current_game"]["seed"] == 7
+    assert client.get("/api/transcript").json()["current_game"]["seed"] == 7  # noqa: PLR2004
     back = client.post(
         "/api/session",
         json={"sequence": replaced["sequence"], "start_clock": OPENING_START_CLOCK},
@@ -524,28 +572,32 @@ def test_new_session_accepts_a_start_clock_and_explicit_seed() -> None:
     assert back["leap_window"] is False
 
 
-def test_the_built_client_is_served_from_the_root(tmp_path) -> None:
+def test_the_built_client_is_served_from_the_root(tmp_path: Path) -> None:
     dist = tmp_path / "dist"
     dist.mkdir()
     (dist / "index.html").write_text("<title>built client</title>", encoding="utf-8")
     (dist / "app.js").write_text("console.log(1)", encoding="utf-8")
-    app = create_app(hal_factory=_StubHal, config=SessionConfig(seed=41), webclient_dist=dist)
+    app = create_app(
+        hal_factory=_StubHal, config=SessionConfig(seed=41), webclient_dist=dist
+    )
     client = TestClient(app)
     page = client.get("/")
     assert "built client" in page.text
     assert page.headers["cache-control"] == "no-cache"
-    assert client.get("/app.js").status_code == 200
+    assert client.get("/app.js").status_code == 200  # noqa: PLR2004
     assert "cache-control" not in client.get("/app.js").headers
     # The API still wins over the static mount.
     assert client.get("/api/session").json()["phase"] == "rules"
 
 
-def test_a_missing_build_is_explained_rather_than_a_404(tmp_path) -> None:
+def test_a_missing_build_is_explained_rather_than_a_404(tmp_path: Path) -> None:
     app = create_app(
-        hal_factory=_StubHal, config=SessionConfig(seed=41), webclient_dist=tmp_path / "none"
+        hal_factory=_StubHal,
+        config=SessionConfig(seed=41),
+        webclient_dist=tmp_path / "none",
     )
     response = TestClient(app).get("/")
-    assert response.status_code == 200
+    assert response.status_code == 200  # noqa: PLR2004
     assert "npm --prefix web run build" in response.text
 
 
@@ -560,7 +612,7 @@ def test_snapshot_carries_authoritative_winner_seat(
     half: int,
     human_second: int,
     fatal_player: str,
-    winner_is_human: bool,
+    winner_is_human: bool,  # noqa: FBT001
 ) -> None:
     session = _session(human_display_name="A display label")
     session.game.current_half = half
@@ -582,7 +634,8 @@ _TYPES = Path(__file__).resolve().parents[2] / "web" / "src" / "types.ts"
 def _interface_fields(source: str, name: str) -> dict[str, tuple[str, bool]]:
     match = re.search(rf"export interface {name} \{{(.*?)\n\}}", source, re.DOTALL)
     if match is None:
-        raise AssertionError(f"web/src/types.ts has no interface {name}")
+        msg = f"web/src/types.ts has no interface {name}"
+        raise AssertionError(msg)
     fields: dict[str, tuple[str, bool]] = {}
     for field, optional, annotation in re.findall(
         r"^\s*(\w+)(\?)?:\s*([^;]+);", match.group(1), re.MULTILINE
@@ -614,8 +667,10 @@ def _typescript_type(annotation: object) -> str:
     if isinstance(annotation, type) and issubclass(annotation, BaseModel):
         return annotation.__name__
     if isinstance(annotation, type) and issubclass(annotation, Enum):
-        raise AssertionError(f"TypeScript alias missing for enum {annotation.__name__}")
-    raise AssertionError(f"unsupported Python wire annotation {annotation!r}")
+        msg = f"TypeScript alias missing for enum {annotation.__name__}"
+        raise AssertionError(msg)  # noqa: TRY004
+    msg = f"unsupported Python wire annotation {annotation!r}"
+    raise AssertionError(msg)
 
 
 def _model_fields(model: type[BaseModel]) -> dict[str, tuple[str, bool]]:
@@ -628,7 +683,8 @@ def _model_fields(model: type[BaseModel]) -> dict[str, tuple[str, bool]]:
 def _string_union(source: str, name: str) -> set[str]:
     match = re.search(rf"export type {name}\s*=\s*(.*?);", source, re.DOTALL)
     if match is None:
-        raise AssertionError(f"web/src/types.ts has no type alias {name}")
+        msg = f"web/src/types.ts has no type alias {name}"
+        raise AssertionError(msg)
     return set(re.findall(r'"([^"]+)"', match.group(1)))
 
 
@@ -642,7 +698,9 @@ def _string_union(source: str, name: str) -> set[str]:
         (LeaderboardEntry, "LeaderboardEntry"),
     ],
 )
-def test_typescript_mirrors_the_python_schema(model, interface: str) -> None:
+def test_typescript_mirrors_the_python_schema(
+    model: type[BaseModel], interface: str
+) -> None:
     source = _TYPES.read_text(encoding="utf-8")
     assert _model_fields(model) == _interface_fields(source, interface)
 

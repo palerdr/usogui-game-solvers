@@ -103,8 +103,7 @@ for the large table bundle; Redis through `KV_REST_API_URL` and
 `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_URL` and
 `UPSTASH_REDIS_REST_TOKEN`); optional leaderboard through `SUPABASE_URL` and
 `SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`). Secrets stay in hosted
-settings. `stl.server.hosted` is the only environment reader. A change to
-bundled Python or the DTH table changes the deployment version and ends old
+settings. `stl.server.hosted` is the only environment reader. Each deployment gets a new session version and ends old
 sessions once the replacement deploy serves them.
 
 ## How to test

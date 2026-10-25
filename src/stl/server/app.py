@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """The browser game's HTTP routes, wire schema and leaderboard name filter.
 
 The server holds exactly one live session, because it is a local single-player
@@ -32,12 +33,13 @@ import random
 import re
 import threading
 import unicodedata
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from itertools import groupby
 from pathlib import Path
-from typing import Annotated, Callable, Literal
+from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
@@ -58,13 +60,14 @@ from stl.hal import reset_provider_game
 from stl.server.session import (
     CANONICAL_HAL_NAME,
     CANONICAL_HUMAN_NAME,
+    HalAgent,
     Phase,
     PlaySession,
     SessionPhaseError,
     validate_human_display_name,
 )
 
-HalFactory = Callable[[], object]
+HalFactory = Callable[[], HalAgent]
 
 # The player-facing rules that the opening screen shows.
 RULES = (
@@ -88,16 +91,42 @@ RULES = (
 
 # Refused wherever the letters occur inside a word.
 _ANYWHERE = (
-    "avttre", "avttn", "avtyrg", "snttbg", "jrgonpx", "gbjryurnq",
-    "enturnq", "puvatpubat", "wvtnobb", "cbepuzbaxrl", "mvccreurnq",
-    "furznyr", "ergneq", "uvgyre",
+    "avttre",
+    "avttn",
+    "avtyrg",
+    "snttbg",
+    "jrgonpx",
+    "gbjryurnq",
+    "enturnq",
+    "puvatpubat",
+    "wvtnobb",
+    "cbepuzbaxrl",
+    "mvccreurnq",
+    "furznyr",
+    "ergneq",
+    "uvgyre",
 )
 # Refused as a whole word only, because ordinary words and names contain them
 # ("raccoon", "spice", "Pakistan", "grape", "Benazir").
 _WHOLE_WORD = (
-    "fcvp", "pbba", "puvax", "tbbx", "cnxv", "snt", "xvxr", "xlxr", "urro",
-    "genaal", "genaavr", "ornare", "xxx", "anmv", "arbanmv", "encr",
-    "encvfg", "encvat",
+    "fcvp",
+    "pbba",
+    "puvax",
+    "tbbx",
+    "cnxv",
+    "snt",
+    "xvxr",
+    "xlxr",
+    "urro",
+    "genaal",
+    "genaavr",
+    "ornare",
+    "xxx",
+    "anmv",
+    "arbanmv",
+    "encr",
+    "encvfg",
+    "encvat",
 )
 # Ordinary words that hold a refused term.
 _ALLOWED = re.compile(r"snigger(s|ed|ing)?")
@@ -107,9 +136,9 @@ _SPELLED_OUT = 3
 # Digits and symbols that stand in for letters, then Cyrillic and Greek
 # letters that look like Latin ones.
 _LOOKALIKES = str.maketrans(
-    "013457@$!|" "\u0430\u0435\u043e\u0456\u0441\u0440\u0445\u0443\u043a\u0455\u0458\u0433"
+    "013457@$!|\u0430\u0435\u043e\u0456\u0441\u0440\u0445\u0443\u043a\u0455\u0458\u0433"
     "\u03bf\u03b1\u03b9\u03b5\u03ba\u03c1\u03c4\u03c5\u03bd",
-    "oieastasii" "aeoicpxyksjr" "oaiekptuv",
+    "oieastasiiaeoicpxyksjroaiekptuv",
 )
 
 
@@ -117,9 +146,7 @@ def _stretched(term: str) -> str:
     """A pattern for the term with any letter held longer: ``coon`` matches
     ``cooon`` and never ``con``, so a doubled letter stays part of the word."""
 
-    return "".join(
-        f"{letter}{{{len(list(run))},}}" for letter, run in groupby(term)
-    )
+    return "".join(f"{letter}{{{len(list(run))},}}" for letter, run in groupby(term))
 
 
 _TERMS = [codecs.decode(term, "rot13") for term in _ANYWHERE]
@@ -237,7 +264,7 @@ class NewSessionRequest(BaseModel):
 
 LEADERBOARD_NAME_LENGTH = 16
 LEADERBOARD_SIZE = 10
-# Control, format (bidi and zero-width), surrogate, private-use, unassigned,
+# Reject control and format characters, surrogates, private-use characters,
 # and line or paragraph separators.
 _HIDDEN_CATEGORIES = {"Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp"}
 # Blank glyphs that Unicode files as letters or symbols: the Hangul fillers
@@ -286,26 +313,35 @@ class PlayerNameRequest(BaseModel):
         # no direction overrides, no invisible characters, no stacked marks.
         name = validate_human_display_name(unicodedata.normalize("NFC", value))
         if len(name) > LEADERBOARD_NAME_LENGTH:
-            raise ValueError(
+            message = (
                 f"a leaderboard name has at most {LEADERBOARD_NAME_LENGTH} characters"
             )
+            raise ValueError(message)
         categories = [unicodedata.category(character) for character in name]
         if any(category in _HIDDEN_CATEGORIES for category in categories) or any(
             character in _BLANK_GLYPHS for character in name
         ):
-            raise ValueError("a leaderboard name must use visible characters")
+            message = "a leaderboard name must use visible characters"
+            raise ValueError(message)
         # Fullwidth and styled letters fold to plain ones, so they cannot spell Hal.
-        if unicodedata.normalize("NFKC", name).casefold() == CANONICAL_HAL_NAME.casefold():
-            raise ValueError(f"{CANONICAL_HAL_NAME!r} is reserved for the opponent")
+        if (
+            unicodedata.normalize("NFKC", name).casefold()
+            == CANONICAL_HAL_NAME.casefold()
+        ):
+            message = f"{CANONICAL_HAL_NAME!r} is reserved for the opponent"
+            raise ValueError(message)
         if not any(category[0] in "LN" for category in categories):
-            raise ValueError("a leaderboard name needs a letter or a digit")
+            message = "a leaderboard name needs a letter or a digit"
+            raise ValueError(message)
         marks = 0
         for category in categories:
             marks = marks + 1 if category[0] == "M" else 0
-            if marks > 2:
-                raise ValueError("a leaderboard name has too many combining marks")
+            if marks > 2:  # noqa: PLR2004 - fixed game or wire-format boundary
+                message = "a leaderboard name has too many combining marks"
+                raise ValueError(message)
         if is_offensive(name):
-            raise ValueError("choose another leaderboard name")
+            message = "choose another leaderboard name"
+            raise ValueError(message)
         return name
 
 
@@ -375,9 +411,7 @@ def snapshot_from_session(session: PlaySession) -> Snapshot:
         half_rounds=session.half_rounds,
         last_outcome=_outcome_view(session),
         winner_name=session.display_canonical_name(session.winner_name),
-        winner_is_human=(
-            None if game.winner is None else game.winner is session.human
-        ),
+        winner_is_human=(None if game.winner is None else game.winner is session.human),
         stopped=session.stopped,
     )
 
@@ -392,7 +426,8 @@ DEFAULT_WEBCLIENT_DIST = Path(__file__).resolve().parents[3] / "web" / "dist"
 _NO_CLIENT_PAGE = """<!doctype html>
 <meta charset="utf-8">
 <title>Surpassing The Leader</title>
-<body style="background:#000;color:#f2f2f2;font:14px/1.6 ui-monospace,monospace;padding:32px">
+<body style="background:#000;color:#f2f2f2;
+font:14px/1.6 ui-monospace,monospace;padding:32px">
 <h1 style="font-size:15px;letter-spacing:.22em">SURPASSING THE LEADER</h1>
 <p>The API is running, but the browser client has not been built.</p>
 <p>Either build it once and reload this page:</p>
@@ -418,18 +453,23 @@ class SessionConfig:
         if self.seed is not None and (
             isinstance(self.seed, bool) or not isinstance(self.seed, int)
         ):
-            raise TypeError("seed must be an integer or None")
+            message = "seed must be an integer or None"
+            raise TypeError(message)
         if isinstance(self.start_clock, bool) or not isinstance(self.start_clock, int):
-            raise TypeError("start_clock must be an integer")
+            message = "start_clock must be an integer"
+            raise TypeError(message)
         if self.start_clock < 0:
-            raise ValueError("start_clock must be nonnegative")
+            message = "start_clock must be nonnegative"
+            raise ValueError(message)
         if self.max_half_rounds is not None:
             if isinstance(self.max_half_rounds, bool) or not isinstance(
                 self.max_half_rounds, int
             ):
-                raise TypeError("max_half_rounds must be an integer or None")
+                message = "max_half_rounds must be an integer or None"
+                raise TypeError(message)
             if self.max_half_rounds <= 0:
-                raise ValueError("max_half_rounds must be positive")
+                message = "max_half_rounds must be positive"
+                raise ValueError(message)
 
 
 @dataclass
@@ -446,7 +486,7 @@ class SeriesConfig:
 
 
 def _new_session(
-    hal_agent: object,
+    hal_agent: HalAgent,
     config: SessionConfig,
     *,
     game_index: int = 0,
@@ -460,7 +500,7 @@ def _new_session(
         player1=hal,
         player2=human,
         referee=Referee(),
-        rng=random.Random(game_seed),
+        rng=random.Random(game_seed),  # noqa: S311 - seeded game simulation, not a security token
     )
     game.game_clock = config.start_clock
     if reset_provider:
@@ -535,12 +575,12 @@ def create_app(
 
     def _session() -> PlaySession:
         session = state["session"]
-        assert isinstance(session, PlaySession)
+        assert isinstance(session, PlaySession)  # noqa: S101 - internal state invariant
         return session
 
     def _game_index() -> int:
         index = state["game_index"]
-        assert isinstance(index, int)
+        assert isinstance(index, int)  # noqa: S101 - internal state invariant
         return index
 
     def _require(sequence: int, session: PlaySession) -> None:
@@ -552,7 +592,9 @@ def create_app(
 
     def _hal_details() -> dict[str, object]:
         details: dict[str, object] = {}
-        match_summary = getattr(getattr(hal_agent, "provider", None), "match_summary", None)
+        match_summary = getattr(
+            getattr(hal_agent, "provider", None), "match_summary", None
+        )
         if callable(match_summary):
             details["hal_summary"] = match_summary()
         diagnostics = getattr(
@@ -569,7 +611,7 @@ def create_app(
             return
         record = session.finish()
         games = transcript["games"]
-        assert isinstance(games, list)
+        assert isinstance(games, list)  # noqa: S101 - internal state invariant
         games.append(record)
         if session.stopped:
             tally["stopped"] += 1
@@ -602,7 +644,10 @@ def create_app(
             if previous.phase not in (Phase.RULES, Phase.GAME_OVER):
                 raise HTTPException(
                     status_code=409,
-                    detail=f"cannot replace an active session in phase {previous.phase.value}",
+                    detail=(
+                        f"cannot replace an active session in phase "
+                        f"{previous.phase.value}"
+                    ),
                 )
             finished = previous.phase is Phase.GAME_OVER
             if finished:
@@ -660,7 +705,7 @@ def create_app(
             transcript["games"] = []
             transcript["human_name"] = base_config.human_name
             transcript["base_seed"] = series_seed
-            tally.update({key: 0 for key in tally})
+            tally.update(dict.fromkeys(tally, 0))
             return snapshot_from_session(_session())
 
     @app.post("/api/session/begin", response_model=Snapshot)
@@ -682,7 +727,9 @@ def create_app(
             session = _session()
             _require(request.sequence, session)
             if session.phase is not Phase.AWAITING_ACTION:
-                raise HTTPException(status_code=409, detail=f"phase is {session.phase.value}")
+                raise HTTPException(
+                    status_code=409, detail=f"phase is {session.phase.value}"
+                )
             if request.second not in session.legal_actions():
                 raise HTTPException(
                     status_code=422,
@@ -737,7 +784,9 @@ def create_app(
     if webclient_dist is not None and (webclient_dist / "index.html").is_file():
 
         @app.middleware("http")
-        async def _revalidate_page(request, call_next):
+        async def _revalidate_page(
+            request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
             # Vite names its bundles by content hash, so they may be cached
             # freely; the page that references them must be re-checked on
             # every load or a rebuild stays invisible until a hard refresh.
@@ -747,7 +796,9 @@ def create_app(
             return response
 
         # Registered last so the API routes above take precedence.
-        app.mount("/", StaticFiles(directory=webclient_dist, html=True), name="webclient")
+        app.mount(
+            "/", StaticFiles(directory=webclient_dist, html=True), name="webclient"
+        )
     else:
 
         @app.get("/", response_class=HTMLResponse, include_in_schema=False)

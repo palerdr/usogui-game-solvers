@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """Hal, the opponent: exact Hal and translated Hal.
 
 Exact Hal plays the certified DTH equilibrium from ``stl.dth.Table``.
@@ -20,11 +21,14 @@ import time
 import zlib
 from dataclasses import asdict, dataclass, field, replace
 from operator import index as integer_index
-from typing import Mapping, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, SupportsIndex, cast, runtime_checkable
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 import numpy as np
 
-from stl.dth import MAX_SADDLE_GAP, Stage, Table
+from stl.dth import MAX_SADDLE_GAP, Stage
 from stl.game import legal_seconds, validate_action
 
 KINDS = ("translated", "exact")
@@ -36,9 +40,7 @@ MAX_MEMORY_BYTES = 4_000_000
 class CanonicalDecision:
     """Public canonical decision context passed to a policy provider.
 
-    The numeric fields are literal engine seconds. ``native_state`` is an
-    opaque escape hatch for a provider that natively understands the canonical
-    engine (for example the STL MCTS agent); abstraction adapters ignore it.
+    The numeric fields are literal engine seconds.
     """
 
     role: str
@@ -49,7 +51,6 @@ class CanonicalDecision:
     checker_ttd_seconds: float
     dropper_cylinder_seconds: float
     dropper_ttd_seconds: float
-    native_state: object
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,8 +139,13 @@ def project_to_dth_state(decision: CanonicalDecision) -> tuple[int, int, int, in
         decision.dropper_ttd_seconds,
     )
     if any(value != int(value) for value in coordinates):
-        raise ValueError("canonical STL state is not on the literal-second DTH grid")
+        message = "canonical STL state is not on the literal-second DTH grid"
+        raise ValueError(message)
     return tuple(int(value) for value in coordinates)  # type: ignore[return-value]
+
+
+class StageReader(Protocol):
+    def stage(self, state: tuple[int, int, int, int]) -> Stage: ...
 
 
 @dataclass
@@ -152,12 +158,9 @@ class ExactHal:
     long-lived provider does not grow.
     """
 
-    table: Table = field(repr=False)
+    table: StageReader = field(repr=False)
     decisions: list[tuple[Stage, float]] = field(default_factory=list, repr=False)
     record_decisions: bool = True
-
-    def close(self) -> None:
-        """Match the provider lifecycle contract; memmaps need no explicit close."""
 
     def policy(self, decision: CanonicalDecision) -> Mapping[int, float]:
         started = time.monotonic()
@@ -207,7 +210,8 @@ _BASE_EXPERT_NAMES = (
 def _finite(value: float, *, label: str) -> float:
     resolved = float(value)
     if not np.isfinite(resolved):
-        raise ValueError(f"{label} must be finite")
+        message = f"{label} must be finite"
+        raise ValueError(message)
     return resolved
 
 
@@ -219,7 +223,8 @@ def _normalize(raw: np.ndarray, *, label: str) -> np.ndarray:
         or np.any(values < 0.0)
         or float(values.sum()) <= 0.0
     ):
-        raise ValueError(f"{label} must be finite nonnegative length 60 with mass")
+        message = f"{label} must be finite nonnegative length 60 with mass"
+        raise ValueError(message)
     result = values / float(values.sum())
     result.setflags(write=False)
     return result
@@ -240,20 +245,24 @@ def _point(action: int) -> np.ndarray:
 
 def _literal_action(raw: object, *, label: str) -> int:
     if isinstance(raw, (bool, np.bool_)):
-        raise ValueError(f"{label} must be an integer second in 1..60")
+        message = f"{label} must be an integer second in 1..60"
+        raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
     try:
-        resolved = int(integer_index(raw))
+        resolved = int(integer_index(cast(SupportsIndex, raw)))  # noqa: TC006 - vulture tracks the index protocol
     except TypeError as error:
-        raise ValueError(f"{label} must be an integer second in 1..60") from error
+        message = f"{label} must be an integer second in 1..60"
+        raise ValueError(message) from error
     if not 1 <= resolved <= ACTION_COUNT:
-        raise ValueError(f"{label} must be an integer second in 1..60")
+        message = f"{label} must be an integer second in 1..60"
+        raise ValueError(message)
     return resolved
 
 
-def _band(value: int | float) -> int:
+def _band(value: float) -> int:
     resolved = _finite(float(value), label="public DTH state coordinate")
     if resolved < 0.0:
-        raise ValueError("public DTH state coordinates must be nonnegative")
+        message = "public DTH state coordinates must be nonnegative"
+        raise ValueError(message)
     return min(5, int(resolved // 60.0))
 
 
@@ -281,9 +290,11 @@ class PerfectHalConfig:
 
     def __post_init__(self) -> None:
         if self.action_count != ACTION_COUNT:
-            raise ValueError("Perfect Hal v1 requires exactly 60 pure-DTH actions")
+            message = "Perfect Hal v1 requires exactly 60 pure-DTH actions"
+            raise ValueError(message)
         if _finite(self.prior_strength, label="prior_strength") <= 0.0:
-            raise ValueError("prior_strength must be positive")
+            message = "prior_strength must be positive"
+            raise ValueError(message)
         if (
             _finite(
                 self.conditional_prior_strength,
@@ -291,20 +302,24 @@ class PerfectHalConfig:
             )
             <= 0.0
         ):
-            raise ValueError("conditional_prior_strength must be positive")
-        if len(self.recency_retentions) != 3 or not all(
+            message = "conditional_prior_strength must be positive"
+            raise ValueError(message)
+        if len(self.recency_retentions) != 3 or not all(  # noqa: PLR2004 - fixed game or wire-format boundary
             0.0 < _finite(value, label="recency retention") < 1.0
             for value in self.recency_retentions
         ):
-            raise ValueError("recency_retentions must contain three values in (0, 1)")
+            message = "recency_retentions must contain three values in (0, 1)"
+            raise ValueError(message)
         if not (
             self.recency_retentions[0]
             > self.recency_retentions[1]
             > self.recency_retentions[2]
         ):
-            raise ValueError("recency_retentions must be ordered slow to flash")
+            message = "recency_retentions must be ordered slow to flash"
+            raise ValueError(message)
         if _finite(self.expert_learning_rate, label="expert_learning_rate") <= 0.0:
-            raise ValueError("expert_learning_rate must be positive")
+            message = "expert_learning_rate must be positive"
+            raise ValueError(message)
         if not (
             0.0
             <= _finite(
@@ -313,26 +328,32 @@ class PerfectHalConfig:
             )
             <= 1.0
         ):
-            raise ValueError("expert_weight_retention must lie in [0, 1]")
+            message = "expert_weight_retention must lie in [0, 1]"
+            raise ValueError(message)
         if not self.periodicities or any(
-            isinstance(period, bool) or not isinstance(period, int) or period < 2
+            isinstance(period, bool) or not isinstance(period, int) or period < 2  # noqa: PLR2004 - fixed game or wire-format boundary
             for period in self.periodicities
         ):
-            raise ValueError("periodicities must be nonempty integers at least two")
+            message = "periodicities must be nonempty integers at least two"
+            raise ValueError(message)
         if len(set(self.periodicities)) != len(self.periodicities):
-            raise ValueError("periodicities must be unique")
+            message = "periodicities must be unique"
+            raise ValueError(message)
         expert_count = len(_BASE_EXPERT_NAMES) + len(self.periodicities)
         floor = _finite(self.expert_weight_floor, label="expert_weight_floor")
         if floor < 0.0 or floor * expert_count >= 1.0:
-            raise ValueError("expert_weight_floor leaves no probability mass")
+            message = "expert_weight_floor leaves no probability mass"
+            raise ValueError(message)
         probability_floor = _finite(
             self.log_probability_floor,
             label="log_probability_floor",
         )
         if not 0.0 < probability_floor < 1.0:
-            raise ValueError("log_probability_floor must lie in (0, 1)")
+            message = "log_probability_floor must lie in (0, 1)"
+            raise ValueError(message)
         if _finite(self.response_temperature, label="response_temperature") < 0.0:
-            raise ValueError("response_temperature must be nonnegative")
+            message = "response_temperature must be nonnegative"
+            raise ValueError(message)
         if (
             _finite(
                 self.best_response_tolerance,
@@ -340,7 +361,8 @@ class PerfectHalConfig:
             )
             < 0.0
         ):
-            raise ValueError("best_response_tolerance must be nonnegative")
+            message = "best_response_tolerance must be nonnegative"
+            raise ValueError(message)
 
     @property
     def expert_names(self) -> tuple[str, ...]:
@@ -412,7 +434,7 @@ def _new_role_state(config: PerfectHalConfig) -> _RoleState:
 class PerfectHalOpponentModel:
     """Role-separated online expert mixture trained only by public reveals."""
 
-    def __init__(self, config: PerfectHalConfig = PerfectHalConfig()) -> None:
+    def __init__(self, config: PerfectHalConfig = PerfectHalConfig()) -> None:  # noqa: B008 - frozen dataclass default
         self.config = config
         self._roles = {
             "dropper": _new_role_state(config),
@@ -436,7 +458,8 @@ class PerfectHalOpponentModel:
 
     def _state(self, role: str) -> _RoleState:
         if role not in self._roles:
-            raise ValueError("opponent role must be 'dropper' or 'checker'")
+            message = "opponent role must be 'dropper' or 'checker'"
+            raise ValueError(message)
         return self._roles[role]
 
     @staticmethod
@@ -462,7 +485,8 @@ class PerfectHalOpponentModel:
                 decision.dropper_ttd_seconds,
             )
         else:
-            raise ValueError("decision role must be 'dropper' or 'checker'")
+            message = "decision role must be 'dropper' or 'checker'"
+            raise ValueError(message)
         return (_band(own[0]), _band(own[1]), _band(opponent[0]), _band(opponent[1]))
 
     def _predictive(
@@ -478,7 +502,8 @@ class PerfectHalOpponentModel:
             or not np.all(np.isfinite(values))
             or np.any(values < 0.0)
         ):
-            raise RuntimeError("Perfect Hal count state is malformed")
+            message = "Perfect Hal count state is malformed"
+            raise RuntimeError(message)
         return _normalize(
             values + float(strength) * np.asarray(prior, dtype=np.float64),
             label="Perfect Hal predictive policy",
@@ -574,7 +599,8 @@ class PerfectHalOpponentModel:
             )
         matrix = np.stack(policies, axis=0)
         if matrix.shape != (len(self.config.expert_names), ACTION_COUNT):
-            raise RuntimeError("Perfect Hal expert matrix shape drifted")
+            message = "Perfect Hal expert matrix shape drifted"
+            raise RuntimeError(message)
         return matrix
 
     def predict(
@@ -589,12 +615,14 @@ class PerfectHalOpponentModel:
 
         state = self._state(opponent_role)
         if game_index < 0 or game_decision_index < 0:
-            raise ValueError("game and decision indices must be nonnegative")
-        if len(state_regime) != 4 or any(
+            message = "game and decision indices must be nonnegative"
+            raise ValueError(message)
+        if len(state_regime) != 4 or any(  # noqa: PLR2004 - fixed game or wire-format boundary
             isinstance(value, bool) or not isinstance(value, int) or value < 0
             for value in state_regime
         ):
-            raise ValueError("state_regime must contain four nonnegative integers")
+            message = "state_regime must contain four nonnegative integers"
+            raise ValueError(message)
         context = PerfectHalContext(
             opponent_role=opponent_role,
             observation_index=state.observations,
@@ -653,14 +681,14 @@ class PerfectHalOpponentModel:
         )
         state = self._state(forecast.context.opponent_role)
         if forecast.context.observation_index != state.observations:
-            raise RuntimeError(
-                "Perfect Hal forecast token is stale or already observed"
-            )
+            message = "Perfect Hal forecast token is stale or already observed"
+            raise RuntimeError(message)
         if forecast.expert_names != self.config.expert_names or (
             forecast.expert_policies.shape
             != (len(self.config.expert_names), ACTION_COUNT)
         ):
-            raise ValueError("Perfect Hal forecast token is incompatible")
+            message = "Perfect Hal forecast token is incompatible"
+            raise ValueError(message)
 
         action_index = resolved_opponent_action - 1
         realized = np.clip(
@@ -678,7 +706,7 @@ class PerfectHalOpponentModel:
             state.recency_counts,
             strict=True,
         ):
-            counts *= retention
+            counts[...] *= retention
             counts[action_index] += 1.0
         previous_opponent = forecast.context.previous_opponent_action
         previous_self = forecast.context.previous_self_action
@@ -708,7 +736,8 @@ class PerfectHalOpponentModel:
 def _validate_stage(stage: Stage) -> None:
     matrix = np.asarray(stage.matrix, dtype=np.float64)
     if matrix.shape != (ACTION_COUNT, ACTION_COUNT) or not np.all(np.isfinite(matrix)):
-        raise ValueError("certified DTH stage matrix must be finite 60x60")
+        message = "certified DTH stage matrix must be finite 60x60"
+        raise ValueError(message)
     for label, raw in (
         ("dropper", stage.drop),
         ("checker", stage.check),
@@ -718,16 +747,18 @@ def _validate_stage(stage: Stage) -> None:
             policy.shape != (ACTION_COUNT,)
             or not np.all(np.isfinite(policy))
             or np.any(policy < 0.0)
-            or abs(float(policy.sum()) - 1.0) > 1e-8
+            or abs(float(policy.sum()) - 1.0) > 1e-8  # noqa: PLR2004 - fixed game or wire-format boundary
         ):
-            raise ValueError(f"certified DTH {label} policy is malformed")
+            message = f"certified DTH {label} policy is malformed"
+            raise ValueError(message)
     if (
         not np.isfinite(stage.value)
         or not np.isfinite(stage.gap)
         or stage.gap < 0.0
         or stage.gap > MAX_SADDLE_GAP
     ):
-        raise ValueError("certified DTH value or saddle gap is malformed")
+        message = "certified DTH value or saddle gap is malformed"
+        raise ValueError(message)
 
 
 def _best_response_policy(
@@ -736,7 +767,8 @@ def _best_response_policy(
 ) -> np.ndarray:
     values = np.asarray(action_values, dtype=np.float64)
     if values.shape != (ACTION_COUNT,) or not np.all(np.isfinite(values)):
-        raise ValueError("Perfect Hal action values must be finite length 60")
+        message = "Perfect Hal action values must be finite length 60"
+        raise ValueError(message)
     best = float(np.max(values))
     if config.response_temperature == 0.0:
         winners = values >= best - config.best_response_tolerance
@@ -761,7 +793,6 @@ class PerfectHalDecision:
     forecast_entropy: float
     forecast_confidence: float
     expected_payoff: float
-    exact_policy_expected_payoff: float
     expected_exploit_gain: float
     best_response_actions: tuple[int, ...]
 
@@ -778,8 +809,8 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
 
     def __init__(
         self,
-        table: Table,
-        config: PerfectHalConfig = PerfectHalConfig(),
+        table: StageReader,
+        config: PerfectHalConfig = PerfectHalConfig(),  # noqa: B008 - frozen dataclass default
         *,
         opponent_model: PerfectHalOpponentModel | None = None,
     ) -> None:
@@ -789,7 +820,8 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
             opponent_model = PerfectHalOpponentModel(config)
         self.opponent_model = opponent_model
         if self.opponent_model.config != config:
-            raise ValueError("Perfect Hal provider and opponent-model configs differ")
+            message = "Perfect Hal provider and opponent-model configs differ"
+            raise ValueError(message)
         self.decisions: list[PerfectHalDecision] = []
         self._pending: _PendingDecision | None = None
         self._seen_reveals: set[tuple[int, int, int]] = set()
@@ -797,24 +829,17 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         self._game_started = False
         self._game_epoch = -1
         self._game_decision_index = 0
-        self._last_outcome: PublicGameOutcome | None = None
 
     @property
     def last_decision(self) -> PerfectHalDecision | None:
         return self.decisions[-1] if self.decisions else None
 
-    @property
-    def has_session_memory(self) -> bool:
-        return self.opponent_model.total_observations > 0
-
-    def close(self) -> None:
-        """Match the provider lifecycle; tablebase memory maps need no close."""
-
     def reset_session(self) -> None:
         """Forget the opponent and restore an independent repeated session."""
 
         if self._pending is not None:
-            raise RuntimeError("Perfect Hal session reset with an unrevealed action")
+            message = "Perfect Hal session reset with an unrevealed action"
+            raise RuntimeError(message)
         self.opponent_model.reset()
         self.decisions.clear()
         self._seen_reveals.clear()
@@ -822,13 +847,13 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         self._game_started = False
         self._game_epoch = -1
         self._game_decision_index = 0
-        self._last_outcome = None
 
     def reset_game(self) -> None:
         """Start a fresh game while retaining the repeated-opponent model."""
 
         if self._pending is not None:
-            raise RuntimeError("Perfect Hal game reset with an unrevealed action")
+            message = "Perfect Hal game reset with an unrevealed action"
+            raise RuntimeError(message)
         if self._game_started:
             self._game_epoch += 1
         else:
@@ -836,33 +861,36 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
             self._game_epoch = 0
         self._current_actor_name = None
         self._game_decision_index = 0
-        self._last_outcome = None
 
     @staticmethod
     def _validate_decision(decision: CanonicalDecision) -> None:
         if decision.role not in {"dropper", "checker"}:
-            raise ValueError("Perfect Hal role must be dropper or checker")
+            message = "Perfect Hal role must be dropper or checker"
+            raise ValueError(message)
         if (
             decision.turn_duration != ACTION_COUNT
             or tuple(decision.legal_seconds) != ACTIONS
         ):
-            raise ValueError(
+            message = (
                 "Perfect Hal supports pure DTH only: turn duration and legal "
                 "actions must be exactly literal seconds 1..60"
             )
+            raise ValueError(message)
 
     def policy(self, decision: CanonicalDecision) -> Mapping[int, float]:
         """Return an unrestricted exact-matrix response to the causal forecast."""
 
         self._validate_decision(decision)
         if self._pending is not None:
-            raise RuntimeError("Perfect Hal was asked to act twice before a reveal")
+            message = "Perfect Hal was asked to act twice before a reveal"
+            raise RuntimeError(message)
         if not self._game_started:
             self.reset_game()
         if self._current_actor_name is None:
             self._current_actor_name = decision.actor_name
         elif self._current_actor_name.casefold() != decision.actor_name.casefold():
-            raise RuntimeError("Perfect Hal cannot switch player identity mid-game")
+            message = "Perfect Hal cannot switch player identity mid-game"
+            raise RuntimeError(message)
 
         stage = self.table.stage(project_to_dth_state(decision))
         _validate_stage(stage)
@@ -907,7 +935,6 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
             forecast_entropy=forecast.entropy,
             forecast_confidence=forecast.confidence,
             expected_payoff=expected_payoff,
-            exact_policy_expected_payoff=exact_expected,
             expected_exploit_gain=expected_payoff - exact_expected,
             best_response_actions=best_actions,
         )
@@ -929,12 +956,15 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
 
         pending = self._pending
         if pending is None:
-            raise RuntimeError("Perfect Hal received a reveal without a pending action")
+            message = "Perfect Hal received a reveal without a pending action"
+            raise RuntimeError(message)
         if record.game_index < 0 or record.half_round_index < 0:
-            raise ValueError("public reveal indices must be nonnegative")
+            message = "public reveal indices must be nonnegative"
+            raise ValueError(message)
         key = (self._game_epoch, record.game_index, record.half_round_index)
         if key in self._seen_reveals:
-            raise RuntimeError("public reveal was delivered more than once")
+            message = "public reveal was delivered more than once"
+            raise RuntimeError(message)
         self_name = pending.self_name.casefold()
         if record.dropper_name.casefold() == self_name:
             self_role = "dropper"
@@ -951,9 +981,11 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
                 label="opponent action",
             )
         else:
-            raise ValueError("public reveal does not include the Perfect Hal player")
+            message = "public reveal does not include the Perfect Hal player"
+            raise ValueError(message)
         if self_role != pending.self_role:
-            raise RuntimeError("public reveal role disagrees with the pending decision")
+            message = "public reveal role disagrees with the pending decision"
+            raise RuntimeError(message)
         self.opponent_model.observe(
             pending.forecast,
             opponent_action=opponent_action,
@@ -966,10 +998,11 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         """Record a terminal public result without erasing opponent memory."""
 
         if self._pending is not None:
-            raise RuntimeError("Perfect Hal game ended with an unrevealed action")
+            message = "Perfect Hal game ended with an unrevealed action"
+            raise RuntimeError(message)
         if outcome.game_index < 0 or outcome.half_rounds < 0:
-            raise ValueError("public game outcome indices must be nonnegative")
-        self._last_outcome = outcome
+            message = "public game outcome indices must be nonnegative"
+            raise ValueError(message)
 
     def match_summary(self) -> str:
         if not self.decisions:
@@ -991,9 +1024,10 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         latest = self.last_decision
         return {
             "schema_version": PERFECT_HAL_DIAGNOSTICS_SCHEMA,
-            "model_schema": getattr(self.opponent_model, "schema", "arena-perfect-hal-online-adaptive-v1"),
-            "opponent_model": self.opponent_model.diagnostics()
-            if hasattr(self.opponent_model, "diagnostics") else None,
+            "model_schema": getattr(
+                self.opponent_model, "schema", "arena-perfect-hal-online-adaptive-v1"
+            ),
+            "opponent_model": None,
             "pure_dth_only": True,
             "public_history_only": True,
             "unrestricted_best_response": True,
@@ -1019,27 +1053,36 @@ class PerfectHalPolicyProvider(CanonicalPolicyProvider):
         }
 
 
-
 @dataclass(frozen=True, slots=True)
 class TranslatedHalConfig(PerfectHalConfig):
     offset_retention: float = 0.9
     translated: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super(TranslatedHalConfig, self).__post_init__()
         if not np.isfinite(self.offset_retention) or not 0 < self.offset_retention <= 1:
-            raise ValueError("offset_retention must be in (0, 1]")
+            message = "offset_retention must be in (0, 1]"
+            raise ValueError(message)
         if not isinstance(self.translated, bool):
-            raise ValueError("translated must be boolean")
+            message = "translated must be boolean"
+            raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
         if self.expert_weight_floor * len(self.expert_names) >= 1:
-            raise ValueError("expert floor leaves no probability mass")
+            message = "expert floor leaves no probability mass"
+            raise ValueError(message)
 
     @property
-    def expert_names(self):
+    def expert_names(self) -> tuple[str, ...]:
         base = super(TranslatedHalConfig, self).expert_names
-        return base + (tuple(f"offset_{anchor}_{direction}_{rate}"
-            for anchor in ("role", "last") for direction in ("copy", "mirror")
-            for rate in ("global", "recent")) if self.translated else ())
+        return base + (
+            tuple(
+                f"offset_{anchor}_{direction}_{rate}"
+                for anchor in ("role", "last")
+                for direction in ("copy", "mirror")
+                for rate in ("global", "recent")
+            )
+            if self.translated
+            else ()
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1048,38 +1091,46 @@ class TranslatedContext(PerfectHalContext):
 
 
 class TranslatedHalOpponentModel(PerfectHalOpponentModel):
+    config: TranslatedHalConfig
     """Score Old's experts and offset experts before each public reveal."""
 
     schema = "arena-translated-hal-v1"
 
-    def __init__(self, config=TranslatedHalConfig()):
+    def __init__(self, config: TranslatedHalConfig = TranslatedHalConfig()) -> None:  # noqa: B008 - frozen dataclass default
         super().__init__(config)
-        base = {key: value for key, value in asdict(config).items()
-                if key in PerfectHalConfig.__dataclass_fields__}
+        base = {
+            key: value
+            for key, value in asdict(config).items()
+            if key in PerfectHalConfig.__dataclass_fields__
+        }
         self._base = PerfectHalOpponentModel(PerfectHalConfig(**base))
         self._offsets = {role: np.zeros((2, 2, 2, 119)) for role in self._roles}
         self._last_self = None
 
-    def reset(self):
+    def reset(self) -> None:
         super().reset()
         self._offsets = {role: np.zeros((2, 2, 2, 119)) for role in self._roles}
         self._last_self = None
 
-    def break_sequence(self):
+    def break_sequence(self) -> None:
         """Keep learned counts; clear references after an excluded leap reveal."""
         self._last_self = None
         for state in self._roles.values():
             state.previous_self_action = None
             state.previous_opponent_action = None
 
-    def _expert_policies(self, state, context):
-        base = self._base._expert_policies(state, context)
+    def _expert_policies(
+        self, state: _RoleState, context: PerfectHalContext
+    ) -> np.ndarray:
+        base = self._base._expert_policies(state, context)  # noqa: SLF001 - collaborators within this module share model state
         if not self.config.translated:
             return base
         policies = list(base)
         prior = base[1]
         offsets = self._offsets[context.opponent_role]
-        for anchor_index, anchor in enumerate((context.previous_self_action, self._last_self)):
+        for anchor_index, anchor in enumerate(
+            (context.previous_self_action, self._last_self)
+        ):
             for mirrored in range(2):
                 for rate in range(2):
                     if anchor is None:
@@ -1087,21 +1138,51 @@ class TranslatedHalOpponentModel(PerfectHalOpponentModel):
                         continue
                     reference = 61 - anchor if mirrored else anchor
                     actions = np.clip(reference + np.arange(-59, 60), 1, 60) - 1
-                    counts = np.bincount(actions, weights=offsets[anchor_index, mirrored, rate], minlength=60)
-                    policies.append(self._predictive(counts, prior,
-                        strength=self.config.conditional_prior_strength))
+                    counts = np.bincount(
+                        actions,
+                        weights=offsets[anchor_index, mirrored, rate],
+                        minlength=60,
+                    )
+                    policies.append(
+                        self._predictive(
+                            counts,
+                            prior,
+                            strength=self.config.conditional_prior_strength,
+                        )
+                    )
         return np.stack(policies)
 
-    def predict(self, *args, **kwargs):
-        forecast = super().predict(*args, **kwargs)
-        context = TranslatedContext(**asdict(forecast.context), last_self_action=self._last_self)
+    def predict(
+        self,
+        opponent_role: str,
+        *,
+        state_regime: tuple[int, int, int, int],
+        game_index: int,
+        game_decision_index: int,
+    ) -> PerfectHalForecast:
+        forecast = super().predict(
+            opponent_role,
+            state_regime=state_regime,
+            game_index=game_index,
+            game_decision_index=game_decision_index,
+        )
+        context = TranslatedContext(
+            **asdict(forecast.context), last_self_action=self._last_self
+        )
         return replace(forecast, context=context)
 
-    def observe(self, forecast, *, opponent_action, self_action):
-        super().observe(forecast, opponent_action=opponent_action, self_action=self_action)
+    def observe(
+        self, forecast: PerfectHalForecast, *, opponent_action: int, self_action: int
+    ) -> None:
+        super().observe(
+            forecast, opponent_action=opponent_action, self_action=self_action
+        )
         if self.config.translated:
             offsets = self._offsets[forecast.context.opponent_role]
-            anchors = (forecast.context.previous_self_action, forecast.context.last_self_action)
+            anchors = (
+                forecast.context.previous_self_action,
+                cast("TranslatedContext", forecast.context).last_self_action,
+            )
             for anchor_index, anchor in enumerate(anchors):
                 if anchor is None:
                     continue
@@ -1136,26 +1217,34 @@ TRANSLATED_HAL_V1 = TranslatedHalConfig(
 class TranslatedHal:
     """Exploit ordinary turns; use DTH equilibrium during the leap window."""
 
-    def __init__(self, table):
+    def __init__(self, table: StageReader) -> None:
         config = TRANSLATED_HAL_V1
-        self.inner = PerfectHalPolicyProvider(table, config,
-            opponent_model=TranslatedHalOpponentModel(config))
+        self.inner = PerfectHalPolicyProvider(
+            table, config, opponent_model=TranslatedHalOpponentModel(config)
+        )
         self._leap_pending = None
         self.leap_fallbacks = 0
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:  # noqa: ANN401 - forwards provider diagnostics
         return getattr(self.inner, name)
 
-    def policy(self, decision):
+    def policy(self, decision: CanonicalDecision) -> Mapping[int, float]:
         if self._leap_pending is not None:
-            raise RuntimeError("Hal was asked to act twice before a leap reveal")
-        if decision.turn_duration == 60:
+            message = "Hal was asked to act twice before a leap reveal"
+            raise RuntimeError(message)
+        if decision.turn_duration == ACTION_COUNT:
             return self.inner.policy(decision)
-        if (decision.turn_duration != 61 or decision.role not in ("dropper", "checker")
-            or tuple(decision.legal_seconds) != legal_seconds(decision.actor_name, decision.role, 61)):
-            raise ValueError("invalid canonical leap decision")
-        if self.inner._pending is not None:
-            raise RuntimeError("Hal has an unrevealed ordinary action")
+        if (
+            decision.turn_duration != ACTION_COUNT + 1
+            or decision.role not in ("dropper", "checker")
+            or tuple(decision.legal_seconds)
+            != legal_seconds(decision.actor_name, decision.role, 61)
+        ):
+            message = "invalid canonical leap decision"
+            raise ValueError(message)
+        if self.inner._pending is not None:  # noqa: SLF001 - collaborators within this module share model state
+            message = "Hal has an unrevealed ordinary action"
+            raise RuntimeError(message)
         stage = self.inner.table.stage(project_to_dth_state(decision))
         _validate_stage(stage)
         policy = stage.drop if decision.role == "dropper" else stage.check
@@ -1163,133 +1252,208 @@ class TranslatedHal:
         self.leap_fallbacks += 1
         return {i + 1: float(p) for i, p in enumerate(policy) if p > 0}
 
-    def observe(self, record):
+    def observe(self, record: PublicHalfRound) -> None:
         pending = self._leap_pending
         if pending is None:
-            return self.inner.observe(record)
+            self.inner.observe(record)
+            return
         name = record.dropper_name if pending.role == "dropper" else record.checker_name
-        if name != pending.actor_name or record.pre_decision_state.turn_duration != 61:
-            raise ValueError("leap reveal disagrees with the pending decision")
+        if (
+            name != pending.actor_name
+            or record.pre_decision_state.turn_duration != ACTION_COUNT + 1
+        ):
+            message = "leap reveal disagrees with the pending decision"
+            raise ValueError(message)
         if record.game_index < 0 or record.half_round_index < 0:
-            raise ValueError("invalid leap reveal indices")
-        validate_action(record.drop_time, actor=record.dropper_name, role="dropper", turn_duration=61)
-        validate_action(record.check_time, actor=record.checker_name, role="checker", turn_duration=61)
-        self.inner.opponent_model.break_sequence()
+            message = "invalid leap reveal indices"
+            raise ValueError(message)
+        validate_action(
+            record.drop_time,
+            actor=record.dropper_name,
+            role="dropper",
+            turn_duration=61,
+        )
+        validate_action(
+            record.check_time,
+            actor=record.checker_name,
+            role="checker",
+            turn_duration=61,
+        )
+        cast("TranslatedHalOpponentModel", self.inner.opponent_model).break_sequence()
         self._leap_pending = None
 
-    def reset_game(self):
+    def reset_game(self) -> None:
         if self._leap_pending is not None:
-            raise RuntimeError("game reset with an unrevealed leap action")
+            message = "game reset with an unrevealed leap action"
+            raise RuntimeError(message)
         self.inner.reset_game()
         self.inner.decisions.clear()
-        self.inner._seen_reveals.clear()
+        self.inner._seen_reveals.clear()  # noqa: SLF001 - collaborators within this module share model state
         self.leap_fallbacks = 0
 
-    def reset_session(self):
+    def reset_session(self) -> None:
         if self._leap_pending is not None:
-            raise RuntimeError("session reset with an unrevealed leap action")
+            message = "session reset with an unrevealed leap action"
+            raise RuntimeError(message)
         self.inner.reset_session()
         self.leap_fallbacks = 0
 
-    def end_game(self, outcome):
+    def end_game(self, outcome: PublicGameOutcome) -> None:
         if self._leap_pending is not None:
-            raise RuntimeError("game ended with an unrevealed leap action")
+            message = "game ended with an unrevealed leap action"
+            raise RuntimeError(message)
         self.inner.end_game(outcome)
 
-    def experiment_diagnostics(self):
-        return {**self.inner.experiment_diagnostics(), "pure_dth_only": False,
+    def experiment_diagnostics(self) -> dict[str, object]:
+        return {
+            **self.inner.experiment_diagnostics(),
+            "pure_dth_only": False,
             "leap_fallbacks": self.leap_fallbacks,
-            "leap_policy": "DTH equilibrium projection; no action-61 optimization claim"}
+            "leap_policy": (
+                "DTH equilibrium projection; no action-61 optimization claim"
+            ),
+        }
 
-    def dump_state(self):
+    def dump_state(self) -> str:
         """Return the opponent evidence as a bounded JSON checkpoint."""
-        if self.inner._pending is not None or self._leap_pending is not None:
-            raise RuntimeError("cannot checkpoint an unrevealed action")
+        if self.inner._pending is not None or self._leap_pending is not None:  # noqa: SLF001 - collaborators within this module share model state
+            message = "cannot checkpoint an unrevealed action"
+            raise RuntimeError(message)
         model = self.opponent_model
         roles = {}
-        for role, state in model._roles.items():
+        for role, state in model._roles.items():  # noqa: SLF001 - collaborators within this module share model state
             fields = asdict(state)
             for key, value in fields.items():
                 if isinstance(value, np.ndarray):
                     fields[key] = value.tolist()
             fields["recency_counts"] = [a.tolist() for a in state.recency_counts]
             for key in ("state_counts", "phase_counts"):
-                fields[key] = [[list(k), v.tolist()] for k, v in getattr(state, key).items()]
+                fields[key] = [
+                    [list(k), v.tolist()] for k, v in getattr(state, key).items()
+                ]
             roles[role] = fields
-        data = {"schema": MEMORY_SCHEMA, "config": asdict(model.config), "roles": roles,
-            "offsets": {r: a.tolist() for r, a in model._offsets.items()},
-            "last_self": model._last_self}
+        data = {
+            "schema": MEMORY_SCHEMA,
+            "config": asdict(model.config),
+            "roles": roles,
+            "offsets": {r: a.tolist() for r, a in model._offsets.items()},  # noqa: SLF001 - collaborators within this module share model state
+            "last_self": model._last_self,  # noqa: SLF001 - collaborators within this module share model state
+        }
         raw = json.dumps(data, separators=(",", ":"), allow_nan=False).encode()
         if len(raw) > MAX_MEMORY_BYTES:
-            raise ValueError("opponent checkpoint exceeds size limit")
+            message = "opponent checkpoint exceeds size limit"
+            raise ValueError(message)
         return base64.b64encode(zlib.compress(raw)).decode("ascii")
 
-    def restore_state(self, memory):
+    def restore_state(self, memory: str) -> None:
         """Replace the opponent evidence with a checkpoint, or raise ValueError."""
         if not isinstance(memory, str) or len(memory) > MAX_MEMORY_BYTES:
-            raise ValueError("invalid opponent checkpoint")
+            message = "invalid opponent checkpoint"
+            raise ValueError(message)
         try:
             packed = base64.b64decode(memory, validate=True)
             inflater = zlib.decompressobj()
             raw = inflater.decompress(packed, MAX_MEMORY_BYTES + 1)
             if len(raw) > MAX_MEMORY_BYTES or not inflater.eof or inflater.unused_data:
-                raise ValueError("invalid compressed opponent checkpoint")
+                message = "invalid compressed opponent checkpoint"
+                raise ValueError(message)
             data = json.loads(raw)
             model = TranslatedHalOpponentModel(self.config)
             expected_config = json.loads(json.dumps(asdict(model.config)))
             if data["schema"] != MEMORY_SCHEMA or data["config"] != expected_config:
-                raise ValueError("opponent checkpoint version mismatch")
+                message = "opponent checkpoint version mismatch"
+                raise ValueError(message)
 
-            def array(value, shape, *, negative=False):
+            def array(
+                value: object, shape: tuple[int, ...], *, negative: bool = False
+            ) -> np.ndarray:
                 result = np.asarray(value, dtype=np.float64)
-                if result.shape != shape or not np.all(np.isfinite(result)) or (not negative and np.any(result < 0)):
-                    raise ValueError("invalid opponent evidence array")
+                if (
+                    result.shape != shape
+                    or not np.all(np.isfinite(result))
+                    or (not negative and np.any(result < 0))
+                ):
+                    message = "invalid opponent evidence array"
+                    raise ValueError(message)
                 return result.copy()
 
-            def action(value):
-                if value is not None and (type(value) is not int or not 1 <= value <= 60):
-                    raise ValueError("invalid opponent action reference")
+            def action(value: object) -> int | None:
+                if value is not None and (
+                    type(value) is not int or not 1 <= value <= ACTION_COUNT
+                ):
+                    message = "invalid opponent action reference"
+                    raise ValueError(message)
                 return value
 
-            for role, state in model._roles.items():
+            for role, state in model._roles.items():  # noqa: SLF001 - collaborators within this module share model state
                 fields = data["roles"][role]
                 count = fields["observations"]
                 if type(count) is not int or not 0 <= count <= 10**12:
-                    raise ValueError("invalid opponent observation count")
+                    message = "invalid opponent observation count"
+                    raise ValueError(message)
                 state.observations = count
-                for key in ("global_counts", "transition_counts", "response_counts", "delta_counts", "log_weights"):
-                    setattr(state, key, array(fields[key], getattr(state, key).shape, negative=key == "log_weights"))
+                for key in (
+                    "global_counts",
+                    "transition_counts",
+                    "response_counts",
+                    "delta_counts",
+                    "log_weights",
+                ):
+                    setattr(
+                        state,
+                        key,
+                        array(
+                            fields[key],
+                            getattr(state, key).shape,
+                            negative=key == "log_weights",
+                        ),
+                    )
                 recency = fields["recency_counts"]
-                if len(recency) != 3:
-                    raise ValueError("invalid recency evidence")
-                state.recency_counts = tuple(array(a, (60,)) for a in recency)
+                if len(recency) != 3:  # noqa: PLR2004 - fixed game or wire-format boundary
+                    message = "invalid recency evidence"
+                    raise ValueError(message)
+                state.recency_counts = (
+                    array(recency[0], (60,)),
+                    array(recency[1], (60,)),
+                    array(recency[2], (60,)),
+                )
                 for key, width in (("state_counts", 4), ("phase_counts", 2)):
                     counts = {}
                     for k, v in fields[key]:
-                        if len(k) != width or any(type(i) is not int or i < 0 for i in k):
-                            raise ValueError("invalid opponent context")
-                        if key == "state_counts" and any(i > 5 for i in k):
-                            raise ValueError("invalid state band")
-                        if key == "phase_counts" and (k[0] not in model.config.periodicities or k[1] >= k[0]):
-                            raise ValueError("invalid periodic phase")
+                        if len(k) != width or any(
+                            type(i) is not int or i < 0 for i in k
+                        ):
+                            message = "invalid opponent context"
+                            raise ValueError(message)
+                        if key == "state_counts" and any(i > 5 for i in k):  # noqa: PLR2004 - fixed game or wire-format boundary
+                            message = "invalid state band"
+                            raise ValueError(message)
+                        if key == "phase_counts" and (
+                            k[0] not in model.config.periodicities or k[1] >= k[0]
+                        ):
+                            message = "invalid periodic phase"
+                            raise ValueError(message)
                         if tuple(k) in counts:
-                            raise ValueError("duplicate opponent context")
+                            message = "duplicate opponent context"
+                            raise ValueError(message)
                         counts[tuple(k)] = array(v, (60,))
                     setattr(state, key, counts)
                 for key in ("previous_self_action", "previous_opponent_action"):
                     setattr(state, key, action(fields[key]))
-                model._offsets[role] = array(data["offsets"][role], (2, 2, 2, 119))
-            model._last_self = action(data["last_self"])
+                model._offsets[role] = array(data["offsets"][role], (2, 2, 2, 119))  # noqa: SLF001 - collaborators within this module share model state
+            model._last_self = action(data["last_self"])  # noqa: SLF001 - collaborators within this module share model state
         except (KeyError, TypeError, zlib.error, UnicodeError) as error:
-            raise ValueError("invalid opponent checkpoint") from error
+            message = "invalid opponent checkpoint"
+            raise ValueError(message) from error
         self.inner.opponent_model = model
 
 
-def make_hal(kind: str, table: Table):
+def make_hal(kind: str, table: StageReader) -> ExactHal | TranslatedHal:
     """Build Hal of one kind in ``KINDS`` over one opened DTH table."""
 
     if kind == "exact":
         return ExactHal(table)
     if kind == "translated":
         return TranslatedHal(table)
-    raise ValueError(f"unknown Hal kind {kind!r}; choose one of {', '.join(KINDS)}")
+    message = f"unknown Hal kind {kind!r}; choose one of {', '.join(KINDS)}"
+    raise ValueError(message)

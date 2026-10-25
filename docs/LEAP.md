@@ -1,5 +1,9 @@
 # Public leap game and certificate
 
+The production sweep and reader live in `src/stl/leap.py`. The independent
+scalar stage and fused-multiply-add reference live in `tests/conftest.py`;
+the golden tests compare the frozen kernel against them and the Rust fixture.
+
 `stl.leap` builds, audits, and reads the public leap-aware game (L2).
 `stl.leap_kernel` is the frozen numba kernel. [RULES.md](RULES.md) owns the
 physical rules; [DTH.md](DTH.md) owns the exact post-leap continuation.

@@ -1,8 +1,10 @@
+# Copyright 2026 The STL authors
 """Phase-machine invariants of the play session, and the policy sampler."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
@@ -13,7 +15,6 @@ from stl.game import (
     Player,
     Referee,
 )
-from stl.hal import CanonicalDecision
 from stl.server.session import (
     Phase,
     PlaySession,
@@ -22,7 +23,11 @@ from stl.server.session import (
     decision_from_game,
     normalize_legal_policy,
 )
-from tests.conftest import RecordingHal as _RecordingHal, make_session as _session
+from tests.conftest import RecordingHal as _RecordingHal
+from tests.conftest import make_session as _session
+
+if TYPE_CHECKING:
+    from stl.hal import CanonicalDecision, PublicGameOutcome
 
 
 def test_session_starts_on_the_rules_phase_and_begins_into_action() -> None:
@@ -117,7 +122,7 @@ def test_finish_notifies_the_provider_only_once() -> None:
         def __init__(self) -> None:
             self.outcomes = []
 
-        def end_game(self, outcome) -> None:
+        def end_game(self, outcome: PublicGameOutcome) -> None:
             self.outcomes.append(outcome)
 
     hal_agent = _RecordingHal()
@@ -141,12 +146,14 @@ def test_finish_rejects_a_nonterminal_session() -> None:
 
 
 @pytest.mark.parametrize("second", [True, 2.0])
-def test_submit_rejects_non_integer_action_types_before_consulting_hal(second) -> None:
+def test_submit_rejects_non_integer_action_types_before_consulting_hal(
+    second: object,
+) -> None:
     hal_agent = _RecordingHal()
     session = _session(hal_agent=hal_agent)
     session.begin()
     with pytest.raises(ValueError, match="Illegal action"):
-        session.submit(second)
+        session.submit(second)  # pyright: ignore[reportArgumentType] - invalid-input contract
     assert hal_agent.calls == []
 
 
@@ -159,7 +166,7 @@ def test_display_label_never_replaces_bakus_rule_identity() -> None:
 
     assert session.human.name == "Baku"
     assert session.human_display_name == "Alice <the challenger>"
-    assert session.legal_actions()[-1] == 61
+    assert session.legal_actions()[-1] == 61  # noqa: PLR2004
 
     session.game.current_half = 1
     session.max_half_rounds = 1
@@ -167,7 +174,7 @@ def test_display_label_never_replaces_bakus_rule_identity() -> None:
     session.submit(30)
     session.acknowledge()
     transcript = session.finish()
-    first = transcript["public_history"][0]
+    first = cast("list[dict]", transcript["public_history"])[0]
     assert first["checker"] == "Alice <the challenger>"
     assert first["public_state_before"]["players"][1]["name"] == (
         "Alice <the challenger>"
@@ -193,14 +200,14 @@ def test_only_a_human_dropper_may_use_the_leap_second() -> None:
     """Legality is the engine's call; the session must not widen it."""
 
     session = _session(start_clock=LS_WINDOW_START)
-    assert session.turn_duration() == 61
+    assert session.turn_duration() == 61  # noqa: PLR2004
     for half in (1, 2):
         session.game.current_half = half
         legal = session.legal_actions()
         if session.human_role() == "dropper":
-            assert legal[-1] == 61
+            assert legal[-1] == 61  # noqa: PLR2004
         else:
-            assert legal[-1] == 60
+            assert legal[-1] == 60  # noqa: PLR2004
 
 
 def test_policy_normalization_discards_illegal_zero_mass_entries() -> None:
@@ -213,7 +220,7 @@ def test_policy_normalization_discards_illegal_zero_mass_entries() -> None:
 
 @dataclass
 class _Provider:
-    def policy(self, decision: CanonicalDecision) -> dict[int, float]:
+    def policy(self, decision: CanonicalDecision) -> dict[int, float]:  # noqa: ARG002
         return {0: 100.0, 1: 1.0, 60: 5.0}
 
 
@@ -221,7 +228,7 @@ def test_algorithm_agnostic_agent_samples_only_a_legal_engine_action() -> None:
     game = Game(Player("Hal"), Player("Baku"), Referee())
     agent = PolicyDrivenAgent(_Provider(), player_name="Hal", seed=4)
     action = agent.choose_action(game, "dropper", game.get_turn_duration())
-    assert 1 <= action <= 60
+    assert 1 <= action <= 60  # noqa: PLR2004
     assert action != 0
 
 
@@ -234,5 +241,5 @@ def test_decision_uses_engine_role_relative_state() -> None:
     game.first_dropper = game.player1
     decision = decision_from_game(game, role="dropper", turn_duration=60)
     assert decision.actor_name == "Hal"
-    assert decision.dropper_cylinder_seconds == 20
-    assert decision.checker_cylinder_seconds == 40
+    assert decision.dropper_cylinder_seconds == 20  # noqa: PLR2004
+    assert decision.checker_cylinder_seconds == 40  # noqa: PLR2004

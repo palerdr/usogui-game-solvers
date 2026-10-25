@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """The Vercel bundle: its copied runtime, its code version and its package pins.
 
 The runtime check copies the sources as ``prepare`` does and runs the
@@ -13,14 +14,30 @@ import json
 import os
 import subprocess
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 
-from stl.server.deploy import BUNDLE_PACKAGES, ROOT, code_version, copy_sources, locked_versions
+from stl.server.deploy import (
+    BUNDLE_PACKAGES,
+    ROOT,
+    copy_sources,
+    locked_versions,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # Modules the hosted function must never load: the numba kernels and the
 # training stack.
-FORBIDDEN_MODULES = ("numba", "llvmlite", "torch", "gymnasium", "stable_baselines3", "sb3_contrib")
+FORBIDDEN_MODULES = (
+    "numba",
+    "llvmlite",
+    "torch",
+    "gymnasium",
+    "stable_baselines3",
+    "sb3_contrib",
+)
 
 _RUN_PRODUCTION = """
 import json, sys, types
@@ -41,7 +58,8 @@ class Table:
     def stage(self, state):
         uniform = np.full(60, 1.0 / 60)
         return Stage(
-            state=tuple(int(value) for value in state), value=1.0 / 60, matrix=np.eye(60),
+            state=tuple(int(value) for value in state),
+            value=1.0 / 60, matrix=np.eye(60),
             drop=uniform, check=uniform.copy(), gap=0.0,
         )
 
@@ -71,7 +89,9 @@ with TestClient(app, base_url="https://testserver") as client:
         return response.json()
 
     health = client.get("/api/health").json()
-    assert health == {"status": "ok", "policy": "translated-hal-v1", "version": "closure"}
+    assert health == {
+        "status": "ok", "policy": "translated-hal-v1", "version": "closure"
+    }
     assert client.get("/api/rules").status_code == 200
     state = post("/api/session/begin", client.get("/api/session").json())
     state = post("/api/session/action", state, second=state["legal_seconds"][0])
@@ -89,13 +109,13 @@ print(json.dumps({"stl_files": files, "modules": sorted(sys.modules)}))
 
 
 @pytest.fixture(scope="module")
-def production_run(tmp_path_factory) -> dict[str, object]:
+def production_run(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
     runtime = tmp_path_factory.mktemp("bundle") / "runtime"
     copy_sources(ROOT, runtime)
     environment = dict(os.environ)
     for name in ("SUPABASE_URL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"):
         environment.pop(name, None)
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         [sys.executable, "-I", "-c", _RUN_PRODUCTION, str(runtime)],
         capture_output=True,
         text=True,
@@ -106,35 +126,41 @@ def production_run(tmp_path_factory) -> dict[str, object]:
     return {"runtime": runtime, **json.loads(result.stdout.strip().splitlines()[-1])}
 
 
-def test_the_production_entry_runs_from_the_copied_sources(production_run) -> None:
+def test_the_production_entry_runs_from_the_copied_sources(
+    production_run: dict,
+) -> None:
     runtime = production_run["runtime"].resolve()
-    outside = [path for path in production_run["stl_files"] if not path.startswith(str(runtime))]
-    assert production_run["stl_files"] and outside == []
+    outside = [
+        path
+        for path in production_run["stl_files"]
+        if not path.startswith(str(runtime))
+    ]
+    assert production_run["stl_files"]
+    assert outside == []
 
 
-def test_the_production_entry_loads_no_numba_and_no_training_stack(production_run) -> None:
+def test_the_production_entry_loads_no_numba_and_no_training_stack(
+    production_run: dict,
+) -> None:
     loaded = {name.split(".", 1)[0] for name in production_run["modules"]}
     assert sorted(loaded & set(FORBIDDEN_MODULES)) == []
 
 
-def test_the_copy_holds_every_package_source_and_nothing_else(tmp_path) -> None:
+def test_the_copy_holds_every_package_source_and_nothing_else(tmp_path: Path) -> None:
     copied = copy_sources(ROOT, tmp_path)
-    expected = sorted(path.relative_to(ROOT) for path in (ROOT / "src" / "stl").rglob("*.py"))
+    expected = sorted(
+        path.relative_to(ROOT) for path in (ROOT / "src" / "stl").rglob("*.py")
+    )
     assert copied == expected
-    assert sorted(path.relative_to(tmp_path) for path in tmp_path.rglob("*") if path.is_file()) == expected
+    assert (
+        sorted(
+            path.relative_to(tmp_path) for path in tmp_path.rglob("*") if path.is_file()
+        )
+        == expected
+    )
 
 
-def test_the_version_covers_each_source_and_the_table(tmp_path) -> None:
-    sources = copy_sources(ROOT, tmp_path)
-    version = code_version(tmp_path, sources, "table-a")
-    assert code_version(tmp_path, sources, "table-a") == version
-    assert code_version(tmp_path, sources, "table-b") != version
-    app = tmp_path / "src" / "stl" / "server" / "app.py"
-    app.write_text(app.read_text() + "\n# a word-list change\n")
-    assert code_version(tmp_path, sources, "table-a") != version
-
-
-def test_the_bundle_pins_one_locked_version_per_package(tmp_path) -> None:
+def test_the_bundle_pins_one_locked_version_per_package(tmp_path: Path) -> None:
     pins = locked_versions(ROOT / "uv.lock")
     assert sorted(pins) == sorted(BUNDLE_PACKAGES)
     assert all(pins.values())

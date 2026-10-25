@@ -22,16 +22,154 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0",
+    "deptry==0.25.1",
+    "import-linter==2.15",
+    "pyright==1.1.414",
+    "pytest==9.1.1",
     "pytest-xdist>=3.6",
+    "ruff==0.17.2",
+    "vulture==2.16",
 ]
 
+
+[tool.ruff]
+extend-exclude = ["src/stl/leap_kernel.py"]
+force-exclude = true
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["C90", "COM812", "D", "PLR09"]
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "TID251"]
+[tool.ruff.lint.flake8-tidy-imports]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api."os.environ"]
+msg = "Read environment variables in config.py."
+[tool.ruff.lint.flake8-tidy-imports.banned-api."os.getenv"]
+msg = "Read environment variables in config.py."
+[tool.ruff.lint.flake8-tidy-imports.banned-api."os.putenv"]
+msg = "Read environment variables in config.py."
 [tool.pytest]
 testpaths = ["tests"]
-# The suite is overwhelmingly independent and every artifact-building test
-# already writes under its own tmp_path, so it distributes cleanly. Use "-n 0"
-# when a failure needs a readable serial traceback.
-# CI passes "-n logical" to use every runner core.
-addopts = ["-n", "8"]
-# Slow tests run by default. Use -m "not slow" for a tighter loop.
 markers = ["slow: a full-domain leap check against the real tables"]
+[tool.pyright]
+include = ["src/stl", "tests"]
+typeCheckingMode = "standard"
+ignore = ["src/stl/leap_kernel.py"]
+[tool.vulture]
+paths = ["src/stl"]
+min_confidence = 60
+ignore_decorators = [
+    "@*.api_route",
+    "@*.delete",
+    "@*.exception_handler",
+    "@*.get",
+    "@*.head",
+    "@*.middleware",
+    "@*.options",
+    "@*.patch",
+    "@*.post",
+    "@*.put",
+    "@*.websocket",
+    "@field_validator",
+    "@model_validator",
+]
+# Wire fields, public game/certificate records, and HiGHS native model fields.
+ignore_names = [
+    "__table_args__",
+    "__tablename__",
+    "branch_labels",
+    "depends_on",
+    "down_revision",
+    "downgrade",
+    "model_config",
+    "revision",
+    "upgrade",
+    "builder_sha256",
+    "clock_display",
+    "clock_seconds",
+    "col_cost_",
+    "col_lower_",
+    "col_upper_",
+    "cprs_performed",
+    "cylinder_max",
+    "cylinder_seconds",
+    "dth_values",
+    "dth_sha256",
+    "format_",
+    "game_clock_at_start",
+    "game_clock_seconds",
+    "half_index",
+    "index_",
+    "is_human",
+    "is_you",
+    "last_outcome",
+    "leap_window",
+    "loser",
+    "num_col_",
+    "num_row_",
+    "opponent_policy",
+    "physicality",
+    "rank",
+    "round",
+    "round_index",
+    "row_lower_",
+    "row_upper_",
+    "schema",
+    "score",
+    "session_ending",
+    "start_",
+    "ttd_max",
+    "ttd_seconds",
+    "value_",
+    "verified",
+    "winner_is_human",
+    "your_name",
+    "your_rank",
+    "your_score",
+]
+exclude = ["src/stl/leap_kernel.py"]
+[tool.importlinter]
+root_packages = ["stl"]
+include_external_packages = true
+[[tool.importlinter.contracts]]
+id = "S2"
+name = "S2 entry and config libraries"
+type = "forbidden"
+source_modules = ["*.*"]
+forbidden_modules = ["argparse", "uvicorn", "dotenv", "pydantic_settings"]
+ignore_imports = [
+    "*.__main__ -> argparse",
+    "*.__main__ -> uvicorn",
+    "*.config -> dotenv",
+    "*.config -> pydantic_settings",
+]
+unmatched_ignore_imports_alerting = "none"
+allow_indirect_imports = true
+[[tool.importlinter.contracts]]
+id = "S4"
+name = "S4 config"
+type = "forbidden"
+source_modules = ["*.config"]
+forbidden_modules = ["*.*"]
+allow_indirect_imports = true
+[[tool.importlinter.contracts]]
+id = "HOSTED"
+name = "Hosted runtime stays independent of builders"
+type = "forbidden"
+source_modules = [
+    "stl.server.app",
+    "stl.server.hosted",
+    "stl.server.session",
+    "stl.hal",
+    "stl.dth",
+    "stl.game",
+]
+forbidden_modules = [
+    "numba",
+    "llvmlite",
+    "stl.leap",
+    "stl.leap_kernel",
+    "stl.dth_kernel",
+]

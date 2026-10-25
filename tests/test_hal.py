@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """Exact Hal, the Perfect Hal base model, translated Hal and its golden trace.
 
 The golden trace section at the end pins translated Hal's decisions.
@@ -19,6 +20,7 @@ import json
 import zlib
 from dataclasses import replace
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
@@ -32,6 +34,7 @@ from stl.hal import (
     PerfectHalOpponentModel,
     PerfectHalPolicyProvider,
     PublicGameOutcome,
+    TranslatedContext,
     TranslatedHal,
     TranslatedHalConfig,
     TranslatedHalOpponentModel,
@@ -39,15 +42,21 @@ from stl.hal import (
 )
 from tests.conftest import (
     StageTable as _StageTable,
+)
+from tests.conftest import (
     make_decision as _decision,
+)
+from tests.conftest import (
     make_forecast as _forecast,
+)
+from tests.conftest import (
     make_reveal as _reveal,
 )
 
 
 def test_config_fixes_pure_dth_and_hard_response_defaults() -> None:
     config = PerfectHalConfig()
-    assert config.action_count == 60
+    assert config.action_count == 60  # noqa: PLR2004
     assert config.response_temperature == 0.0
     assert config.expert_names[:5] == (
         "uniform",
@@ -80,10 +89,10 @@ def test_online_model_learns_a_deterministic_role_without_cross_role_leakage() -
 
     learned = _forecast(model, "checker", decision_index=8)
     untouched = _forecast(model, "dropper", decision_index=8)
-    assert learned.policy[6] > 0.90
-    assert learned.confidence > 0.70
+    assert learned.policy[6] > 0.90  # noqa: PLR2004
+    assert learned.confidence > 0.70  # noqa: PLR2004
     assert untouched.policy == pytest.approx(initial_dropper.policy)
-    assert model.observations("checker") == 8
+    assert model.observations("checker") == 8  # noqa: PLR2004
     assert model.observations("dropper") == 0
 
 
@@ -111,7 +120,7 @@ def test_self_response_expert_uses_only_the_previous_revealed_self_action() -> N
     previous_self = 10
     for index in range(20):
         prediction = _forecast(model, "dropper", decision_index=index)
-        current_self = 20 if previous_self == 10 else 10
+        current_self = 20 if previous_self == 10 else 10  # noqa: PLR2004
         model.observe(
             prediction,
             opponent_action=previous_self,
@@ -122,8 +131,8 @@ def test_self_response_expert_uses_only_the_previous_revealed_self_action() -> N
     prediction = _forecast(model, "dropper", decision_index=20)
     response_index = prediction.expert_names.index("self_response")
     expected_action = previous_self
-    assert prediction.expert_policies[response_index, expected_action - 1] > 0.95
-    assert prediction.policy[expected_action - 1] > 0.70
+    assert prediction.expert_policies[response_index, expected_action - 1] > 0.95  # noqa: PLR2004
+    assert prediction.policy[expected_action - 1] > 0.70  # noqa: PLR2004
 
 
 def test_forecast_tokens_are_single_use_and_causally_ordered() -> None:
@@ -140,7 +149,7 @@ def test_noninteger_actions_fail_without_consuming_the_forecast() -> None:
     with pytest.raises(ValueError, match="integer second"):
         model.observe(prediction, opponent_action=True, self_action=9)
     with pytest.raises(ValueError, match="integer second"):
-        model.observe(prediction, opponent_action=5, self_action=9.0)
+        model.observe(prediction, opponent_action=5, self_action=9.0)  # pyright: ignore[reportArgumentType] - invalid-input contract
 
     model.observe(prediction, opponent_action=5, self_action=9)
     assert model.observations("checker") == 1
@@ -152,14 +161,14 @@ def test_provider_places_all_mass_on_the_forecast_best_response() -> None:
 
     first = provider.policy(_decision(role="dropper"))
     assert first == pytest.approx(
-        {action: 1.0 / ACTION_COUNT for action in range(1, ACTION_COUNT + 1)}
+        dict.fromkeys(range(1, ACTION_COUNT + 1), 1.0 / ACTION_COUNT)
     )
     provider.observe(_reveal(opponent_action=7, self_action=3))
 
     second = provider.policy(_decision(role="dropper"))
     assert second == {7: pytest.approx(1.0)}
     assert provider.last_decision is not None
-    assert provider.last_decision.opponent_policy[6] > 0.5
+    assert provider.last_decision.opponent_policy[6] > 0.5  # noqa: PLR2004
     assert provider.last_decision.expected_exploit_gain > 0.0
     assert provider.last_decision.best_response_actions == (7,)
     assert table.states == [(12, 60, 24, 120), (12, 60, 24, 120)]
@@ -183,7 +192,6 @@ def test_provider_preserves_session_memory_across_games_and_seat_names() -> None
 
     next_game = provider.policy(_decision(role="dropper", actor_name="Baku"))
     assert next_game == {13: pytest.approx(1.0)}
-    assert provider.has_session_memory
     provider.observe(
         _reveal(
             self_role="dropper",
@@ -195,7 +203,6 @@ def test_provider_preserves_session_memory_across_games_and_seat_names() -> None
     )
 
     provider.reset_session()
-    assert not provider.has_session_memory
     assert provider.last_decision is None
 
 
@@ -229,7 +236,7 @@ def test_diagnostics_are_json_serializable_and_explicitly_unrestricted() -> None
 
 
 @pytest.mark.parametrize("role", ["dropper", "checker"])
-def test_offsets_transfer_to_an_unseen_hal_action(role):
+def test_offsets_transfer_to_an_unseen_hal_action(role: str) -> None:
     model = TranslatedHalOpponentModel()
     last = 10
     for own in (13, 22, 8, 37, 15, 28, 42, 19, 31, 47, 25, 51):
@@ -238,29 +245,29 @@ def test_offsets_transfer_to_an_unseen_hal_action(role):
         last = own
     forecast = _forecast(model, role)
     index = forecast.expert_names.index("offset_last_copy_global")
-    assert forecast.expert_policies[index, 52] > 0.95
-    assert forecast.policy[52] > 0.8
+    assert forecast.expert_policies[index, 52] > 0.95  # noqa: PLR2004
+    assert forecast.policy[52] > 0.8  # noqa: PLR2004
     assert model.observations("checker" if role == "dropper" else "dropper") == 0
 
 
-def test_offsets_use_the_last_reveal_across_roles_and_track_a_switch():
+def test_offsets_use_the_last_reveal_across_roles_and_track_a_switch() -> None:
     model = TranslatedHalOpponentModel(TranslatedHalConfig(offset_retention=0.7))
     rng = np.random.default_rng(917)
     last = 20
     for index in range(90):
         role = "dropper" if index % 2 else "checker"
         forecast = _forecast(model, role)
-        action = last + (3 if index < 40 else -3)
+        action = last + (3 if index < 40 else -3)  # noqa: PLR2004
         own = int(rng.integers(5, 55))
         model.observe(forecast, opponent_action=action, self_action=own)
         last = own
     forecast = _forecast(model, "checker")
     recent = forecast.expert_names.index("offset_last_copy_recent")
-    assert forecast.expert_policies[recent, last - 4] > 0.95
-    assert forecast.policy[last - 4] > 0.8
+    assert forecast.expert_policies[recent, last - 4] > 0.95  # noqa: PLR2004
+    assert forecast.policy[last - 4] > 0.8  # noqa: PLR2004
 
 
-def test_no_offset_ablation_matches_old_bit_for_bit():
+def test_no_offset_ablation_matches_old_bit_for_bit() -> None:
     old = PerfectHalOpponentModel()
     candidate = TranslatedHalOpponentModel(TranslatedHalConfig(translated=False))
     rng = np.random.default_rng(81)
@@ -269,11 +276,11 @@ def test_no_offset_ablation_matches_old_bit_for_bit():
         before = [_forecast(model, role) for model in (old, candidate)]
         np.testing.assert_array_equal(before[0].policy, before[1].policy)
         own, action = rng.integers(1, 61, 2)
-        for model, forecast in zip((old, candidate), before):
+        for model, forecast in zip((old, candidate), before, strict=False):
             model.observe(forecast, opponent_action=int(action), self_action=int(own))
 
 
-def test_reset_and_excluded_turn_clear_translation_references():
+def test_reset_and_excluded_turn_clear_translation_references() -> None:
     model = TranslatedHalOpponentModel()
     forecast = _forecast(model, "dropper")
     model.observe(forecast, opponent_action=12, self_action=10)
@@ -281,7 +288,7 @@ def test_reset_and_excluded_turn_clear_translation_references():
         model.observe(forecast, opponent_action=13, self_action=11)
     model.break_sequence()
     forecast = _forecast(model, "dropper")
-    assert forecast.context.last_self_action is None
+    assert cast("TranslatedContext", forecast.context).last_self_action is None
     assert forecast.context.previous_self_action is None
     assert model.total_observations == 1
     model.reset()
@@ -289,15 +296,17 @@ def test_reset_and_excluded_turn_clear_translation_references():
     np.testing.assert_allclose(_forecast(model, "dropper").policy, np.ones(60) / 60)
 
 
-def test_offset_projection_clips_and_preserves_probability_mass():
+def test_offset_projection_clips_and_preserves_probability_mass() -> None:
     model = TranslatedHalOpponentModel()
     for own in (10, 20, 30, 40, 60):
         before = _forecast(model, "dropper")
-        last = before.context.last_self_action
-        model.observe(before, opponent_action=20 if last is None else last + 4, self_action=own)
+        last = cast("TranslatedContext", before.context).last_self_action
+        model.observe(
+            before, opponent_action=20 if last is None else last + 4, self_action=own
+        )
     forecast = _forecast(model, "dropper")
     index = forecast.expert_names.index("offset_last_copy_global")
-    assert forecast.expert_policies[index, 59] > 0.95
+    assert forecast.expert_policies[index, 59] > 0.95  # noqa: PLR2004
     np.testing.assert_allclose(forecast.expert_policies.sum(axis=1), 1)
 
 
@@ -311,7 +320,6 @@ def _literal_decision(*, legal: tuple[int, ...] = (1, 2, 3)) -> CanonicalDecisio
         checker_ttd_seconds=120,
         dropper_cylinder_seconds=29,
         dropper_ttd_seconds=70,
-        native_state=object(),
     )
 
 
@@ -326,7 +334,6 @@ def test_dth_projection_is_the_exact_literal_second_identity() -> None:
         checker_ttd_seconds=301.0,
         dropper_cylinder_seconds=-2.0,
         dropper_ttd_seconds=299.6,
-        native_state=object(),
     )
     with pytest.raises(ValueError, match="literal-second"):
         project_to_dth_state(wide)
@@ -334,7 +341,7 @@ def test_dth_projection_is_the_exact_literal_second_identity() -> None:
 
 def test_dth_provider_serves_only_complete_exact_policies() -> None:
     class _Table:
-        def stage(self, state):
+        def stage(self, state: tuple[int, int, int, int]) -> Stage:
             return Stage(
                 state=state,
                 value=0.1,
@@ -349,30 +356,41 @@ def test_dth_provider_serves_only_complete_exact_policies() -> None:
     assert "1 exact moves" in provider.match_summary()
 
 
-def provider():
+def provider() -> TranslatedHal:
     return TranslatedHal(_StageTable())
 
 
-def test_checkpoint_preserves_forecasts_without_sharing_mutable_evidence():
+def test_checkpoint_preserves_forecasts_without_sharing_mutable_evidence() -> None:
     first = provider()
     rng = np.random.default_rng(2291)
     for index in range(100):
         role = "checker" if index % 2 else "dropper"
         model = first.opponent_model
-        model.observe(_forecast(model, role), opponent_action=int(rng.integers(1, 61)), self_action=int(rng.integers(1, 61)))
+        model.observe(
+            _forecast(model, role),
+            opponent_action=int(rng.integers(1, 61)),
+            self_action=int(rng.integers(1, 61)),
+        )
     snapshot = first.dump_state()
     restored = provider()
     restored.restore_state(snapshot)
     for role in ("dropper", "checker"):
-        np.testing.assert_array_equal(_forecast(first.opponent_model, role).policy, _forecast(restored.opponent_model, role).policy)
-    restored.opponent_model.observe(_forecast(restored.opponent_model, "dropper"), opponent_action=12, self_action=3)
-    assert first.opponent_model.total_observations == 100
-    assert restored.opponent_model.total_observations == 101
+        np.testing.assert_array_equal(
+            _forecast(first.opponent_model, role).policy,
+            _forecast(restored.opponent_model, role).policy,
+        )
+    restored.opponent_model.observe(
+        _forecast(restored.opponent_model, "dropper"), opponent_action=12, self_action=3
+    )
+    assert first.opponent_model.total_observations == 100  # noqa: PLR2004
+    assert restored.opponent_model.total_observations == 101  # noqa: PLR2004
     assert first.dump_state() == snapshot
 
 
-@pytest.mark.parametrize("damage", ["schema", "config", "nan", "shape", "action", "compressed"])
-def test_checkpoint_rejects_corruption_without_replacing_the_model(damage):
+@pytest.mark.parametrize(
+    "damage", ["schema", "config", "nan", "shape", "action", "compressed"]
+)
+def test_checkpoint_rejects_corruption_without_replacing_the_model(damage: str) -> None:
     first = provider()
     encoded = first.dump_state()
     data = json.loads(zlib.decompress(base64.b64decode(encoded)))
@@ -390,25 +408,27 @@ def test_checkpoint_rejects_corruption_without_replacing_the_model(damage):
     if damage == "compressed":
         encoded = encoded[:12]
     original = first.opponent_model
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         first.restore_state(encoded)
     assert first.opponent_model is original
 
 
-def test_leap_fallback_keeps_evidence_and_clears_sequence_references():
+def test_leap_fallback_keeps_evidence_and_clears_sequence_references() -> None:
     p = provider()
     p.policy(_decision())
     p.observe(_reveal())
     leap = replace(_decision(role="checker"), turn_duration=61)
     assert set(p.policy(leap)) == set(range(1, 61))
     reveal = _reveal(self_role="checker", opponent_action=61, half_round_index=1)
-    reveal = replace(reveal, pre_decision_state=replace(reveal.pre_decision_state, turn_duration=61))
+    reveal = replace(
+        reveal, pre_decision_state=replace(reveal.pre_decision_state, turn_duration=61)
+    )
     p.observe(reveal)
     assert p.opponent_model.total_observations == 1
-    assert p.opponent_model._last_self is None
+    assert p.opponent_model._last_self is None  # noqa: SLF001
     p.policy(_decision())
     p.observe(_reveal(half_round_index=2))
-    assert p.opponent_model.total_observations == 2
+    assert p.opponent_model.total_observations == 2  # noqa: PLR2004
 
 
 # The golden trace of translated Hal.
@@ -419,7 +439,7 @@ LEAP_GAMES = (2, 5, 7)
 LEAP_HALF_ROUNDS = (24, 25)
 
 
-def _matrix():
+def _matrix() -> np.ndarray:
     """The dropper's payoff: 1 for a failed check, the gap over 60 for a caught drop.
 
     No action dominates, so each best reply follows the forecast: the dropper
@@ -431,22 +451,22 @@ def _matrix():
     return np.where(check >= drop, (check - drop) / 60, 1.0)
 
 
-def _baku(n, role, hal_last, baku_last):
+def _baku(n: int, role: str, hal_last: int, baku_last: int) -> int:
     """Copy, then cycle, then repeat with drift, so each expert family gets a phase."""
-    if n < 150:
+    if n < 150:  # noqa: PLR2004
         second = hal_last + 2 if role == "checker" else 61 - hal_last
-    elif n < 300:
+    elif n < 300:  # noqa: PLR2004
         second = (12, 25, 37, 48, 55)[n % 5] if role == "checker" else 20 + (7 * n) % 30
     else:
         second = baku_last + (5 if n % 4 == 0 else 0)
     return min(60, max(1, second))
 
 
-def _provider():
+def _provider() -> TranslatedHal:
     return TranslatedHal(_StageTable(_matrix()))
 
 
-def play(*, checkpoint):
+def play(*, checkpoint: bool) -> dict:
     """Return the trace rows and the final observation counts by Baku's role."""
     provider, rows = _provider(), []
     n, hal_last, baku_last = 0, 30, 30
@@ -462,8 +482,13 @@ def play(*, checkpoint):
             hal = ((37 * n + 11 * game) % 300, 60 * ((n // 10) % 5))
             baku = ((53 * n + 7 * game) % 300, 60 * ((n // 7) % 4))
             checker, dropper = (baku, hal) if role == "dropper" else (hal, baku)
-            decision = _decision(role=role, checker_cylinder=checker[0], checker_ttd=checker[1],
-                                 dropper_cylinder=dropper[0], dropper_ttd=dropper[1])
+            decision = _decision(
+                role=role,
+                checker_cylinder=checker[0],
+                checker_ttd=checker[1],
+                dropper_cylinder=dropper[0],
+                dropper_ttd=dropper[1],
+            )
             if leap:
                 decision = replace(decision, turn_duration=61)
             policy = provider.policy(decision)
@@ -480,32 +505,75 @@ def play(*, checkpoint):
             baku_action = _baku(n, baku_role, hal_last, baku_last)
             if leap and baku_role == "dropper":
                 baku_action = 61
-            reveal = _reveal(self_role=role, self_action=hal_action, opponent_action=baku_action,
-                             game_index=game, half_round_index=half_round)
+            reveal = _reveal(
+                self_role=role,
+                self_action=hal_action,
+                opponent_action=baku_action,
+                game_index=game,
+                half_round_index=half_round,
+            )
             if leap:
-                reveal = replace(reveal, pre_decision_state=replace(reveal.pre_decision_state, turn_duration=61))
-            gain = None if leap else round(provider.inner.decisions[-1].expected_exploit_gain, 9)
-            rows.append([n, game, half_round, role, decision.turn_duration, hal_action, baku_action, support, gain])
+                reveal = replace(
+                    reveal,
+                    pre_decision_state=replace(
+                        reveal.pre_decision_state, turn_duration=61
+                    ),
+                )
+            gain = (
+                None
+                if leap
+                else round(provider.inner.decisions[-1].expected_exploit_gain, 9)
+            )
+            rows.append(
+                [
+                    n,
+                    game,
+                    half_round,
+                    role,
+                    decision.turn_duration,
+                    hal_action,
+                    baku_action,
+                    support,
+                    gain,
+                ]
+            )
             provider.observe(reveal)
             n, hal_last, baku_last = n + 1, hal_action, min(baku_action, 60)
-        provider.end_game(PublicGameOutcome(game_index=game, winner_name=None, half_rounds=HALF_ROUNDS))
+        provider.end_game(
+            PublicGameOutcome(
+                game_index=game, winner_name=None, half_rounds=HALF_ROUNDS
+            )
+        )
     model = provider.opponent_model
-    return {"rows": rows, "observations": {role: model.observations(role) for role in ("dropper", "checker")}}
+    return {
+        "rows": rows,
+        "observations": {
+            role: model.observations(role) for role in ("dropper", "checker")
+        },
+    }
 
 
-def dump(trace):
+def dump(trace: dict) -> str:
     """One row per line, so a diff names the first decision that moved."""
     rows = ",\n".join(json.dumps(row, separators=(",", ":")) for row in trace["rows"])
-    return f'{{"observations":{json.dumps(trace["observations"])},\n"rows":[\n{rows}\n]}}\n'
+    return (
+        f'{{"observations":{json.dumps(trace["observations"])},\n'
+        f'"rows":[\n{rows}\n]}}\n'
+    )
 
 
-@pytest.mark.parametrize("checkpoint", [False, True], ids=["one-provider", "memory-per-game"])
-def test_translated_hal_reproduces_the_golden_trace(checkpoint):
+@pytest.mark.parametrize(
+    "checkpoint", [False, True], ids=["one-provider", "memory-per-game"]
+)
+def test_translated_hal_reproduces_the_golden_trace(checkpoint: bool) -> None:  # noqa: FBT001
     trace = play(checkpoint=checkpoint)
     golden = json.loads(TRACE.read_text())
-    leaps = [row for row in trace["rows"] if row[4] == 61]
-    assert len(trace["rows"]) == GAMES * HALF_ROUNDS and len(leaps) == 2 * len(LEAP_GAMES)
+    leaps = [row for row in trace["rows"] if row[4] == 61]  # noqa: PLR2004
+    assert len(trace["rows"]) == GAMES * HALF_ROUNDS
+    assert len(leaps) == 2 * len(LEAP_GAMES)
     assert sum(trace["observations"].values()) == len(trace["rows"]) - len(leaps)
-    for index, (row, expected) in enumerate(zip(trace["rows"], golden["rows"], strict=True)):
+    for index, (row, expected) in enumerate(
+        zip(trace["rows"], golden["rows"], strict=True)
+    ):
         assert row == expected, f"decision {index} left the golden trace"
     assert trace["observations"] == golden["observations"]

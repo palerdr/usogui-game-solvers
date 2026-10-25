@@ -1,3 +1,4 @@
+# Copyright 2026 The STL authors
 """The STL referee and action legality. Every game plays through this module.
 
 The module holds the rule constants, the actor-aware legality of action
@@ -12,7 +13,7 @@ leap-window half-round only the canonical Baku identity as Dropper may also
 use second 61. Checkers are capped at 60, and every other identity is capped
 at 60. These are ordinal literal seconds: action 1 is an immediate
 first-second action. The engine counts successful ST inclusively as
-``check - drop + 1``. See ``docs/ACTION_TIMING.md``.
+``check - drop + 1``. See ``docs/RULES.md``.
 """
 
 from __future__ import annotations
@@ -21,31 +22,30 @@ import random
 from dataclasses import dataclass, field
 from enum import Enum
 from numbers import Integral
-from typing import Optional
 
 # ──────────────────────────────────────────────
 # CLOCK
 # ──────────────────────────────────────────────
-OPENING_START_CLOCK = 12 * 60       # Canonical R1 start: 8:12:00 AM
+OPENING_START_CLOCK = 12 * 60  # Canonical R1 start: 8:12:00 AM
 # Leap second: inserted at exactly 8:59:60 AM.
 # In game clock seconds: 8:59:00 AM = 59 * 60 = 3540s after game start.
 # A half-round whose start falls in the CLOSED interval [3540, 3600] spans the
 # leap second — a half-round starting at exactly 3600 (8:59:60) still spans
 # the inserted second.
-LS_WINDOW_START = 59 * 60         # 3540 — start of the 8:59 minute
-LS_WINDOW_END = 60 * 60               #8:59:60 AM (inclusive)
+LS_WINDOW_START = 59 * 60  # 3540 — start of the 8:59 minute
+LS_WINDOW_END = 60 * 60  # 8:59:60 AM (inclusive)
 # ──────────────────────────────────────────────
 # TURN
 # ──────────────────────────────────────────────
-TURN_DURATION_NORMAL = 60           # seconds per half-round (normal)
-TURN_DURATION_LEAP = 61             # seconds per half-round (during LS window)
-FAILED_CHECK_PENALTY = 60           # 1 minute NDD added on failed check
+TURN_DURATION_NORMAL = 60  # seconds per half-round (normal)
+TURN_DURATION_LEAP = 61  # seconds per half-round (during LS window)
+FAILED_CHECK_PENALTY = 60  # 1 minute NDD added on failed check
 # ──────────────────────────────────────────────
 # CYLINDER / NDD
 # ──────────────────────────────────────────────
-CYLINDER_MAX = 300                  # 5 minutes — at or above this, instant injection
-TOTAL_TTD_MAX = 300                 # exactly 5 minutes remains revival-eligible; over is fatal
-DEATH_PROCEDURE_OVERHEAD = 120      # injection + waiting + CPR + recovery (~2 min)
+CYLINDER_MAX = 300  # 5 minutes — at or above this, instant injection
+TOTAL_TTD_MAX = 300  # exactly 5 minutes remains revival-eligible; over is fatal
+DEATH_PROCEDURE_OVERHEAD = 120  # injection + waiting + CPR + recovery (~2 min)
 # ──────────────────────────────────────────────
 # CLOCK ADVANCEMENT
 #
@@ -59,14 +59,14 @@ DEATH_PROCEDURE_OVERHEAD = 120      # injection + waiting + CPR + recovery (~2 m
 #
 # No-death round: 60 + 60 + 60 (overhead) = 180s. Snap → 4-minute gap between rounds.
 # Death round (60s death): 60 + 60 + 120 + 60 + 60 = 360s. Snap → 7-minute gap.
-# Manga: "1 MINUTE OF NEAR-DEATH WOULD CONSUME 5 MINUTES OF GAME TIME"
+# Manga states that one minute near death consumes five minutes of game time.
 # ──────────────────────────────────────────────
-WITHIN_ROUND_OVERHEAD = 60          # total procedural time within a round (settling,
-                                    # injection procedure, role swap). Applied between halves.
+WITHIN_ROUND_OVERHEAD = 60  # Total procedural time within a round, including settling,
+# injection procedure, role swap). Applied between halves.
 # ──────────────────────────────────────────────
 # REVIVAL PROBABILITY
 #
-# Repository authority: docs/REVIVAL_MODEL.md. ``death_duration`` is the
+# Repository authority: docs/RULES.md. ``death_duration`` is the
 # complete injected dose q = s + 60. The frozen surface is identity-neutral
 # and depends only on vial ST ``s`` and prior TTD.
 # ──────────────────────────────────────────────
@@ -81,8 +81,6 @@ PHYSICALITY_BAKU = 1.0
 # ──────────────────────────────────────────────
 # ACTION LEGALITY
 # ──────────────────────────────────────────────
-NORMAL_SECONDS = tuple(range(1, TURN_DURATION_NORMAL + 1))
-LEAP_SECONDS = tuple(range(1, TURN_DURATION_LEAP + 1))
 
 
 class IllegalActionError(ValueError):
@@ -111,16 +109,18 @@ def validate_action(second: int, *, actor: str, role: str, turn_duration: int) -
     """Return a canonical literal second after actor-aware validation."""
     max_sec = legal_max_second(actor, role, turn_duration)
     if isinstance(second, bool) or not isinstance(second, Integral):
-        raise IllegalActionError(
+        message = (
             f"Illegal action second={second!r} for actor={actor!r} role={role!r}; "
             "seconds must be integers."
         )
+        raise IllegalActionError(message)
     value = int(second)
     if not (1 <= value <= max_sec):
-        raise IllegalActionError(
+        message = (
             f"Illegal action second={second!r} for actor={actor!r} role={role!r} "
             f"turn_duration={turn_duration}; legal range is [1, {max_sec}]."
         )
+        raise IllegalActionError(message)
     return value
 
 
@@ -134,18 +134,6 @@ class Player:
     ttd: float = 0.0
     deaths: int = 0
     alive: bool = True
-
-    @property
-    def safe_strategies_remaining(self) -> int:
-        """
-        How many consecutive safe-strategy checks can this player do
-        without the cylinder hitting CYLINDER_MAX?
-
-        Safe if: cylinder + 60 < CYLINDER_MAX (strictly less — 300 triggers injection).
-
-        Returns the number of times the player can absorb a worst-case safe check.
-        """
-        return max(0, int((CYLINDER_MAX - 1 - self.cylinder) // TURN_DURATION_NORMAL))
 
     def on_death(self, death_duration: float) -> None:
         """
@@ -188,9 +176,12 @@ class Referee:
 
     cprs_performed: int = 0
 
-    def compute_survival_probability(self, player: Player, death_duration: float) -> float:
+    def compute_survival_probability(
+        self, player: Player, death_duration: float
+    ) -> float:
         """
-        Compute the probability that `player` survives a death of `death_duration` seconds.
+        Compute the probability that `player` survives a death of `death_duration`
+        seconds.
 
         Args:
             player: The player who is dying. ``player.ttd`` is prior accrued TTD.
@@ -214,35 +205,38 @@ class Referee:
         st_in_vial = max(0.0, death_duration - FAILED_CHECK_PENALTY)
         survivable_st_span = CYLINDER_MAX - FAILED_CHECK_PENALTY
         st_factor = 1.0 - st_in_vial / survivable_st_span
-        ttd_factor = REVIVAL_TTD_DECAY_PER_MINUTE ** (
-            player.ttd / FAILED_CHECK_PENALTY
-        )
+        ttd_factor = REVIVAL_TTD_DECAY_PER_MINUTE ** (player.ttd / FAILED_CHECK_PENALTY)
         return max(0.0, min(1.0, REVIVAL_BASELINE * st_factor * ttd_factor))
 
-    def attempt_revival(self, player: Player, death_duration: float, rng: random.Random | None = None) -> bool:
+    def attempt_revival(
+        self, player: Player, death_duration: float, rng: random.Random | None = None
+    ) -> bool:
         """
         Attempt to revive a player. Rolls against survival probability.
 
         Args:
             player: The dying player. NOTE: player.ttd should reflect state
                     BEFORE this death (on_death hasn't been called yet, or if it has,
-                    you need to subtract this death_duration back out for the cardiac calc).
+                    you need to subtract this death_duration back out for the cardiac
+                    calc).
             death_duration: Duration of this death episode.
-            rng: Optional seeded RNG for deterministic testing. If None, use random.random().
+            rng: Optional seeded RNG for deterministic testing. If None, use
+            random.random().
 
         Returns:
             True if revival succeeds, False if player dies permanently.
 
         Side effects:
             - Increments self.cprs_performed for match history only.
-            - On the Player side, the caller (Game) should handle on_death/on_revival/on_permanent_death.
+            - On the Player side, the caller (Game) should handle
+            on_death/on_revival/on_permanent_death.
 
         Design note:
             The referee doesn't mutate the player — it only reads player state and
             returns a bool. The Game object orchestrates the state transitions.
         """
         if rng is None:
-            rng = random.Random()
+            rng = random.Random()  # noqa: S311 - seeded game simulation, not a security token
 
         prob = self.compute_survival_probability(player, death_duration)
         roll = rng.random()
@@ -253,27 +247,39 @@ class Referee:
 
 class HalfRoundResult(Enum):
     """Outcome of a single half-round."""
-    CHECK_SUCCESS = "check_success"                         # C found the handkerchief
-    CHECK_FAIL_SURVIVED = "check_fail_survived"             # C failed, died, but was revived
-    CHECK_FAIL_DIED = "check_fail_died"                     # C failed, died permanently → game over
-    CYLINDER_OVERFLOW_SURVIVED = "overflow_survived"        # C's cylinder hit 300 from ST accumulation, survived
-    CYLINDER_OVERFLOW_DIED = "overflow_died"                # C's cylinder hit 300 from ST accumulation, died
+
+    CHECK_SUCCESS = "check_success"  # C found the handkerchief
+    CHECK_FAIL_SURVIVED = "check_fail_survived"  # C failed, died, but was revived
+    CHECK_FAIL_DIED = "check_fail_died"  # C failed, died permanently → game over
+    CYLINDER_OVERFLOW_SURVIVED = (
+        "overflow_survived"  # C's cylinder hit 300 from ST accumulation, survived
+    )
+    CYLINDER_OVERFLOW_DIED = (
+        "overflow_died"  # C's cylinder hit 300 from ST accumulation, died
+    )
+
+
 @dataclass
 class HalfRoundRecord:
     """Immutable record of what happened in one half-round. For history/analysis."""
+
     round_num: int
-    half: int                        # 1 or 2
-    dropper: str                     # player name
-    checker: str                     # player name
-    drop_time: int                   # second D dropped
-    check_time: int                  # second C checked
-    turn_duration: int               # 60 or 61
+    half: int  # 1 or 2
+    dropper: str  # player name
+    checker: str  # player name
+    drop_time: int  # second D dropped
+    check_time: int  # second C checked
+    turn_duration: int  # 60 or 61
     result: HalfRoundResult
-    st_gained: float                 # squandered time C accumulated (0 if failed check)
-    death_duration: float            # how long C was dead (0 if no death)
-    survived: Optional[bool]         # None if no death, True/False if death occurred
-    game_clock_at_start: float       # absolute game clock when this half-round began
-    survival_probability: Optional[float]  # the computed P before the roll (None if no death)
+    st_gained: float  # squandered time C accumulated (0 if failed check)
+    death_duration: float  # how long C was dead (0 if no death)
+    survived: bool | None  # None if no death, True/False if death occurred
+    game_clock_at_start: float  # absolute game clock when this half-round began
+    survival_probability: (
+        float | None
+    )  # the computed P before the roll (None if no death)
+
+
 @dataclass
 class Game:
     """The state machine that orchestrates a game.
@@ -291,10 +297,11 @@ class Game:
         8. Check for game-over conditions.
     The Game does NOT decide what actions to take — it receives them.
     """
+
     player1: Player
     player2: Player
     referee: Referee
-    first_dropper: Optional[Player] = None
+    first_dropper: Player | None = None
     # ── Game clock (seconds since 8:00:00 AM) ──
     # Canonical opening is R1 at 8:12:00 AM.
     game_clock: float = OPENING_START_CLOCK
@@ -302,18 +309,21 @@ class Game:
     current_half: int = 1
     round_num: int = 0
     game_over: bool = False
-    winner: Optional[Player] = None
-    loser: Optional[Player] = None
+    winner: Player | None = None
+    loser: Player | None = None
     # ── History ──
     history: list[HalfRoundRecord] = field(default_factory=list)
     # ── RNG (seed for deterministic replays) ──
     rng: random.Random = field(default_factory=random.Random)
-    def __post_init__(self):
+
+    def __post_init__(self) -> None:
         if self.first_dropper is None:
             self.first_dropper = self.player1
+
     def seed(self, seed: int) -> None:
         """Seed the RNG for deterministic games."""
         self.rng.seed(seed)
+
     # CLOCK
     def get_turn_duration(self) -> int:
         """
@@ -330,53 +340,57 @@ class Game:
         if LS_WINDOW_START <= self.game_clock <= LS_WINDOW_END:
             return TURN_DURATION_LEAP
         return TURN_DURATION_NORMAL
+
     def advance_clock(self, elapsed: float) -> None:
         """Advance game clock by the given number of elapsed seconds."""
         self.game_clock += elapsed
+
     def snap_clock_to_next_minute(self) -> None:
         """
         Round the game clock UP to the next wall-clock minute boundary.
         Always advances to the next minute, even if already on a boundary.
-        Pre-leap (gc < 3600): wall-clock minutes are at multiples of 60.
+        Pre-leap (gc < LS_WINDOW_END): wall-clock minutes are at multiples of 60.
             Example: 1740 (8:29:00) → 1800 (8:30:00)
                      1753 (8:29:13) → 1800 (8:30:00)
-        At/near leap second (gc 3540–3600): the 8:59 minute has 61 game-clock
+        At/near leap second (gc 3540-3600): the 8:59 minute has 61 game-clock
         seconds (the leap second), so the next minute (9:00:00) is gc 3601.
-        Post-leap (gc > 3600): the leap second inserted an extra game-clock
+        Post-leap (gc > LS_WINDOW_END): the leap second inserted an extra game-clock
         second, so wall-clock minutes are at 3601 + n*60, not multiples of 60.
             Example: 3810 → 3841 (9:04:00), not 3840 (which would be 9:03:59)
         """
         gc = int(self.game_clock)
-        if gc < 3600:
+        if gc < LS_WINDOW_END:
             snapped = ((gc // 60) + 1) * 60
             # If snap lands on 3600 (the leap second itself, 8:59:60),
             # push to 3601 (9:00:00) — 3600 is not a minute boundary.
-            if snapped == 3600:
+            if snapped == 3600:  # noqa: PLR2004 - fixed game or wire-format boundary
                 snapped = 3601
             self.game_clock = snapped
-        elif gc <= 3600:
+        elif gc <= 3600:  # noqa: PLR2004 - fixed game or wire-format boundary
             # At the leap second: next wall-clock minute is 9:00:00
             self.game_clock = 3601
         else:
             # Post-leap: wall-clock minutes at 3601, 3661, 3721, 3781, ...
             elapsed = gc - 3601
             self.game_clock = 3601 + ((elapsed // 60) + 1) * 60
+
     def format_game_clock(self) -> str:
         """
         Format the current game clock as a human-readable time string.
         e.g., game_clock=720 → "8:12 AM"
-        MUST consider that the leap second is literally inserted into reality for calculations after 8:59:60
+        MUST consider that the leap second is literally inserted into reality for
+        calculations after 8:59:60
         Useful for CLI display and matching against manga timestamps.
         """
         gc = int(self.game_clock)
-        if gc <= 3599:
+        if gc < LS_WINDOW_END:
             # Pre-leap: normal conversion
             total_seconds = gc
             hours = 8 + total_seconds // 3600
             remainder = total_seconds % 3600
             minutes = remainder // 60
             seconds = remainder % 60
-        elif gc == 3600:
+        elif gc == LS_WINDOW_END:
             # THE leap second
             hours, minutes, seconds = 8, 59, 60
         else:
@@ -387,6 +401,7 @@ class Game:
             minutes = remainder // 60
             seconds = remainder % 60
         return f"{hours}:{minutes:02d}:{seconds:02d} AM"
+
     # ROLE ASSIGNMENT
     def get_roles_for_half(self, half: int) -> tuple[Player, Player]:
         """
@@ -400,19 +415,19 @@ class Game:
         """
         if self.first_dropper == self.player1:
             if half == 1:
-                D = self.player1
-                C = self.player2
+                dropper = self.player1
+                checker = self.player2
             else:
-                D = self.player2
-                C = self.player1
+                dropper = self.player2
+                checker = self.player1
+        elif half == 1:
+            dropper = self.player2
+            checker = self.player1
         else:
-            if half == 1:
-                D = self.player2
-                C = self.player1
-            else:
-                D = self.player1
-                C = self.player2
-        return D, C
+            dropper = self.player1
+            checker = self.player2
+        return dropper, checker
+
     # CORE GAME LOOP
     def play_half_round(self, drop_time: int, check_time: int) -> HalfRoundRecord:
         """Execute one half-round, rolling RNG for any required survival check.
@@ -421,11 +436,12 @@ class Game:
         an explicit survived_outcome.
         """
         return self.resolve_half_round(drop_time, check_time, survived_outcome=None)
+
     def resolve_half_round(
         self,
         drop_time: int,
         check_time: int,
-        survived_outcome: Optional[bool] = None,
+        survived_outcome: bool | None = None,  # noqa: FBT001 - preserve the referee call interface
     ) -> HalfRoundRecord:
         """Apply a half-round, optionally with an externally-supplied survival outcome.
         This is the single source of truth for half-round resolution. Both
@@ -442,9 +458,11 @@ class Game:
             HalfRoundRecord describing everything that happened.
         """
         if self.game_over:
-            raise GameOverError("Game is Already Over")
+            message = "Game is Already Over"
+            raise GameOverError(message)
         if survived_outcome is not None and not isinstance(survived_outcome, bool):
-            raise ValueError("survived_outcome must be bool or None")
+            message = "survived_outcome must be bool or None"
+            raise ValueError(message)
         clock_at_start = self.game_clock
         dropper, checker = self.get_roles_for_half(self.current_half)
         turn_duration = self.get_turn_duration()
@@ -457,11 +475,11 @@ class Game:
         success = check_time >= drop_time
         death_occurred = not success
         death_duration = 0.0
-        survived: Optional[bool] = None
-        survival_probability: Optional[float] = None
-        ST = check_time - drop_time + 1 if success else 0.0
+        survived: bool | None = None
+        survival_probability: float | None = None
+        st = check_time - drop_time + 1 if success else 0.0
         if success:
-            candidate_cylinder = checker.cylinder + ST
+            candidate_cylinder = checker.cylinder + st
             death_occurred = candidate_cylinder >= CYLINDER_MAX
             if death_occurred:
                 death_duration = min(candidate_cylinder, CYLINDER_MAX)
@@ -473,10 +491,12 @@ class Game:
                 checker, death_duration=death_duration
             )
             if survived_outcome is True and survival_probability <= 0.0:
-                raise ValueError(
-                    "cannot force survival when the canonical revival probability is zero"
+                message = (
+                    "cannot force survival when the canonical revival "
+                    "probability is zero"
                 )
-        checker.cylinder += ST if success else FAILED_CHECK_PENALTY
+                raise ValueError(message)
+        checker.cylinder += st if success else FAILED_CHECK_PENALTY
         if death_occurred:
             if survived_outcome is None:
                 survived = self.referee.attempt_revival(
@@ -515,7 +535,7 @@ class Game:
             check_time=check_time,
             turn_duration=turn_duration,
             result=result,
-            st_gained=ST,
+            st_gained=st,
             death_duration=death_duration if death_occurred else 0.0,
             survived=survived,
             game_clock_at_start=clock_at_start,
@@ -531,6 +551,7 @@ class Game:
                 self.current_half = 1
                 self.round_num += 1
         return record
+
     # VALIDATION
     def validate_drop_time(
         self, drop_time: int, turn_duration: int, actor: str | None = None
@@ -544,12 +565,12 @@ class Game:
         if actor is None:
             max_second = turn_duration
             if isinstance(drop_time, bool) or not isinstance(drop_time, Integral):
-                raise ValueError(f"drop_time must be an integer, got {drop_time!r}")
+                message = f"drop_time must be an integer, got {drop_time!r}"
+                raise ValueError(message)
             normalized = int(drop_time)
             if not (1 <= normalized <= max_second):
-                raise ValueError(
-                    f"drop_time must be in [1, {max_second}], got {drop_time}"
-                )
+                message = f"drop_time must be in [1, {max_second}], got {drop_time}"
+                raise ValueError(message)
             return normalized
         try:
             return validate_action(
@@ -571,12 +592,12 @@ class Game:
         if actor is None:
             max_second = min(turn_duration, TURN_DURATION_NORMAL)
             if isinstance(check_time, bool) or not isinstance(check_time, Integral):
-                raise ValueError(f"check_time must be an integer, got {check_time!r}")
+                message = f"check_time must be an integer, got {check_time!r}"
+                raise ValueError(message)
             normalized = int(check_time)
             if not (1 <= normalized <= max_second):
-                raise ValueError(
-                    f"check_time must be in [1, {max_second}], got {check_time}"
-                )
+                message = f"check_time must be in [1, {max_second}], got {check_time}"
+                raise ValueError(message)
             return normalized
         try:
             return validate_action(
@@ -587,10 +608,9 @@ class Game:
             )
         except IllegalActionError as exc:
             raise ValueError(str(exc)) from exc
+
     # GAME STATE QUERIES
-    def is_leap_second_turn(self) -> bool:
-        """Is the current game clock in the leap second window?"""
-        return LS_WINDOW_START <= self.game_clock <= LS_WINDOW_END
+
+
 class GameOverError(Exception):
     """Raised when trying to play after the game has ended."""
-    pass
