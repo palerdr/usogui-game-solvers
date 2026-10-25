@@ -76,7 +76,10 @@ def deploy(artifact: Path | None) -> None:
     version = pipeline.prepare(artifact or DEFAULT_PATH)
     url = pipeline.ship()
     print(f"Preview {url} serves version {version}.")  # noqa: T201 - CLI progress output
-    print(f"After /api/health and one game there: npx vercel promote {url} --yes")  # noqa: T201 - CLI progress output
+    print(  # noqa: T201 - CLI progress output
+        "Run the preview smoke checks, then follow README.md's "
+        "staged-production procedure and repeat the checks before promotion."
+    )
 
 
 def main(argv: list[str] | None = None) -> None:
