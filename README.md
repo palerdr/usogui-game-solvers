@@ -35,8 +35,8 @@ opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
 ## Commands
 
 ```powershell
-# The certified STL leap table
-uv run python -m stl.solver.leap_build --full --min-clock 720
+# The certified STL leap table: artifacts/leap
+uv run python -m stl.leap
 
 # The certified DTH table: artifacts/dth/V.npy, sha256 e43977b7...
 uv run python -m stl.dth_kernel

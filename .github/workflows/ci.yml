@@ -48,7 +48,7 @@ jobs:
       # that compile, and the workers of the shard below load it.
       - name: Check the numba leap kernel against the Rust golden fixture
         if: matrix.shard == 'stl'
-        run: uv run python -m pytest src/stl/tests/test_leap_golden.py -q -n 0
+        run: uv run python -m pytest tests/test_leap_kernel.py -q -n 0
       # worksteal lets an idle worker take a test that waits behind a long one.
       - run: uv run python -m pytest -q ${{ matrix.select }} -n logical --dist worksteal
       # The hosted runtime runs on Python 3.13, so the server tests run there

@@ -11,26 +11,20 @@ version-suffixed names.
 
 - `game.py` is the STL referee and action legality. Every game plays
   through it. Root `tests/test_game.py` covers it.
-- `solver/leap_profiles.py` owns the STL quotient, the turn duration, and
-  the child clocks.
-  `solver/leap_oracle.py` certifies scalar stages; `solver/leap_build.py` owns
-  reachability and the full sweep checkpoint.
-  `solver/leap_kernel.py` is the numba leap kernel that the sweep calls.
-  `solver/leap_oracle.py` and `solver/leap_support.py` remain its scalar
-  authorities, and `tests/test_leap_golden.py` holds it to the outputs of the
-  retired Rust kernel.
-- `reader.py` is the public read path into a completed leap artifact.
-  Other projects and the paper's
-  figure scripts read leap tables through it, not through `solver/`.
-  `open_leap()` checks the manifest schema, the complete flag, and the SHA-256
-  of the DTH tail before it returns a table. `verify="files"` also re-hashes
-  each file that the manifest lists. `LeapTable.stage()` re-certifies one
-  stored value with HiGHS and raises when the Bellman residual or the saddle
-  gap exceeds 1e-6. Default paths resolve from this package, or from the
-  absolute paths in `STL_LEAP_ARTIFACT` and `STL_LEAP_DTH`. The module opens
-  the artifact read-only. It sits outside `solver/`, so the builder hash does
-  not cover it; keep it there. `tests/test_reader.py` reproduces the paper's
-  16 H1 records and skips when `outputs/leap-full-native/` is absent.
+- `leap.py` builds, audits and reads the certified leap table: the STL
+  quotient and clocks, the scalar stage oracle, reachability, the full sweep
+  checkpoint, the HiGHS fallback, the packed audit and `open_leap`.
+  `leap_kernel.py` is the numba leap kernel that the sweep calls. Root
+  `tests/test_leap_kernel.py` holds it to the scalar oracles and to the
+  outputs of the retired Rust kernel.
+- `open_leap()` is the public read path into a completed leap artifact. It
+  checks the manifest schema, the complete flag, and the SHA-256 of the DTH
+  table before it returns a table. `verify="files"` also re-hashes each file
+  that the manifest lists. `LeapTable.stage()` re-certifies one stored value
+  with HiGHS and raises when the Bellman residual or the saddle gap exceeds
+  1e-6. The defaults are `artifacts/leap` and `artifacts/dth/V.npy`, resolved
+  from the repository root. Root `tests/test_leap.py` reproduces the paper's
+  16 H1 records and skips when `artifacts/leap/` is absent.
 - Repository-wide canonical rules and formulation contracts belong in root
   `docs/`. Generated experiment data remains gitignored and STL-owned.
 
@@ -45,20 +39,20 @@ and utility in the canonical documentation before adding implementation code.
 Then add the smallest implementation that realizes that contract. Do not add
 solver, learning, or play modules merely to preserve an earlier experiment.
 
-Run `uv run python -m pytest src/stl/tests -q` for the retained surface.
+Run `uv run python -m pytest tests src/stl/tests -q` for the retained surface.
 
 ## Leap build
 
-The leap kernel is `solver/leap_kernel.py`. numba compiles it on first use,
+The leap kernel is `leap_kernel.py`. numba compiles it on first use,
 in 14 to 35 seconds, and caches the machine code in the ignored
-`solver/__pycache__/`. The kernel passes its inputs read-only, so writable
+`src/stl/__pycache__/`. The kernel passes its inputs read-only, so writable
 arrays and the memmapped child tables of a build share one compiled version.
 A change to the kernel source or to the numba version in `uv.lock`
 invalidates that cache. Set `NUMBA_CACHE_DIR` to move it, for example to a
 disk that a container keeps.
 
 For the full public game, run
-`uv run python -m stl.solver.leap_build --full --min-clock 720 --output <dir>`.
+`uv run python -m stl.leap [--dth artifacts/dth/V.npy] [--output artifacts/leap]`.
 This command sweeps through the clock-720 opening. Resume uses the same
 command and requires matching source, DTH, and checkpoint file hashes.
 The builder commits packed-file hashes before removing each cold dense table.
@@ -79,7 +73,7 @@ The scalar retry sequence uses the failure payoff, then the first success
 payoff, as common offsets if earlier attempts fail.
 
 The full sweep solves H1 and H2 residue inside the kernel, as
-`leap_build.RESIDUE` selects. Each 1024-class chunk moves the certified
+`leap.RESIDUE` selects. Each 1024-class chunk moves the certified
 support of its preceding residue class with the success-payoff kink and tries
 it once. On a miss, the chunk runs the packing LP from the recurrence crash
 basis. REV keys keep the Python fallback and its revival cache, and their
@@ -97,14 +91,14 @@ bits in row-major order. Each dense table keeps NaN in unreachable cells and
 as incomplete. A complete L2 claim still requires the full audit.
 
 The slow leap tests require `artifacts/dth/V.npy`, which `uv run python -m stl.dth_kernel` writes. Run
-`uv run python -m pytest src/stl/tests -q`; its first run compiles the kernel
+`uv run python -m pytest tests/test_leap.py tests/test_leap_kernel.py -q`; its first run compiles the kernel
 in each worker. The full reachability test checks the measured state totals
 without performing a value sweep.
 
 ## Numba kernel
 
 On 2026-10-23 we replaced the Rust `stl_solver_rs` leap kernel with the numba
-port in `solver/leap_kernel.py`. The port keeps the Rust operation order. It
+port in `leap_kernel.py`. The port keeps the Rust operation order. It
 writes `f64::mul_add`, `f64::min`, and `f64::max` as `llvm.fma`,
 `llvm.minnum`, and `llvm.maxnum`, and it orders pivots by the IEEE total
 order, as `f64::total_cmp` did. It keeps the 1024-class chunks, the 16-lane
@@ -132,11 +126,11 @@ the leap row wins every class, took 0.08 s against 0.04 s. A cold cache adds
 a compile of 14 seconds on AC power, and up to 35 seconds on battery, to the
 first calls.
 
-`tests/data/leap_kernel_golden.npz` keeps 1,940 seeded stage classes and
+Root `tests/leap_kernel_golden.npz` keeps 1,940 seeded stage classes and
 1,100 random-table classes with the Rust outputs: square and window stages,
 the rungs alone and the production options that `RESIDUE` held at the
 capture, the packing LP from the slack and crash bases, and the warm and cold
-packing runs of the benchmarks. `tests/test_leap_golden.py` requires equal
+packing runs of the benchmarks. `tests/test_leap_kernel.py` requires equal
 kinds, failure counts, masks, and values. It runs the production cases with
 the captured options, so a change of `RESIDUE` keeps the check. It also reads
 the child tables as read-only memmaps. The commit that added the fixture

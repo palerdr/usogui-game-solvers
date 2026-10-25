@@ -3,9 +3,9 @@
 Run from the repository root with:
     uv run --with matplotlib python paper/make_stl_figures.py
 
-The script reads the table through ``stl.reader``, which checks the manifest
-and the DTH tail hash. Set STL_LEAP_ARTIFACT or STL_LEAP_DTH to an absolute
-path to read another copy.
+The script reads the table through ``stl.leap.open_leap``, which checks the
+manifest and the DTH tail hash. Pass other paths to ``open_leap`` to read
+another copy.
 """
 
 from pathlib import Path
@@ -21,7 +21,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from stl.reader import open_leap
+from stl.leap import open_leap
 
 OUTPUT = ROOT / "paper/build/figures/stl"
 

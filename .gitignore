@@ -32,8 +32,8 @@ paper/*.aux
 paper/*.fdb_latexmk
 paper/*.fls
 paper/*.out
-src/stl/outputs/
-# Built tables: artifacts/dth/V.npy from python -m stl.dth_kernel.
+# Built tables: artifacts/dth/V.npy from python -m stl.dth_kernel and
+# artifacts/leap from python -m stl.leap.
 artifacts/
 
 # Training artifacts

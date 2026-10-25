@@ -10,7 +10,7 @@
 - `docs/` owns repository-wide canonical game and solver contracts.
 - `paper/` owns the project's mathematical paper. Re-render and visually
   inspect its PDF after changing the TeX. Its figure scripts read the STL
-  leap artifact through `stl.reader` and the DTH table through `stl.dth`,
+  leap artifact through `stl.leap` and the DTH table through `stl.dth`,
   and import no other project module.
 - `docs/papers/` owns primary evidence and cited literature.
 - `src/stl/` and `src/dth_ocaml/` are peer projects. They must not import one another. `src/arena/` is the game library
@@ -44,14 +44,13 @@ The table lists the import rules of each project. No test enforces them.
 | --- | --- | --- |
 | Peers | `stl`, `dth_ocaml`, `dth_cpp` | No other project |
 | Proofs | `formal` | Nothing |
-| Library | `arena` | `stl.game`, `stl.reader`, `stl.dth` |
+| Library | `arena` | `stl.game`, `stl.leap`, `stl.dth` |
 | App | `browser` | `arena`, `stl.game`, `stl.dth` |
-| Consumer | `paper` | `stl.reader`, `stl.dth` |
+| Consumer | `paper` | `stl.leap`, `stl.dth` |
 
 - No project imports `browser`, and `arena` imports no `browser` module.
-- `paper` owns no importable module. `stl.reader` is the one read path into a
-  completed leap artifact. Code outside `stl` reads leap tables through it,
-  not through the `stl.solver.leap_*` builder modules.
+- `paper` owns no importable module. `stl.leap.open_leap` is the one read
+  path into a completed leap artifact.
 - Inside `arena`, `contracts.py`, `agent.py`, `session.py`, and
   `variants.py` import `stl.game` and each other alone. `stl.dth` enters
   through the adapters and `arena/policies/`.
@@ -67,19 +66,20 @@ The table lists the import rules of each project. No test enforces them.
   lock enters a DTH digest.
 - `stl.dth` imports numpy and scipy only, so the hosted bundle needs no
   numba. The numba sweep lives in `stl.dth_kernel`.
-- `stl.solver.leap_build.builder_hash()` hashes the builder sources, the
-  numba kernel `leap_kernel.py` among them, with the root `pyproject.toml` and
-  `uv.lock`, and a resume refuses a changed hash. Do not start or resume a
-  leap build across an edit to the root `pyproject.toml` or `uv.lock`.
-- The builder hash reads `src/stl/solver/leap_*.py` by glob. Name a new STL
-  builder module `src/stl/solver/leap_*.py`, and put new non-builder STL code
-  outside `src/stl/solver/`.
-- The STL leap kernel `src/stl/solver/leap_kernel.py` is numba code. Its
-  first call compiles it into the ignored `src/stl/solver/__pycache__/`;
-  `NUMBA_CACHE_DIR` moves that cache.
+- `stl.leap.builder_hash()` hashes `src/stl/game.py`, `leap.py` and
+  `leap_kernel.py` by package-relative name, and a resume refuses a changed
+  hash. Do not start or resume a leap build across an edit to those three
+  files.
+- `python -m stl.leap` writes the ignored `artifacts/leap` (82 GB), whose
+  manifest binds the sha256 of `artifacts/dth/V.npy`.
+- The STL leap kernel `src/stl/leap_kernel.py` is numba code. Its first call
+  compiles it into the ignored `src/stl/__pycache__/`; `NUMBA_CACHE_DIR`
+  moves that cache. `tests/leap_kernel_golden.npz` holds it to the retired
+  Rust kernel's outputs.
 - One root `pyproject.toml` and one `uv.lock` cover every Python package,
   the browser server included. The deploy bundle takes its package pins from
-  that lock. A dependency change therefore also changes the leap builder hash.
+  that lock. A leap resume refuses a changed Python, numpy, numba or HiGHS
+  version through its checkpoint identity.
 
 ## Frozen global rules
 
