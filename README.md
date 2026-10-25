@@ -84,19 +84,30 @@ tectonic pm_hal.tex
 ```
 
 Deployment requires owner approval. From the root, with the existing Vercel
-project link at `.vercel/project.json`, these commands create and promote a
-preview:
+project link at `.vercel/project.json`, create a preview:
 
 ```sh
 uv run --isolated --python 3.13 python -m stl deploy
-npx vercel promote PREVIEW_URL --yes
 ```
 
 `deploy --artifact PATH` selects the DTH table. It verifies the table, builds
 `web/`, copies Python and the table into ignored `artifacts/vercel/`, runs
 Vercel build, adds Python 3.13 bytecode, and uploads a prebuilt archive.
 Check `/api/health`, one full game, separate browser sessions, competing
-submissions, and the leaderboard on the preview before promotion.
+submissions, and the leaderboard on the preview. After those checks pass,
+rebuild the prepared bundle for production and add bytecode again:
+
+```sh
+npx vercel pull --cwd artifacts/vercel --environment=production --yes
+npx vercel build --cwd artifacts/vercel --prod --yes
+uv run --isolated --locked --python 3.13 python -c 'from stl.server.deploy import BUNDLE, add_bytecode; print(add_bytecode(BUNDLE))'
+npx vercel deploy --cwd artifacts/vercel --prebuilt --archive=tgz --prod --skip-domain
+```
+
+Repeat the checks on the staged production URL. In the Vercel dashboard,
+open that deployment's menu and select **Promote**. [Staged production
+promotion preserves the build; preview promotion rebuilds it](https://vercel.com/docs/deployments/promoting-a-deployment).
+The staged path retains the bytecode added after the local build.
 
 Hosted configuration: `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` and Fluid Compute
 for the large table bundle; Redis through `KV_REST_API_URL` and
