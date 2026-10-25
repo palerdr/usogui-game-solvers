@@ -1,7 +1,7 @@
 (executable
  (public_name dth-play)
  (name play_cli)
- (package dth_play)
+ (package dth)
  (modules
   notty
   notty_unix

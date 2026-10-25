@@ -13,8 +13,8 @@
   leap artifact through `stl.leap` and the DTH table through `stl.dth`,
   and import no other project module.
 - `docs/papers/` owns primary evidence and cited literature.
-- `src/stl/` and `src/dth_ocaml/` are peer projects. They must not import one another.
-- `src/formal/` is a Lean project that machine-checks the solvers' mathematics.
+- `src/stl/`, `src/ocaml/` and `src/cpp/` are peer projects. They must not import one another.
+- `src/lean/` is a Lean project that machine-checks the solvers' mathematics.
   It imports no other project, and no project imports it.
 - `src/stl/server/` is the browser game's Python side: the session, the
   FastAPI routes, the hosted Vercel entry and the deploy pipeline. `python -m
@@ -38,8 +38,8 @@ The table lists the import rules of each project. No test enforces them.
 
 | Layer | Projects | May import |
 | --- | --- | --- |
-| Peers | `stl`, `dth_ocaml`, `dth_cpp` | No other project |
-| Proofs | `formal` | Nothing |
+| Peers | `stl`, `ocaml`, `cpp` | No other project |
+| Proofs | `lean` | Nothing |
 | Consumer | `paper` | `stl.leap`, `stl.dth` |
 
 - Inside `stl`, `hal.py` imports `stl.dth` and `stl.game`, and `server/`
@@ -49,7 +49,7 @@ The table lists the import rules of each project. No test enforces them.
 - No module imports `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`. The hosted entry `stl.server.hosted` loads no numba;
   `tests/server/test_deploy.py` checks both in a fresh interpreter.
-- The `file:line` citations in `src/formal` read against commit `938fb25`.
+- The `file:line` citations in `src/lean` read against commit `938fb25`.
 
 ## Fingerprints and locks
 
@@ -92,13 +92,13 @@ The table lists the import rules of each project. No test enforces them.
 - In STL's leap window only Baku as Dropper may choose 61; Checker remains
   capped at 60. Both players know the leap rule from game initialization.
 - DTH does not inherit STL-only leap or information-state mechanics.
-- The `dth_ocaml` solver library in `lib/solver/`, its tests, and
+- The `src/ocaml` solver library in `lib/solver/`, its tests, and
   `bin/solve_tablebase.ml` are an independent OCaml implementation of **pure
   DTH**, not STL: actions are literal seconds 1..60 and it has no leap window.
   It exists as a hand-written reference for the exact solver and is held to
   the same frozen rules and the same 1e-6 saddle-gap gate as its Python peer.
-  `src/dth_ocaml/play/` is a second dune package that holds the CS 3110 STL
-  engine and its terminal UI. The solver library does not link it.
+  `src/ocaml/play/` holds the CS 3110 STL engine and its terminal UI in the
+  same dune package, `dth`. The solver library does not link it.
 - `stl.dth` and `stl.dth_kernel` are the paper's solver of **pure DTH**, held
   to the 1e-6 saddle-gap gate, and `stl.dth.Table` is Hal's one DTH
   table. `src/c/fast_kernel.c` is the retired C recurrence kernel; no code
@@ -116,9 +116,14 @@ validation to make a change pass.
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
 npm --prefix web run typecheck
-opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
-opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
-lake -d src/formal build
+opam exec --switch=stl-dth-ocaml -- dune build --root src/ocaml
+opam exec --switch=stl-dth-ocaml -- dune runtest --root src/ocaml
+opam exec --switch=stl-dth-ocaml -- dune build --root src/ocaml @fmt
+cmake -S src/cpp --preset release
+cmake --build src/cpp/build/release
+ctest --test-dir src/cpp/build/release --output-on-failure
+lake -d src/lean exe cache get
+lake -d src/lean build
 ```
 
 The typecheck needs `npm --prefix web install` once. The browser

@@ -5,8 +5,10 @@ This repository contains deliberately separate game-solving projects:
 | Project | Purpose | Rules |
 | --- | --- | --- |
 | `src/stl/` | Canonical leap-aware referee, the certified leap table, the DTH solver `stl.dth` with its numba sweep `stl.dth_kernel`, which builds the complete 289,374,121-class table, Hal in `stl.hal`, and the browser game's server in `stl.server`. `python -m stl` runs the four commands `dth`, `leap`, `serve` and `deploy` | L2 public game; only Baku as Dropper may use second 61. DTH: literal seconds 1..60 |
-| `src/dth_ocaml/` | Hand-written exact OCaml reference; `play/` keeps the CS 3110 STL engine and terminal UI | Pure DTH with literal seconds 1..60 and the repository-wide frozen revival model |
-| `src/dth_cpp/` | In-progress native exact DTH implementation | Pure DTH; build order and root integration remain subtree-owned while work is active |
+| `src/ocaml/` | Hand-written exact OCaml/GLPK reference solver; `play/` keeps the CS 3110 STL engine and terminal UI | Pure DTH with literal seconds 1..60 and the repository-wide frozen revival model |
+| `src/cpp/` | Native C++/HiGHS DTH solver, a CI cross-check of the Python table | Pure DTH with literal seconds 1..60 |
+| `src/c/` | `fast_kernel.c`, the retired C recurrence kernel; no code calls it | Pure DTH |
+| `src/lean/` | Lean proofs of the solvers' mathematics; `CLAIMS.md` maps claims to theorems. Its `file:line` citations read against commit `938fb25` | Imports no other project |
 | `src/browser/` | The browser game's TypeScript client and its deploy notes | Canonical STL through `stl.server` |
 
 Repository-wide game contracts live in [`docs/`](docs/). The mathematical
@@ -15,7 +17,11 @@ paper, a certified exact solution of the complete DTH game, lives at
 [`docs/game-sources/`](docs/game-sources/), with the manga reference images in
 [`docs/game-sources/reference-art/`](docs/game-sources/reference-art/), and
 cited research lives in [`docs/papers/`](docs/papers/). The OCaml project
-records its authorship in [`src/dth_ocaml/AUTHORS.md`](src/dth_ocaml/AUTHORS.md).
+originated as a CS 3110 Spring 2026 project by James Cenawood (JCC463), Orion
+Hoch (OGH6), Emily Wei (EJW235), and Max Masleyev (MAM759). Drop the
+Handkerchief is adapted from the *Surpassing the Leader* arc of *Usogui* by
+Toshio Sako. The OCaml terminal UI follows
+[`notty`](https://github.com/pqwy/notty) by David Kaloper Meršinjak (ISC).
 
 ## Setup
 
@@ -27,8 +33,13 @@ uv sync --locked
 uv run python -m pytest --collect-only -q
 uv run python -m pytest -q
 npm --prefix web run typecheck
-opam exec --switch=stl-dth-ocaml -- dune build --root src/dth_ocaml
-opam exec --switch=stl-dth-ocaml -- dune runtest --root src/dth_ocaml
+opam exec --switch=stl-dth-ocaml -- dune build --root src/ocaml
+opam exec --switch=stl-dth-ocaml -- dune runtest --root src/ocaml
+cmake -S src/cpp --preset release
+cmake --build src/cpp/build/release
+ctest --test-dir src/cpp/build/release --output-on-failure
+lake -d src/lean exe cache get
+lake -d src/lean build
 ```
 
 ## Commands

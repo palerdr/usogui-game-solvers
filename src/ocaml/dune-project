@@ -1,0 +1,35 @@
+(lang dune 3.21)
+
+(name dth)
+
+(generate_opam_files true)
+
+(source
+ (uri git+https://github.coecis.cornell.edu/jcc463/3110-DTH))
+
+(authors
+ "James Cenawood"
+ "Orion Hoch"
+ "Emily Wei"
+ "Max Masleyev")
+
+(maintainers "James Cenawood")
+
+(package
+ (name dth)
+ (synopsis "DTH reference solver and the CS 3110 STL terminal game")
+ (description
+  "The exact pure-DTH reference solver with the frozen revival model, and the class project's STL referee and terminal UI.")
+ (depends
+  dune
+  bisect_ppx
+  ocaml
+  ocamlformat
+  ; Matrix values come from GLPK; this project does not implement a simplex.
+  ; lp-glpk links GLPK in process, so a system GLPK must be installed.
+  lp
+  lp-glpk)
+ (tags
+  (game ocaml solver)))
+
+; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html

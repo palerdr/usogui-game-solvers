@@ -41,15 +41,12 @@ models/
 checkpoints/
 src/stl/checkpoints/
 
-# Lean/Lake build products and the vendored Mathlib checkout
-src/formal/.lake/
-src/formal/build/
-
-# Imported OCaml/Dune build products
-src/dth_ocaml/_build/
-src/dth_ocaml/_opam/
-src/dth_ocaml/_coverage/
-src/dth_ocaml/bisect*.coverage
+# Native build products. Lake keeps Mathlib under src/lean/build/packages.
+src/lean/.lake/
+src/lean/build/
+src/ocaml/_build/
+src/cpp/build/
+src/cpp/outputs/
 
 # Generated media
 *.png

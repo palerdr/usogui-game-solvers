@@ -11,12 +11,6 @@ include(FetchContent)
 # mapper flags in compile_commands.json.
 set(CMAKE_CXX_SCAN_FOR_MODULES 0)
 
-# Read the preset variable even while the requested scaffold has no compile
-# targets. Once BUILD.md adds targets, CMake also uses it to emit the database.
-if(CMAKE_EXPORT_COMPILE_COMMANDS)
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-endif()
-
 option(DTH_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(
     DTH_FETCH_HIGHS
