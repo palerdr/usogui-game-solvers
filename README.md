@@ -119,8 +119,7 @@ opam exec --switch=stl-dth-ocaml -- dune build --root src/ocaml
 opam exec --switch=stl-dth-ocaml -- dune runtest --root src/ocaml
 opam exec --switch=stl-dth-ocaml -- dune build --root src/ocaml @fmt
 ctest --test-dir src/cpp/build/release --output-on-failure
-lake -d src/lean exe cache get
-lake -d src/lean build
+(cd src/lean && lake exe cache get && lake build)
 ```
 
 The default pytest suite includes slow tests. `-m "not slow"` is only an

@@ -152,8 +152,10 @@ The full matrix, only when a rung needs it:
 
 Row `d` of `M` is `(d − 1)` copies of `failed` followed by
 `success[1..61−d]`; column `c` is `success[1..c]` plus `failed` when
-`c < 60`. Every row minimum and column maximum is therefore one of four
-numbers, and the best pure actions are known in advance.
+`c < 60`. Among rows 2 through 60, the row minima are nondecreasing;
+among columns 1 through 59, the column maxima are nondecreasing.
+Thus the best pure row is row 1 or row 60, and the best pure column is
+column 1 or column 60. Intermediate extrema can take other values.
 
 ```text
 function PURE_TEST(success, failed):
