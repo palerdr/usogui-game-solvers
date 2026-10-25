@@ -308,7 +308,7 @@ procedure VERIFY():
         assert | V[ENCODE(state)] − expected | ≤ 1e-6
 ```
 
-## 7. Provenance
+## 7. Independent reference values
 
 The rules restated here are frozen by the repository ([RULES.md](RULES.md)
 owns the revival surface; `stl.dth` and `stl.dth_kernel` implement it). The six
@@ -320,9 +320,8 @@ finalize recheck's worst disagreement on the complete table is 8.9e-16.
 
 ## 8. Live reader and independent implementations
 
-`uv run python -m stl dth` builds `artifacts/dth/V.npy`. Its SHA-256 starts
-`e43977b7`; the leap manifest binds the full digest. `stl.dth.Table.open`
-checks shape and all six anchors; optional strided rechecks independently
+`uv run python -m stl dth` builds `artifacts/dth/V.npy`.
+`stl.dth.Table.open` checks shape and all six anchors; optional strided rechecks independently
 rebuild stage certificates. `Table.value` and `Table.stage` accept the
 role-relative state above. Alive TTD in 1..59 is off-domain and is rejected.
 

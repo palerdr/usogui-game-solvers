@@ -4,13 +4,13 @@ fallback, the sweep scheduler, the packed audit and the verified read path."""
 
 from __future__ import annotations
 
-import hashlib
 import inspect
 import json
 import random
 import time
 from functools import lru_cache
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -23,7 +23,6 @@ from tests.conftest import solve_stage
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-    from types import SimpleNamespace
 
     from stl.leap import PackedReader
 
@@ -365,7 +364,7 @@ def test_subtree_vs_naive(dth: np.ndarray) -> None:
     assert abs(evaluate_states(("H1", 53), pair, dth)[0] - expected) <= 1e-8  # noqa: PLR2004
 
 
-def test_store_pack_checkpoint(tmp_path: Path) -> None:
+def test_store_pack_round_trip(tmp_path: Path) -> None:
     from stl.leap import N, TableStore  # noqa: PLC0415
 
     store = TableStore(tmp_path)
@@ -398,18 +397,6 @@ def test_kernel_rounding_mode() -> None:
         assert libc.fesetround(original) == 0
 
 
-def test_reachability_cache_hashes(tmp_path: Path) -> None:
-    from stl.leap import file_hash, validate_files  # noqa: PLC0415
-
-    path = tmp_path / "reach.npy"
-    path.write_bytes(b"reach bitmap")
-    hashes = {"reach.npy": file_hash(path)}
-    validate_files(tmp_path, hashes)
-    path.write_bytes(b"changed bitmap")
-    with pytest.raises(ValueError, match="hash mismatch"):
-        validate_files(tmp_path, hashes)
-
-
 def test_hot_horizon(tmp_path: Path) -> None:
     from stl.leap import TableStore  # noqa: PLC0415
 
@@ -422,21 +409,6 @@ def test_hot_horizon(tmp_path: Path) -> None:
     store.pack(("REV", 3600))
     assert not store.path(("REV", 3600)).exists()
     assert store.load(("REV", 3600))[0, 0] == 0.75  # noqa: PLR2004
-
-
-def test_reachability_source_guard(tmp_path: Path) -> None:
-    import json  # noqa: PLC0415
-
-    from stl.leap import _load_reach, forward_reachability  # noqa: PLC0415
-
-    forward_reachability(limit=720, directory=tmp_path)
-    assert sum(_load_reach(tmp_path).counts.values()) == 1
-    path = tmp_path / "manifest.json"
-    manifest = json.loads(path.read_text())
-    manifest["builder_sha256"] = "stale"
-    path.write_text(json.dumps(manifest))
-    with pytest.raises(ValueError, match="source mismatch"):
-        _load_reach(tmp_path)
 
 
 def test_oracle_recurrence_overflow_uses_lp() -> None:
@@ -1058,43 +1030,6 @@ def test_packed_audit_checks_membership_and_values(small_packed: tuple) -> None:
         a.audit_packed_key(store.directory, key, reached, int(mask.sum()))
 
 
-def test_cold_pack_commits_before_dense_removal(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from stl import leap as b  # noqa: PLC0415
-
-    monkeypatch.setattr(b, "N", 8)
-    store = b.TableStore(tmp_path / "tables")
-    key = ("REV", 3600)
-    table = store.create(key)
-    table[0, 0] = 0.3
-    table.flush()
-    del table
-    files = {"tables/REV_3600.npy": b.file_hash(store.path(key))}
-    records = [{"key": list(key), "states": 1}]
-    b.write_json(tmp_path / "checkpoint.json", {"files": files})
-    old_checkpoint = (tmp_path / "checkpoint.json").read_bytes()
-    real_write = b.write_json
-
-    def fail_write(*args: Any) -> None:  # noqa: ANN401, ARG001
-        msg = "injected checkpoint failure"
-        raise OSError(msg)
-
-    monkeypatch.setattr(b, "write_json", fail_write)
-    with pytest.raises(OSError, match="injected"):
-        b.commit_full_checkpoint(tmp_path, {}, records, files.copy(), store, 3059, 1.0)
-    assert store.path(key).exists()
-    assert (tmp_path / "checkpoint.json").read_bytes() == old_checkpoint
-    b.validate_files(tmp_path, files)
-    monkeypatch.setattr(b, "write_json", real_write)
-    b.commit_full_checkpoint(tmp_path, {}, records, files, store, 3059, 1.0)
-    saved = json.loads((tmp_path / "checkpoint.json").read_text())
-    b.validate_files(tmp_path, saved["files"])
-    assert "tables/REV_3600.npy" not in saved["files"]
-    assert "tables/REV_3600.values.npy" in saved["files"]
-    assert not store.path(key).exists()
-
-
 def test_explicit_lp_certifies_both_policies() -> None:
     from stl.leap import certify_matrix  # noqa: PLC0415
 
@@ -1169,77 +1104,98 @@ def test_full_sweep_groups_compressed_failure_tables(
 # ──────────────────────────────────────────────────────────────────────
 
 needs_artifact = pytest.mark.skipif(
-    not (ARTIFACT / "manifest.json").is_file() or not DTH_PATH.is_file(),
+    not (ARTIFACT / "report.json").is_file() or not DTH_PATH.is_file(),
     reason="artifacts/leap or artifacts/dth/V.npy is unavailable",
 )
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
 @pytest.fixture
-def fake_artifact(tmp_path: Path) -> tuple[Path, Path, dict]:
-    """A manifest, one listed file, and a DTH tail; the tables stay unread."""
+def fake_artifact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path, dict]:
+    """A completed report and a small DTH double for reader unit tests."""
+    from stl import leap  # noqa: PLC0415
+
     dth = tmp_path / "V.npy"
     np.save(dth, np.arange(6, dtype=np.float64).reshape(2, 3))
+    monkeypatch.setattr(
+        leap,
+        "Table",
+        SimpleNamespace(open=lambda path: SimpleNamespace(values=np.load(path))),
+    )
     artifact = tmp_path / "leap"
     artifact.mkdir()
-    (artifact / "audit.json").write_text("{}\n")
-    manifest = {
-        "schema": "stl-leap-values-v1",
-        "complete": True,
-        "builder_sha256": "b" * 64,
-        "dth_sha256": _sha256(dth),
-        "files": {"audit.json": _sha256(artifact / "audit.json")},
+    report = {
+        "states": sum(leap.TOTALS.values()),
+        "rows": {kind: {"states": count} for kind, count in leap.TOTALS.items()},
+        "max_bellman_residual": 0.0,
     }
-    (artifact / "manifest.json").write_text(json.dumps(manifest))
-    return artifact, dth, manifest
+    (artifact / "report.json").write_text(json.dumps(report))
+    return artifact, dth, report
 
 
-def _rewrite(artifact: Path, manifest: dict, **changes: object) -> None:
-    (artifact / "manifest.json").write_text(json.dumps({**manifest, **changes}))
-
-
-def test_open_leap_checks_schema_completion_and_dth_hash(
+def test_open_leap_requires_a_complete_checked_result(
     fake_artifact: tuple[Path, Path, dict], tmp_path: Path
 ) -> None:
     from stl.leap import open_leap  # noqa: PLC0415
 
-    artifact, dth, manifest = fake_artifact
-    identity = open_leap(artifact, dth=dth).identity
-    assert identity.artifact == artifact.resolve()
-    assert identity.dth_values == dth.resolve()
-    assert identity.builder_sha256 == "b" * 64
-    assert identity.dth_sha256 == manifest["dth_sha256"]
-    assert identity.schema == "stl-leap-values-v1"
-    assert identity.verified == "manifest"
-    with pytest.raises(ValueError, match="verify"):
-        open_leap(artifact, dth=dth, verify="none")
-    with pytest.raises(FileNotFoundError, match="manifest"):
+    artifact, dth, report = fake_artifact
+    open_leap(artifact, dth=dth)
+    with pytest.raises(FileNotFoundError, match="report"):
         open_leap(tmp_path / "missing", dth=dth)
-    _rewrite(artifact, manifest, schema="stl-leap-values-v0")
-    with pytest.raises(ValueError, match="schema"):
-        open_leap(artifact, dth=dth)
-    _rewrite(artifact, manifest, complete=False)
-    with pytest.raises(ValueError, match="complete"):
-        open_leap(artifact, dth=dth)
-    _rewrite(artifact, manifest, dth_sha256="0" * 64)
-    with pytest.raises(ValueError, match="DTH tail"):
-        open_leap(artifact, dth=dth)
+    for changes in (
+        {"states": 1},
+        {"rows": {}},
+        {"max_bellman_residual": 1e-5},
+        {"max_bellman_residual": float("nan")},
+    ):
+        (artifact / "report.json").write_text(json.dumps({**report, **changes}))
+        with pytest.raises(ValueError, match="complete, numerically checked"):
+            open_leap(artifact, dth=dth)
 
 
-def test_files_mode_rehashes_every_listed_file(
-    fake_artifact: tuple[Path, Path, dict],
+def test_open_leap_validates_the_dth_table(
+    fake_artifact: tuple[Path, Path, dict], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl.leap import open_leap  # noqa: PLC0415
+    from stl import leap  # noqa: PLC0415
+    from stl.dth import Table  # noqa: PLC0415
 
     artifact, dth, _ = fake_artifact
-    assert open_leap(artifact, dth=dth, verify="files").identity.verified == "files"
-    (artifact / "audit.json").write_text('{"changed": true}\n')
-    assert open_leap(artifact, dth=dth).identity.verified == "manifest"
-    with pytest.raises(ValueError, match=r"audit.json"):
-        open_leap(artifact, dth=dth, verify="files")
+    monkeypatch.setattr(leap, "Table", Table)
+    with pytest.raises(ValueError, match="is not float64"):
+        leap.open_leap(artifact, dth=dth)
+
+
+def test_full_build_rejects_existing_output(tmp_path: Path) -> None:
+    from stl.leap import run_full  # noqa: PLC0415
+
+    saved = tmp_path / "saved.npy"
+    saved.write_bytes(b"existing result")
+    with pytest.raises(FileExistsError, match="empty output"):
+        run_full(tmp_path / "absent-dth.npy", tmp_path)
+    assert saved.read_bytes() == b"existing result"
+    assert list(tmp_path.iterdir()) == [saved]
+
+
+def test_cold_pack_keeps_the_dependency_horizon(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from stl import leap  # noqa: PLC0415
+
+    monkeypatch.setattr(leap, "N", 8)
+    store = leap.TableStore(tmp_path)
+    for key in (("REV", 3599), ("REV", 3600)):
+        table = store.create(key)
+        table[0, 0] = 0.3
+        table.flush()
+        del table
+    store.pack_after(3599)
+    assert store.path(("REV", 3599)).exists()
+    assert not store.path(("REV", 3600)).exists()
+    assert store.load(("REV", 3600))[0, 0] == 0.3  # noqa: PLR2004
+    store.pack_after(0)
+    assert not store.path(("REV", 3599)).exists()
+    assert not store.path(("REV", 3600)).exists()
 
 
 def test_default_paths_come_from_the_repository() -> None:
@@ -1319,7 +1275,6 @@ def test_stage_enforces_the_1e6_residual_and_gap_gates(
 def test_reader_reproduces_the_h1_strategy_records() -> None:
     """Reproduce the 16 archived Figure 3 records, minutes 44-59, via the reader."""
     from stl.leap import (  # noqa: PLC0415
-        DEFAULT_ARTIFACT,
         PackedReader,
         certify_matrix,
         explicit_matrix,
@@ -1328,10 +1283,6 @@ def test_reader_reproduces_the_h1_strategy_records() -> None:
     )
 
     table = open_leap()
-    manifest = json.loads((ARTIFACT / "manifest.json").read_text())
-    assert table.identity.artifact == DEFAULT_ARTIFACT == ARTIFACT
-    assert table.identity.builder_sha256 == manifest["builder_sha256"]
-    assert table.identity.dth_sha256 == manifest["dth_sha256"]
     checker = profile_index(st=60, ttd=120)
     dropper = profile_index(st=0, ttd=180)
     # We rebuild each record from the packed tables and the audit LP directly.

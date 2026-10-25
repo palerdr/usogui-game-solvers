@@ -30,7 +30,7 @@ def dth(output: Path | None) -> None:
 
 
 def leap(dth_path: Path | None, output: Path | None) -> None:
-    """Build, or resume, the full certified leap sweep to the clock-720 opening."""
+    """Build the full certified leap sweep in an empty output directory."""
     from stl.dth import DEFAULT_PATH  # noqa: PLC0415 - load only the selected CLI runtime
     from stl.leap import DEFAULT_ARTIFACT, run_full  # noqa: PLC0415 - load only the selected CLI runtime
 

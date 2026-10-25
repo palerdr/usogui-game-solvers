@@ -9,13 +9,12 @@ oracle in tests/conftest.py checks the kernel. ``docs/LEAP.md``
 holds the certificate equations.
 
 Run ``python -m stl leap [--dth artifacts/dth/V.npy] [--output artifacts/leap]``
-to build or resume the table. Resume needs the same builder hash, DTH table
-and checkpoint file hashes.
+to build the table in an empty output directory. The completed report records
+coverage and numerical audit results.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import multiprocessing
@@ -31,11 +30,10 @@ from pathlib import Path
 from typing import Self, cast
 
 import highspy
-import numba
 import numpy as np
 from scipy.optimize import linprog
 
-from stl.dth import DEFAULT_PATH
+from stl.dth import DEFAULT_PATH, Table
 from stl.game import (
     LS_WINDOW_END,
     LS_WINDOW_START,
@@ -46,13 +44,12 @@ from stl.game import (
 )
 from stl.leap_kernel import solve_packing, sweep_batch
 
-__all__ = ["LeapIdentity", "LeapTable", "open_leap", "profile_index"]
+__all__ = ["LeapTable", "open_leap", "profile_index"]
 
 type Key = tuple[str, int]
 type PathLike = str | os.PathLike[str]
 
-# The completed leap artifact (82 GB, gitignored). Its manifest binds the
-# sha256 of the DTH table at DEFAULT_PATH.
+# The completed leap artifact (82 GB, gitignored).
 DEFAULT_ARTIFACT = Path(__file__).resolve().parents[2] / "artifacts" / "leap"
 
 
@@ -420,43 +417,7 @@ def forward_reachability(
                     dest_bits[rows, col // 8] |= dense[:, j] << int(col % 8)
         if directory is not None and key[0] == "H1":
             print(f"reach {key_name(key)}: {count:,}", flush=True)  # noqa: T201
-    result = Reachability(counts, directory)
-    if directory is not None:
-        (directory / "counts.json").write_text(
-            json.dumps({key_name(k): v for k, v in counts.items()})
-        )
-        files = {
-            path.name: file_hash(path)
-            for path in directory.glob("*")
-            if path.name != "manifest.json"
-        }
-        write_json(
-            directory / "manifest.json",
-            {"builder_sha256": builder_hash(), "files": files, "limit": limit},
-        )
-    return result
-
-
-def file_hash(path: PathLike) -> str:
-    h = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(8 * 1024 * 1024), b""):
-            h.update(block)
-    return h.hexdigest()
-
-
-def builder_hash() -> str:
-    """Hash the sources that decide a leap value, by package-relative name."""
-    package = Path(__file__).resolve().parent
-    h = hashlib.sha256()
-    for name in ("game.py", "leap.py", "leap_kernel.py"):
-        encoded = name.encode()
-        data = (package / name).read_bytes()
-        h.update(len(encoded).to_bytes(8, "big"))
-        h.update(encoded)
-        h.update(len(data).to_bytes(8, "big"))
-        h.update(data)
-    return h.hexdigest()
+    return Reachability(counts, directory)
 
 
 def write_json(path: Path, data: object) -> None:
@@ -489,7 +450,7 @@ class TableStore:
         self.write_bytes += table.nbytes
         return table
 
-    def pack(self, key: Key, *, retain_dense: bool = False) -> None:
+    def pack(self, key: Key) -> None:
         start = time.perf_counter()
         table = np.load(self.path(key), mmap_mode="r")
         cols = key_columns(key)
@@ -519,8 +480,17 @@ class TableStore:
         self.pack_bytes += bitmap.nbytes + values.nbytes
         self.pack_seconds += time.perf_counter() - start
         del bitmap, values, table
-        if not retain_dense:
-            self.path(key).unlink()
+        self.path(key).unlink()
+
+    def pack_after(self, clock: int) -> None:
+        """Pack dense tables beyond the remaining sweep's dependency horizon."""
+        for path in self.directory.glob("*.npy"):
+            if "." in path.stem:
+                continue
+            kind, index = path.stem.split("_")
+            key = (kind, int(index))
+            if key_clock(key) > clock:
+                self.pack(key)
 
     def load(self, key: Key) -> np.memmap:
         if self.path(key).exists():
@@ -700,152 +670,31 @@ def sweep_key(
     }
 
 
-def _load_reach(directory: Path) -> Reachability:
-    manifest = json.loads((directory / "manifest.json").read_text())
-    if manifest["builder_sha256"] != builder_hash():
-        message = "reachability source mismatch"
-        raise ValueError(message)
-    validate_files(directory, manifest["files"])
-    data = json.loads((directory / "counts.json").read_text())
-    return Reachability(
-        {(name.split("_")[0], int(name.split("_")[1])): n for name, n in data.items()},
-        directory,
-    )
-
-
 def _rss_bytes() -> int:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (
         1 if sys.platform == "darwin" else 1024
     )
 
 
-def commit_full_checkpoint(
-    directory: PathLike,
-    identity: dict,
-    records: list[dict],
-    files: dict[str, str],
-    store: TableStore,
-    clock: int,
-    elapsed: float,
-    *,
-    finalize: bool = False,
-) -> None:
-    directory = Path(directory)
-    cold = []
-    for path in store.directory.glob("*.npy"):
-        if "." in path.stem:
-            continue
-        kind, index = path.stem.split("_")
-        key = (kind, int(index))
-        if finalize or key_clock(key) > clock + 540:
-            # We retain the dense source until the checkpoint owns both packed files.
-            store.pack(key, retain_dense=True)
-            for suffix in (".bits.npy", ".values.npy"):
-                packed = store.directory / f"{key_name(key)}{suffix}"
-                files[str(packed.relative_to(directory))] = file_hash(packed)
-            files.pop(str(path.relative_to(directory)), None)
-            cold.append(path)
-    io = {
-        name: getattr(store, name)
-        for name in ("write_bytes", "write_seconds", "pack_bytes", "pack_seconds")
-    }
-    write_json(
-        directory / "checkpoint.json",
-        {
-            "identity": identity,
-            "records": records,
-            "files": files,
-            "io": io,
-            "elapsed_seconds": elapsed,
-            "peak_rss_bytes": _rss_bytes(),
-            "sweep_complete": finalize,
-        },
-    )
-    for path in cold:
-        path.unlink()
-
-
 def run_full(dth_path: PathLike, directory: PathLike) -> dict:
     """We sweep the public game to its clock-720 opening and audit the result."""
     started = time.perf_counter()
     directory = Path(directory)
-    directory.mkdir(parents=True, exist_ok=True)
-    dth_path = Path(dth_path)
-    dth = np.load(dth_path, mmap_mode="r")
-    if (
-        dth.shape != (N, N + 1)
-        or dth.dtype != np.float64
-        or not np.all(dth[:, -1] == -1)
-    ):
-        message = "DTH table schema mismatch"
+    if directory.exists() and any(directory.iterdir()):
+        message = f"{directory}: leap builds require an empty output directory"
+        raise FileExistsError(message)
+    dth = Table.open(Path(dth_path)).values
+    if not np.all(dth[:, -1] == -1):
+        message = "DTH table sentinel mismatch"
         raise ValueError(message)
-    identity = {
-        "schema": "stl-leap-values-v1",
-        "builder_sha256": builder_hash(),
-        "dth_sha256": file_hash(dth_path),
-        "saddle_tolerance": 1e-6,
-        "minimum_clock": 720,
-        "mode": "full",
-        "python": sys.version,
-        "numpy": np.__version__,
-        "numba": numba.__version__,
-        "highs": highspy.Highs().version(),
-        "residue": RESIDUE,
-    }
-    checkpoint_path = directory / "checkpoint.json"
     store = TableStore(directory / "tables")
     records = []
-    files = {}
-    elapsed_base = 0.0
-    prior_peak = 0
-    if checkpoint_path.exists():
-        checkpoint = json.loads(checkpoint_path.read_text())
-        if checkpoint["identity"] != identity:
-            message = "checkpoint source or DTH digest mismatch"
-            raise ValueError(message)
-        manifest_path = directory / "manifest.json"
-        if manifest_path.exists():
-            manifest = json.loads(manifest_path.read_text())
-            if (
-                manifest.get("complete")
-                and manifest.get("builder_sha256") == identity["builder_sha256"]
-            ):
-                validate_files(directory, manifest["files"])
-                report = json.loads((directory / "report.json").read_text())
-                print(json.dumps(report, indent=2), flush=True)  # noqa: T201
-                return report
-        files = checkpoint["files"]
-        validate_files(directory, files)
-        records = checkpoint["records"]
-        elapsed_base = checkpoint.get("elapsed_seconds", 0.0)
-        prior_peak = checkpoint.get("peak_rss_bytes", 0)
-        for name, value in checkpoint["io"].items():
-            setattr(store, name, value)
-        # We remove a dense copy left by an interruption after checkpoint commit.
-        for path in store.directory.glob("*.npy"):
-            if "." not in path.stem and str(path.relative_to(directory)) not in files:
-                packed = str(path.with_suffix(".values.npy").relative_to(directory))
-                if packed in files:
-                    path.unlink()
-    reach_dir = directory / "reachability"
-    reach = (
-        _load_reach(reach_dir)
-        if (reach_dir / "counts.json").exists()
-        else forward_reachability(directory=reach_dir)
-    )
+    reach = forward_reachability(directory=directory / "reachability")
     if reach.by_type != TOTALS or reach.window_count != 470336555:  # noqa: PLR2004
         message = "full reachability count mismatch"
         raise RuntimeError(message)
-    if not files:
-        files = {
-            str(path.relative_to(directory)): file_hash(path)
-            for path in reach_dir.glob("*")
-        }
-    done = {tuple(r["key"]) for r in records}
     with NativeFallback(**RESIDUE) as fallback:
         for key in sorted(reach.counts, key=key_clock, reverse=True):
-            if key in done:
-                continue
             tick = time.perf_counter()
             record = sweep_key(
                 key,
@@ -857,29 +706,10 @@ def run_full(dth_path: PathLike, directory: PathLike) -> dict:
                 fallback=fallback,
             )
             record["sweep_seconds"] = time.perf_counter() - tick
-            path = store.path(key)
-            files[str(path.relative_to(directory))] = file_hash(path)
             records.append(record)
-            commit_full_checkpoint(
-                directory,
-                identity,
-                records,
-                files,
-                store,
-                key_clock(key),
-                elapsed_base + time.perf_counter() - started,
-            )
+            store.pack_after(key_clock(key) + 540)
             print(json.dumps(record), flush=True)  # noqa: T201
-    commit_full_checkpoint(
-        directory,
-        identity,
-        records,
-        files,
-        store,
-        720,
-        elapsed_base + time.perf_counter() - started,
-        finalize=True,
-    )
+    store.pack_after(0)
     if sum(r["states"] for r in records) != sum(TOTALS.values()) or len(records) != len(
         reach.counts
     ):
@@ -919,9 +749,9 @@ def run_full(dth_path: PathLike, directory: PathLike) -> dict:
         "cached_failures": sum(r["cached_failures"] for r in records),
         "kernel_seconds": sum(r["kernel_seconds"] for r in records),
         "lp_seconds": sum(r["lp_seconds"] for r in records),
-        "wall_seconds": elapsed_base + time.perf_counter() - started,
+        "wall_seconds": time.perf_counter() - started,
         "audit_seconds": time.perf_counter() - audit_started,
-        "peak_rss_bytes": max(prior_peak, _rss_bytes()),
+        "peak_rss_bytes": _rss_bytes(),
         "memmap_write_MB_s": store.write_bytes / store.write_seconds / 1e6,
         "pack_MB_s": store.pack_bytes / store.pack_seconds / 1e6,
         "lp_audit_samples": audit["lp_samples"],
@@ -932,33 +762,8 @@ def run_full(dth_path: PathLike, directory: PathLike) -> dict:
         "min_baku_gain": audit["min_baku_gain"],
     }
     write_json(directory / "report.json", report)
-    for name in ("checkpoint.json", "audit.json", "report.json"):
-        files[name] = file_hash(directory / name)
-    write_json(
-        directory / "manifest.json",
-        {
-            **identity,
-            "files": files,
-            "complete": True,
-            "stopped_at_clock": 720,
-            "states": sum(TOTALS.values()),
-            "audit": {
-                "packed_coverage": "all reachable states",
-                "lp_samples": audit["lp_samples"],
-                "max_bellman_residual": audit["max_bellman_residual"],
-            },
-        },
-    )
     print(json.dumps(report, indent=2), flush=True)  # noqa: T201
     return report
-
-
-def validate_files(directory: PathLike, files: dict[str, str]) -> None:
-    for name, digest in files.items():
-        path = Path(directory) / name
-        if not path.is_file() or file_hash(path) != digest:
-            message = f"checkpoint file hash mismatch: {name}"
-            raise ValueError(message)
 
 
 # ────────────────────────────────────────────────────────────
@@ -1653,33 +1458,11 @@ def audit_full(
 # Verified read path
 # ────────────────────────────────────────────────────────────
 
-# A completed artifact opens read-only. open_leap checks the manifest before
-# it returns a table: the schema is stl-leap-values-v1, the builder marked the
-# artifact complete, and the SHA-256 of the DTH table equals dth_sha256. With
-# verify="files" it also re-hashes each file that the manifest lists, which
-# reads the whole artifact. A key names a table as the builder does:
-# ("H1", minute), ("H2", minute) or ("REV", clock). checker and dropper are
-# profile indices that profile_index returns.
-
-SCHEMA = "stl-leap-values-v1"
-
+# A completed report records full coverage and a successful Bellman audit.
+# A key names a table as ("H1", minute), ("H2", minute) or ("REV", clock).
+# checker and dropper are profile indices that profile_index returns.
 
 TOLERANCE = 1e-6
-
-
-VERIFY_MODES = ("manifest", "files")
-
-
-@dataclass(frozen=True)
-class LeapIdentity:
-    """The facts that bind a figure or a policy to one artifact."""
-
-    artifact: Path
-    dth_values: Path
-    schema: str
-    builder_sha256: str
-    dth_sha256: str
-    verified: str
 
 
 def profile_index(st: int, ttd: int) -> int:
@@ -1696,14 +1479,9 @@ def profile_index(st: int, ttd: int) -> int:
 class LeapTable:
     """Stored values and stage certificates of one verified leap artifact."""
 
-    def __init__(self, identity: LeapIdentity, dth: np.ndarray) -> None:
-        self._identity = identity
-        self._reader = PackedReader(identity.artifact / "tables")
+    def __init__(self, artifact: Path, dth: np.ndarray) -> None:
+        self._reader = PackedReader(artifact / "tables")
         self._dth = dth
-
-    @property
-    def identity(self) -> LeapIdentity:
-        return self._identity
 
     def value(self, key: tuple[str, int], checker: int, dropper: int) -> float:
         """Return the stored value of one state, from the Dropper's side.
@@ -1761,42 +1539,17 @@ def open_leap(
     artifact: str | os.PathLike[str] = DEFAULT_ARTIFACT,
     *,
     dth: str | os.PathLike[str] = DEFAULT_PATH,
-    verify: str = "manifest",
 ) -> LeapTable:
-    """Open a completed leap artifact after its manifest checks pass."""
-
-    if verify not in VERIFY_MODES:
-        message = f"verify must be one of {VERIFY_MODES}, not {verify!r}"
-        raise ValueError(message)
+    """Open a completed leap artifact and validate its DTH tail."""
     root = Path(artifact).resolve()
-    dth_path = Path(dth).resolve()
-    manifest_path = root / "manifest.json"
-    if not manifest_path.is_file():
-        message = f"no leap manifest at {manifest_path}"
-        raise FileNotFoundError(message)
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("schema") != SCHEMA:
-        message = (
-            f"{manifest_path}: schema {manifest.get('schema')!r} is not {SCHEMA!r}"
-        )
+    report_path = root / "report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if (
+        report.get("states") != sum(TOTALS.values())
+        or {kind: row["states"] for kind, row in report.get("rows", {}).items()}
+        != TOTALS
+        or not 0 <= report.get("max_bellman_residual", math.inf) <= TOLERANCE
+    ):
+        message = f"{report_path}: no complete, numerically checked leap result"
         raise ValueError(message)
-    if manifest.get("complete") is not True:
-        message = f"{manifest_path}: the builder did not mark the artifact complete"
-        raise ValueError(message)
-    if file_hash(dth_path) != manifest["dth_sha256"]:
-        message = f"{dth_path}: the DTH tail differs from the audited solve"
-        raise ValueError(message)
-    if verify == "files":
-        for name, expected in manifest["files"].items():
-            if file_hash(root / name) != expected:
-                message = f"{root / name}: the file differs from its manifest hash"
-                raise ValueError(message)
-    identity = LeapIdentity(
-        artifact=root,
-        dth_values=dth_path,
-        schema=SCHEMA,
-        builder_sha256=str(manifest["builder_sha256"]),
-        dth_sha256=str(manifest["dth_sha256"]),
-        verified=verify,
-    )
-    return LeapTable(identity, np.load(dth_path, mmap_mode="r"))
+    return LeapTable(root, Table.open(Path(dth)).values)

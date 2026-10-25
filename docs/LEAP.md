@@ -26,17 +26,16 @@ The round-start route is `1 + ((minute - 12) mod 4)`. Route 2 is active: a
 round starting at 8:57 gives Baku the leap-window drop in half 2. Routes
 are derived from the clock, never advanced as independent state.
 
-## Build, resume, and read
+## Build and read
 
 Run `uv run python -m stl leap` after building DTH. The default output is
 ignored `artifacts/leap/` (about 82 GB); `--dth` and `--output` override the
 paths. The full build reaches clock 720. `open_leap()` is the one completed
-artifact reader; it validates the manifest and bound DTH digest.
-
-The builder hashes `game.py`, `leap.py`, and `leap_kernel.py` by package-relative
-name. Never resume a build across changes to these bytes. Resume identity
-also binds Python, NumPy, numba, and HiGHS versions. Reading a completed
-artifact does not make its historical builder hash a claim about today's code.
+artifact reader. The builder requires an empty output directory and writes
+`report.json` after its coverage and numerical audits pass. An interrupted
+build must restart in a new empty directory. The reader checks the report's
+coverage and residual, then validates the DTH shape and six reference values.
+`LeapTable.stage` reconstructs a stage and checks its numerical certificate.
 
 `tests/leap_kernel_golden.npz` pins the retired Rust kernel's outputs exactly.
 The frozen kernel bytes, support APIs, and packing-runs entry stay intact

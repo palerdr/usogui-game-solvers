@@ -2,11 +2,9 @@
 """Build the DTH table: one backward pass of the numba ladder over the potential layers
 phi = 1200..0.
 
-The sweep writes artifacts/dth/V.npy (17,011 x 17,012 float64, sha256 e43977b7...), the
-value the leap
-manifest binds. Run it with `uv run python -m stl dth [--output PATH]`. The rules, the
-scalar
-ladder and the checks live in stl.dth, which the hosted game imports without numba.
+The sweep writes artifacts/dth/V.npy (17,011 x 17,012 float64).
+Run it with `uv run python -m stl dth [--output PATH]`. The rules, scalar
+ladder and checks live in stl.dth, which the hosted game imports without numba.
 """
 
 from __future__ import annotations

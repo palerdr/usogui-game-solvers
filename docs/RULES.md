@@ -93,5 +93,5 @@ optimality. See [HAL.md](HAL.md).
 
 Artifacts built with action 0, exclusive ST, different revival constants, or
 a different leap mask are incompatible. Changes to rules must update the
-evidence, docs, artifact identity, and tests together; solver gaps, tolerances,
+evidence, docs, and tests together; solver gaps, tolerances,
 and validation gates must not be weakened.

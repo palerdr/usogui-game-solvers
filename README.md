@@ -52,9 +52,9 @@ uv run python -m stl leap
 ```
 
 `dth --output PATH` and `leap --dth PATH --output DIRECTORY` select artifacts.
-Never resume a leap build across changes to `game.py`, `leap.py`, or
-`leap_kernel.py`; its builder identity binds those bytes and runtime versions.
-A completed historical table remains readable with its bound DTH artifact.
+A leap build requires an empty output directory. An interrupted build must
+restart in a new empty directory. `open_leap()` reads completed results and
+checks the DTH reference values; `LeapTable.stage()` checks stage certificates.
 
 Independent native programs:
 
