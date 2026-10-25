@@ -25,7 +25,7 @@ public interfaces from `stl`, and `stl` must not import it.
   module. `src/browser/tests/test_runtime_imports.py` checks this in
   a fresh interpreter.
 - `variants.py` holds `PureDTHGame`. `contracts.py`, `agent.py`, `session.py`,
-  and `variants.py` import no project except `stl.engine`; `stl.dth` enters
+  and `variants.py` import no project except `stl.game`; `stl.dth` enters
   through the adapters and `policies/`.
 - `transcript.py` writes the public play transcript file for the browser's
   `--transcript`. `session.py` stays free of I/O.

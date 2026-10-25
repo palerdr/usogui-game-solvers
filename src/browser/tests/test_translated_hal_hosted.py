@@ -23,7 +23,7 @@ from arena.testing import (
     make_reveal as _reveal,
 )
 from browser.tests.fakes import MemoryStore, begin
-from stl.engine.game import LS_WINDOW_START
+from stl.game import LS_WINDOW_START
 
 
 def provider():

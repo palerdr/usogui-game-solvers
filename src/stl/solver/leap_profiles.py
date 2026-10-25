@@ -4,7 +4,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from stl.engine.game import (
+from stl.game import (
     LS_WINDOW_END,
     LS_WINDOW_START,
     TURN_DURATION_LEAP,

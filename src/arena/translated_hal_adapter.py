@@ -7,7 +7,7 @@ from pathlib import Path
 from arena.dth_adapter import project_to_dth_state
 from arena.policies.perfect_hal import PerfectHalPolicyProvider, _validate_stage
 from arena.policies.translated_hal import TranslatedHalConfig, TranslatedHalOpponentModel
-from stl.engine.actions import legal_seconds, validate_action
+from stl.game import legal_seconds, validate_action
 
 SELECTION = Path(__file__).with_name("config") / "translated_hal_v1_selection.json"
 

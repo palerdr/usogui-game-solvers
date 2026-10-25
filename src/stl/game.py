@@ -1,8 +1,18 @@
-"""Engine truth for Surpassing The Leader / Drop the Handkerchief.
+"""The STL referee and action legality. Every game plays through this module.
 
-This module intentionally collapses the old Constants, Player, Referee, and
-Game modules into one import surface. Solver and learning code should depend
-on this module rather than reimplementing game rules.
+The module holds the rule constants, the actor-aware legality of action
+seconds, the Player and Referee state, and the Game state machine. Solver and
+server code read the rules here and do not reimplement them.
+
+All timing values are in seconds. The game clock is absolute: second 0 is
+8:00:00 AM.
+
+Action index equals action second. Normal action seconds are 1..60. During a
+leap-window half-round only the canonical Baku identity as Dropper may also
+use second 61. Checkers are capped at 60, and every other identity is capped
+at 60. These are ordinal literal seconds: action 1 is an immediate
+first-second action. The engine counts successful ST inclusively as
+``check - drop + 1``. See ``docs/ACTION_TIMING.md``.
 """
 
 from __future__ import annotations
@@ -13,17 +23,9 @@ from enum import Enum
 from numbers import Integral
 from typing import Optional
 
-"""
-Drop The Handkerchief — Game Constants
-All timing values are in seconds unless otherwise noted.
-The game clock is absolute: second 0 = 8:00:00 AM.
-"""
 # ──────────────────────────────────────────────
 # CLOCK
 # ──────────────────────────────────────────────
-GAME_START_HOUR = 8                 # 8:00 AM
-SECONDS_PER_MINUTE = 60
-MINUTES_PER_HOUR = 60
 OPENING_START_CLOCK = 12 * 60       # Canonical R1 start: 8:12:00 AM
 # Leap second: inserted at exactly 8:59:60 AM.
 # In game clock seconds: 8:59:00 AM = 59 * 60 = 3540s after game start.
@@ -76,7 +78,51 @@ REVIVAL_TTD_DECAY_PER_MINUTE = 0.75
 PHYSICALITY_HAL = 1.0
 PHYSICALITY_BAKU = 1.0
 
-from dataclasses import dataclass, field
+# ──────────────────────────────────────────────
+# ACTION LEGALITY
+# ──────────────────────────────────────────────
+NORMAL_SECONDS = tuple(range(1, TURN_DURATION_NORMAL + 1))
+LEAP_SECONDS = tuple(range(1, TURN_DURATION_LEAP + 1))
+
+
+class IllegalActionError(ValueError):
+    """Raised when an action second violates actor/role legality."""
+
+
+def legal_max_second(actor: str, role: str, turn_duration: int) -> int:
+    actor_l = actor.lower()
+    role_l = role.lower()
+
+    if turn_duration < TURN_DURATION_LEAP:
+        return min(int(turn_duration), TURN_DURATION_NORMAL)
+
+    if role_l == "dropper" and actor_l == "baku":
+        return TURN_DURATION_LEAP
+
+    return TURN_DURATION_NORMAL
+
+
+def legal_seconds(actor: str, role: str, turn_duration: int) -> tuple[int, ...]:
+    """Return literal legal action seconds for the actor and role."""
+    return tuple(range(1, legal_max_second(actor, role, turn_duration) + 1))
+
+
+def validate_action(second: int, *, actor: str, role: str, turn_duration: int) -> int:
+    """Return a canonical literal second after actor-aware validation."""
+    max_sec = legal_max_second(actor, role, turn_duration)
+    if isinstance(second, bool) or not isinstance(second, Integral):
+        raise IllegalActionError(
+            f"Illegal action second={second!r} for actor={actor!r} role={role!r}; "
+            "seconds must be integers."
+        )
+    value = int(second)
+    if not (1 <= value <= max_sec):
+        raise IllegalActionError(
+            f"Illegal action second={second!r} for actor={actor!r} role={role!r} "
+            f"turn_duration={turn_duration}; legal range is [1, {max_sec}]."
+        )
+    return value
+
 
 @dataclass
 class Player:
@@ -89,10 +135,6 @@ class Player:
     deaths: int = 0
     alive: bool = True
 
-    # ── Per-death history (for analysis / debugging) ──
-    # Each entry is the duration of one death episode in seconds.
-    death_history: list[float] = field(default_factory=list)
-
     @property
     def safe_strategies_remaining(self) -> int:
         """
@@ -104,29 +146,16 @@ class Player:
         Returns the number of times the player can absorb a worst-case safe check.
         """
         return max(0, int((CYLINDER_MAX - 1 - self.cylinder) // TURN_DURATION_NORMAL))
-    
-
-    def add_to_cylinder(self, amount: float) -> bool:
-        """
-        Add NDD to the cylinder.
-
-        Returns True if cylinder >= CYLINDER_MAX after addition,
-        meaning immediate injection is triggered.
-        """
-        self.cylinder += amount
-        return self.cylinder >= CYLINDER_MAX
 
     def on_death(self, death_duration: float) -> None:
         """
         Called when this player dies.
         - Increment deaths count
         - Add death_duration to ttd
-        - Append to death_history
         - Set alive = False
         """
         self.deaths += 1
         self.ttd += death_duration
-        self.death_history.append(death_duration)
         self.alive = False
 
     def on_revival(self) -> None:
@@ -146,26 +175,17 @@ class Player:
         """
         self.alive = False
 
-"""
-Drop The Handkerchief — Referee
-
-The Referee (Yakou) manages the death/revival roll.
-
-The referee has ONE job in the engine: determine whether a player survives
-a death episode. This involves:
-
-1. Computing the frozen two-variable revival probability.
-2. Rolling against that probability.
-3. Tracking revival attempts for match history only. That count is not a
-   probability input.
-"""
-
-import random
-from dataclasses import dataclass
-
 
 @dataclass
 class Referee:
+    """The Referee (Yakou) determines whether a player survives a death episode.
+
+    1. Compute the frozen two-variable revival probability.
+    2. Roll against that probability.
+    3. Track revival attempts for match history only. That count is not a
+       probability input.
+    """
+
     cprs_performed: int = 0
 
     def compute_survival_probability(self, player: Player, death_duration: float) -> float:
@@ -223,31 +243,14 @@ class Referee:
         """
         if rng is None:
             rng = random.Random()
-            
+
         prob = self.compute_survival_probability(player, death_duration)
         roll = rng.random()
         survived = prob > roll
         self.cprs_performed += 1
         return survived
 
-"""
-Drop The Handkerchief — Game
-The Game is the state machine that orchestrates everything.
-It owns two Players, one Referee, and the game clock.
-A Game consists of Rounds. Each Round has two HalfRounds.
-Each HalfRound has a Dropper and a Checker.
-Flow per HalfRound:
-    1. Determine turn_duration (60 normally, 61 if leap second window).
-    2. D chooses a literal drop second, normally in [1, 60].
-    3. C chooses a literal check second, capped at [1, 60].
-    4. Resolve: successful check or failed check.
-    5. On success: add ST to C's cylinder. Check for overflow.
-    6. On failure: add penalty to C's cylinder. Inject. Death sequence.
-    7. Advance game clock.
-    8. Check for game-over conditions.
-The Game does NOT decide what actions to take — it receives them.
-Action selection is the responsibility of the caller (CLI, AI, Gym env).
-"""
+
 class HalfRoundResult(Enum):
     """Outcome of a single half-round."""
     CHECK_SUCCESS = "check_success"                         # C found the handkerchief
@@ -273,6 +276,21 @@ class HalfRoundRecord:
     survival_probability: Optional[float]  # the computed P before the roll (None if no death)
 @dataclass
 class Game:
+    """The state machine that orchestrates a game.
+
+    It owns two Players, one Referee, and the game clock. A Game consists of
+    Rounds. Each Round has two HalfRounds. Each HalfRound has a Dropper and a
+    Checker. Flow per HalfRound:
+        1. Determine turn_duration (60 normally, 61 if leap second window).
+        2. D chooses a literal drop second, normally in [1, 60].
+        3. C chooses a literal check second, capped at [1, 60].
+        4. Resolve: successful check or failed check.
+        5. On success: add ST to C's cylinder. Check for overflow.
+        6. On failure: add penalty to C's cylinder. Inject. Death sequence.
+        7. Advance game clock.
+        8. Check for game-over conditions.
+    The Game does NOT decide what actions to take — it receives them.
+    """
     player1: Player
     player2: Player
     referee: Referee
@@ -458,7 +476,7 @@ class Game:
                 raise ValueError(
                     "cannot force survival when the canonical revival probability is zero"
                 )
-        checker.add_to_cylinder(ST if success else FAILED_CHECK_PENALTY)
+        checker.cylinder += ST if success else FAILED_CHECK_PENALTY
         if death_occurred:
             if survived_outcome is None:
                 survived = self.referee.attempt_revival(
@@ -513,19 +531,6 @@ class Game:
                 self.current_half = 1
                 self.round_num += 1
         return record
-    def play_round(self, half1_drop: int, half1_check: int,
-                   half2_drop: int, half2_check: int) -> list[HalfRoundRecord]:
-        """
-        Convenience method: play both halves of a round.
-        Returns list of 1 or 2 HalfRoundRecords (may be 1 if game ends in half 1).
-        """
-        records: list[HalfRoundRecord] = []
-        record1 = self.play_half_round(half1_drop, half1_check)
-        records.append(record1)
-        if not self.game_over:
-            record2 = self.play_half_round(half2_drop, half2_check)
-            records.append(record2)
-        return records
     # VALIDATION
     def validate_drop_time(
         self, drop_time: int, turn_duration: int, actor: str | None = None
@@ -546,8 +551,6 @@ class Game:
                     f"drop_time must be in [1, {max_second}], got {drop_time}"
                 )
             return normalized
-        from stl.engine.actions import IllegalActionError, validate_action
-
         try:
             return validate_action(
                 drop_time,
@@ -575,8 +578,6 @@ class Game:
                     f"check_time must be in [1, {max_second}], got {check_time}"
                 )
             return normalized
-        from stl.engine.actions import IllegalActionError, validate_action
-
         try:
             return validate_action(
                 check_time,
@@ -590,33 +591,6 @@ class Game:
     def is_leap_second_turn(self) -> bool:
         """Is the current game clock in the leap second window?"""
         return LS_WINDOW_START <= self.game_clock <= LS_WINDOW_END
-    def get_state_summary(self) -> dict:
-        """
-        Return a dict summarizing the current game state.
-        Useful for CLI display, logging, and later for Gym observations.
-        """
-        def player_summary(p: Player) -> dict:
-            return {
-                "name": p.name,
-                "cylinder": p.cylinder,
-                "ttd": p.ttd,
-                "deaths": p.deaths,
-                "alive": p.alive,
-                "safe_strategies_remaining": p.safe_strategies_remaining,
-            }
-        return {
-            "round_num": self.round_num,
-            "current_half": self.current_half,
-            "game_clock": self.game_clock,
-            "game_clock_display": self.format_game_clock(),
-            "is_leap_second_turn": self.is_leap_second_turn(),
-            "player1": player_summary(self.player1),
-            "player2": player_summary(self.player2),
-            "revival_attempts": self.referee.cprs_performed,
-            "game_over": self.game_over,
-            "winner": self.winner.name if self.winner else None,
-            "loser": self.loser.name if self.loser else None,
-        }
 class GameOverError(Exception):
     """Raised when trying to play after the game has ended."""
     pass

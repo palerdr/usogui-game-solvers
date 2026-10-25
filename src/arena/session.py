@@ -34,8 +34,8 @@ from arena.contracts import (
     end_provider_game,
     observe_provider,
 )
-from stl.engine.actions import legal_seconds, validate_action
-from stl.engine.game import Game, HalfRoundRecord, Player
+from stl.game import legal_seconds, validate_action
+from stl.game import Game, HalfRoundRecord, Player
 
 
 CANONICAL_HAL_NAME = "Hal"

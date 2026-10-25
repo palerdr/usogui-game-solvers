@@ -190,7 +190,7 @@ def builder_hash():
     # The glob covers the numba kernel, leap_kernel.py; uv.lock pins numba.
     root = Path(__file__).resolve().parents[3]
     files = [*Path(__file__).parent.glob('leap_*.py'),
-             root/'src/stl/engine/game.py', root/'uv.lock', root/'pyproject.toml']
+             root/'src/stl/game.py', root/'uv.lock', root/'pyproject.toml']
     h = hashlib.sha256()
     for path in sorted(files):
         name = str(path.relative_to(root)).encode(); data = path.read_bytes()

@@ -7,7 +7,7 @@ can select a variant without loading a solver.
 
 from __future__ import annotations
 
-from stl.engine.game import Game
+from stl.game import Game
 
 
 class PureDTHGame(Game):

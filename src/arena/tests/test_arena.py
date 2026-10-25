@@ -7,7 +7,7 @@ import pytest
 
 from arena.agent import PolicyDrivenAgent, decision_from_game, normalize_legal_policy
 from arena.contracts import CanonicalDecision
-from stl.engine.game import Game, Player, Referee
+from stl.game import Game, Player, Referee
 
 
 def _decision(*, legal: tuple[int, ...] = (1, 2, 3)) -> CanonicalDecision:

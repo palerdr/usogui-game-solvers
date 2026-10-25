@@ -13,8 +13,8 @@ from arena.contracts import (
     PublicDecisionState,
     PublicPlayerState,
 )
-from stl.engine.actions import legal_seconds
-from stl.engine.game import Game
+from stl.game import legal_seconds
+from stl.game import Game
 
 
 def decision_from_game(game: Game, *, role: str, turn_duration: int) -> CanonicalDecision:

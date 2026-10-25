@@ -12,7 +12,7 @@ uv run python -m browser
 
 ## Boundaries
 
-- Browser imports `arena`, `stl.engine`, and `stl.dth`. No project imports
+- Browser imports `arena`, `stl.game`, and `stl.dth`. No project imports
   browser.
 - Browser imports no `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`. `tests/test_runtime_imports.py` and `tests/test_manifest.py`

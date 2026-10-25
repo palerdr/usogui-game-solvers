@@ -31,7 +31,7 @@ def lp(s, f, window):
 
 def test_clock_matches_engine():
     from stl.solver.leap_profiles import child_clock, snap
-    from stl.engine.game import Game, Player, Referee
+    from stl.game import Game, Player, Referee
     rng = random.Random(381)
     for clock in [720, 3420, 3479, 3480, 3539, 3540, 3599, 3600, 3601]:
         for half in (1, 2):
@@ -48,7 +48,7 @@ def test_clock_matches_engine():
 
 
 def test_leap_window_is_closed_and_turn_duration_agrees():
-    from stl.engine.game import (
+    from stl.game import (
         LS_WINDOW_END,
         LS_WINDOW_START,
         TURN_DURATION_LEAP,

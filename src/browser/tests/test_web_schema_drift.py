@@ -25,7 +25,7 @@ from browser.schema import (
     Snapshot,
 )
 from arena.session import Phase
-from stl.engine.game import HalfRoundResult
+from stl.game import HalfRoundResult
 
 _TYPES = Path(__file__).resolve().parents[1] / "webclient" / "src" / "types.ts"
 

@@ -25,7 +25,7 @@ from arena.session import (
     validate_human_display_name,
 )
 from browser.names import is_offensive
-from stl.engine.game import (
+from stl.game import (
     CYLINDER_MAX,
     TOTAL_TTD_MAX,
     TURN_DURATION_LEAP,

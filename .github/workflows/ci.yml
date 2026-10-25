@@ -15,8 +15,8 @@ concurrency:
 
 jobs:
   # The three shards partition the root suite: every test is either slow, or
-  # not slow and under src/stl/tests, or not slow and elsewhere (src/arena and
-  # src/browser). The slow shard runs alone because test_forward_counts_full
+  # not slow and under tests/ or src/stl/tests, or not slow and elsewhere
+  # (src/arena and src/browser). The slow shard runs alone because test_forward_counts_full
   # takes about 210 s on one core. CI sets the xdist width to the runner's
   # logical cores.
   python:
@@ -28,9 +28,9 @@ jobs:
       matrix:
         include:
           - shard: stl
-            select: -m "not slow" src/stl/tests
+            select: -m "not slow" tests src/stl/tests
           - shard: rest
-            select: -m "not slow" --ignore-glob='src/stl/tests/*'
+            select: -m "not slow" --ignore-glob='tests/*' --ignore-glob='src/stl/tests/*'
           - shard: slow
             select: -m slow
     steps:

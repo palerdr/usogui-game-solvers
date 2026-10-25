@@ -6,7 +6,7 @@ import pytest
 
 from arena.testing import make_session as _session
 from browser.schema import snapshot_from_session
-from stl.engine.game import TOTAL_TTD_MAX
+from stl.game import TOTAL_TTD_MAX
 
 
 @pytest.mark.parametrize(

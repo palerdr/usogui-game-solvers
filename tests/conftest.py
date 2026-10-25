@@ -2,10 +2,10 @@
 
 import pytest
 
-from stl.engine.game import Player
-from stl.engine.game import Referee
-from stl.engine.game import Game
-from stl.engine.game import PHYSICALITY_HAL, PHYSICALITY_BAKU
+from stl.game import Player
+from stl.game import Referee
+from stl.game import Game
+from stl.game import PHYSICALITY_HAL, PHYSICALITY_BAKU
 
 
 @pytest.fixture

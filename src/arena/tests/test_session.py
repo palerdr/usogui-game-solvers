@@ -6,7 +6,7 @@ import pytest
 
 from arena.session import Phase, PlaySession, SessionPhaseError
 from arena.testing import RecordingHal as _RecordingHal, make_session as _session
-from stl.engine.game import (
+from stl.game import (
     LS_WINDOW_START,
     PHYSICALITY_BAKU,
     Player,

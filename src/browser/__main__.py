@@ -15,7 +15,7 @@ import uvicorn
 from arena.policies import registry
 from arena.session import validate_human_display_name
 from browser.app import DEFAULT_WEBCLIENT_DIST, SeriesConfig, SessionConfig, create_app
-from stl.engine.game import OPENING_START_CLOCK
+from stl.game import OPENING_START_CLOCK
 
 
 def build_parser() -> argparse.ArgumentParser:

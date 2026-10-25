@@ -48,9 +48,7 @@ RUNTIME_FILES: tuple[RuntimeFile, ...] = (
     RuntimeFile("src/arena/transcript.py", in_version=True),
     RuntimeFile("src/arena/variants.py"),
     RuntimeFile("src/stl/__init__.py"),
-    RuntimeFile("src/stl/engine/__init__.py"),
-    RuntimeFile("src/stl/engine/actions.py", in_version=True),
-    RuntimeFile("src/stl/engine/game.py", in_version=True),
+    RuntimeFile("src/stl/game.py", in_version=True),
     # The certified DTH table reader: rules, scalar ladder, Table and Stage.
     RuntimeFile("src/stl/dth.py", in_version=True),
     # The browser server, its hosted wrapper, and this deploy entry.

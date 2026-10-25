@@ -21,7 +21,7 @@
 - `src/browser/` is the browser game app, `python -m browser`: the FastAPI
   server, the TypeScript client in `src/browser/webclient/`, and the Vercel
   deploy pipeline in `src/browser/deploy/`. It may import `arena`,
-  `stl.engine`, and `stl.dth`, and no project imports it. The client renders
+  `stl.game`, and `stl.dth`, and no project imports it. The client renders
   state and collects input; it never derives game rules and never receives an
   unrevealed action.
 - Each project owns its configs, docs, tests, checkpoints, and outputs.
@@ -44,8 +44,8 @@ The table lists the import rules of each project. No test enforces them.
 | --- | --- | --- |
 | Peers | `stl`, `dth_ocaml`, `dth_cpp` | No other project |
 | Proofs | `formal` | Nothing |
-| Library | `arena` | `stl.engine`, `stl.reader`, `stl.dth` |
-| App | `browser` | `arena`, `stl.engine`, `stl.dth` |
+| Library | `arena` | `stl.game`, `stl.reader`, `stl.dth` |
+| App | `browser` | `arena`, `stl.game`, `stl.dth` |
 | Consumer | `paper` | `stl.reader`, `stl.dth` |
 
 - No project imports `browser`, and `arena` imports no `browser` module.
@@ -53,7 +53,7 @@ The table lists the import rules of each project. No test enforces them.
   completed leap artifact. Code outside `stl` reads leap tables through it,
   not through the `stl.solver.leap_*` builder modules.
 - Inside `arena`, `contracts.py`, `agent.py`, `session.py`, and
-  `variants.py` import `stl.engine` and each other alone. `stl.dth` enters
+  `variants.py` import `stl.game` and each other alone. `stl.dth` enters
   through the adapters and `arena/policies/`.
 - No project imports `torch`, `gymnasium`, `stable_baselines3`, or
   `sb3_contrib`. `arena/policies/__init__.py` imports nothing.

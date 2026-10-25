@@ -28,7 +28,7 @@ from arena.contracts import (
 from arena.policies.perfect_hal import ACTION_COUNT
 from arena.session import PlaySession
 from stl.dth import Stage
-from stl.engine.game import (
+from stl.game import (
     OPENING_START_CLOCK,
     PHYSICALITY_BAKU,
     PHYSICALITY_HAL,

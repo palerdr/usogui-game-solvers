@@ -30,7 +30,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["src/stl/tests", "src/arena/tests", "src/browser/tests"]
+testpaths = ["tests", "src/stl/tests", "src/arena/tests", "src/browser/tests"]
 pythonpath = ["src", "."]
 # The suite is overwhelmingly independent and every artifact-building test
 # already writes under its own tmp_path, so it distributes cleanly. Use "-n 0"

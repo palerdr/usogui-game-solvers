@@ -9,10 +9,8 @@ version-suffixed names.
 
 ## Retained surfaces
 
-- `engine/` is retained only as the compatibility interface currently consumed
-  by `src/arena/`. It is a behavioral reference for already-frozen rules, not
-  the canonical full STL formulation and not a foundation to extend casually.
-- `tests/engine/` protects that compatibility interface.
+- `game.py` is the STL referee and action legality. Every game plays
+  through it. Root `tests/test_game.py` covers it.
 - `solver/leap_profiles.py` owns the STL quotient, the turn duration, and
   the child clocks.
   `solver/leap_oracle.py` certifies scalar stages; `solver/leap_build.py` owns

@@ -1,7 +1,7 @@
 """Local HTTP surface for browser play.
 
 A front end onto the same session as the terminal app (``terminal.cli`` and
-``terminal.tui``). It imports only ``stl.engine`` and ``arena``. The client
+``terminal.tui``). It imports only ``stl.game`` and ``arena``. The client
 serves its pre-rendered character frames from ``webclient/public/art``. The STL
 engine remains the only referee; this module sequences requests and serializes
 state.
@@ -47,7 +47,7 @@ from browser.schema import (
     Snapshot,
     snapshot_from_session,
 )
-from stl.engine.game import (
+from stl.game import (
     OPENING_START_CLOCK,
     PHYSICALITY_BAKU,
     PHYSICALITY_HAL,
