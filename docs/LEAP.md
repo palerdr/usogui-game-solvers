@@ -1,11 +1,63 @@
-# Certificate from nonnegative weights
+# Public leap game and certificate
 
-We use this bound in `kernel.c` to avoid a second triangular matrix product.
+`stl.leap` builds, audits, and reads the public leap-aware game (L2).
+`stl.leap_kernel` is the frozen numba kernel. [RULES.md](RULES.md) owns the
+physical rules; [DTH.md](DTH.md) owns the exact post-leap continuation.
+
+## Formulation
+
+The public Markov state is `(baku_load, baku_ttd, hal_load, hal_ttd, half, clock)`.
+The opening is clock 720 (8:12), empty loads and TTD, Hal dropping in half 1.
+Both players know the leap rule. Each stage has simultaneous private choices
+and public revealed outcomes. There is no hidden awareness variable in L2.
+
+In half 1, DTH sees `(baku_load, baku_ttd, hal_load, hal_ttd)`; in half 2 it
+sees `(hal_load, hal_ttd, baku_load, baku_ttd)`. DTH values are from the
+current Dropper's perspective, so Hal's utility negates them in half 2.
+Only children with `clock > 3600` use DTH as an exact tail. Before that,
+future action 61 can alter incentives even in an ordinary 60-by-60 stage.
+The browser's DTH fallback is therefore not an exact full-STL policy.
+
+The round-start route is `1 + ((minute - 12) mod 4)`. Route 2 is active: a
+round starting at 8:57 gives Baku the leap-window drop in half 2. Routes
+are derived from the clock, never advanced as independent state.
+
+## Build, resume, and read
+
+Run `uv run python -m stl leap` after building DTH. The default output is
+ignored `artifacts/leap/` (about 82 GB); `--dth` and `--output` override the
+paths. The full build reaches clock 720. `open_leap()` is the one completed
+artifact reader; it validates the manifest and bound DTH digest.
+
+The builder hashes `game.py`, `leap.py`, and `leap_kernel.py` by package-relative
+name. Never resume a build across changes to these bytes. Resume identity
+also binds Python, NumPy, numba, and HiGHS versions. Reading a completed
+artifact does not make its historical builder hash a claim about today's code.
+
+`tests/leap_kernel_golden.npz` pins the retired Rust kernel's outputs exactly.
+The frozen kernel bytes, support APIs, and packing-runs entry stay intact
+because that fixture cannot be regenerated. Its old doc paths refer to
+`938fb25`; this guide replaces `src/stl/docs/LEAP_CERTIFICATE.md`.
+`tests/test_leap.py` independently recertifies the 16 Figure 3 records for
+minutes 44 through 59 against the real artifact.
+
+## Claim boundary
+
+The stored L2 result is a certified numerical solution of the declared public
+game, not a model of Hal's counterfactual memory. The source analyses describe
+awareness on the realized trace but give no off-path awareness kernel. Those
+interpretations and the retired L3 research remain in `938fb25`; no surviving
+provider claims to solve that hidden-memory game. Translated Hal is an
+empirical opponent model described in [HAL.md](HAL.md).
+
+## Certificate from nonnegative weights
+
+We use this bound in `src/stl/leap_kernel.py` to avoid a second triangular matrix product.
 We retain the full matrix check after clipping a negative weight.
 
 We treat the gathered binary64 payoffs as the exact entries of the stage
 matrix. You must account for child-value error through the accumulated bound
-in `paper/dth.tex`.
+in `docs/paper/dth_exact_solution.tex`.
 
 We require 60 actions, round-to-nearest binary64 arithmetic with gradual
 underflow, and compilation without fast-math. We check the rounding mode and
@@ -140,8 +192,8 @@ We store `max(v60, f)` and use kind 2 if `f >= v60`.
 We reserve kind 255 and NaN for classes that fail both kernel rungs. Python
 constructs the explicit 60-column matrix and uses HiGHS, then checks both
 saddle bounds against the same `1e-6` gate. Python aborts if that check fails.
-The artifact contains values. We do not claim a complete L2 solve from the
-clock-3420 calibration segment.
+The complete artifact contains values through the clock-720 opening. A
+clock-3420 partial segment by itself would not establish a complete L2 solve.
 
 ## Reduced support candidate (rung 2b)
 
@@ -182,8 +234,8 @@ Python sends remaining misses to HiGHS and refreshes the row's support.
 Python batches rows with reduced dimension above 16 through HiGHS by default.
 This size limit controls work and does not change the certificate.
 
-You enable this path by supplying support masks to `sweep_batch`, or by using
-`SupportFallback` in place of `Fallback`. The full-sweep command leaves
+The frozen kernel exposes this path through support masks to `sweep_batch`.
+The retired Python `SupportFallback` controller is available only in history. The full-sweep command leaves
 support reuse disabled: measured support-search and refresh costs exceeded the saved LP
 work on the sampled H2 batches. We retain kinds 4 and 5 for direct and moved
 support certificates, and kind 254 for deferred classes after a row miss.
@@ -261,8 +313,8 @@ reduced solve of rung 2b, then at most `kink_attempts - 1` edge moves. We
 send a miss to the packing LP. Its final basis supplies the next seed: the
 basic Dropper variables and the nonbasic Checker slacks, which have equal
 counts. The seed proposes mixtures; the full payoff check controls
-acceptance, as for rung 2b. `leap_support.py` holds the Python authority for
-`kink_index` and `kink_seed`.
+acceptance, as for rung 2b. The scalar reference for
+`kink_index` and `kink_seed` lives beside its tests in `tests/test_leap_kernel.py`.
 
 Window stages with `f > s[0]` never reach the residue. There `v60 <= f`, so
 the lifted pure bounds meet at `f`. A window residue stage therefore has

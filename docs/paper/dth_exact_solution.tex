@@ -120,10 +120,10 @@ We solve from layer 1200 down to 0, using known later values. \textup{QED}
 \begin{minipage}[t]{0.42\textwidth}
 \vspace{0pt}
 \centering
-\includegraphics[width=\linewidth,trim=100 10 95 0,clip]{build/figures/seaborn/fig1_revival_probability.pdf}
+\includegraphics[width=\linewidth,trim=100 10 95 0,clip]{figures/fig1_revival_probability.pdf}
 \figcap{Revival becomes less likely as either time total grows. Beyond $s+t=240$, the player cannot survive; at $s=240$, revival also has probability zero.}
 \vspace{10pt}
-\includegraphics[width=\linewidth]{build/figures/seaborn/fig2_toeplitz_structure.pdf}
+\includegraphics[width=\linewidth]{figures/fig2_toeplitz_structure.pdf}
 \figcap{Each diagonal has one success payoff $S_\ell$; each failed check has payoff $F$. We need at most 61 values for the 3,600 action pairs.}
 \vspace{12pt}
 \resizebox{\linewidth}{!}{
@@ -283,7 +283,7 @@ fallback uses floating-point checks.
   clip=false,
 ]
 \addplot[draw=figblue, fill=figblue!14, line width=0.75pt]
-  table[x=potential, y=classes] {build/figures/layer_widths.dat}
+  table[x=potential, y=classes] {figures/layer_widths.dat}
   \closedcycle;
 \addplot[only marks, mark=*, mark size=1.7pt, figorange]
   coordinates {(374,1678715)};
@@ -294,7 +294,7 @@ fallback uses floating-point checks.
 }
 \figcap{Play moves to higher layers; we solve in reverse. The widest layer contains 1,678,715 classes.}
 \vspace{5pt}
-\includegraphics[width=\linewidth]{build/figures/seaborn/fig5_strategy_and_value.pdf}
+\includegraphics[width=\linewidth]{figures/fig5_strategy_and_value.pdf}
 \figcap{With both TTDs zero: the Dropper's strategy $\sigma_d=a$ at equal ST (left), and the game value as each player's ST changes (right).}
 \raggedright
 \head{6. Results}

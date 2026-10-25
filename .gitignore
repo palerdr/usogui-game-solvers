@@ -25,13 +25,13 @@ multirun/
 logs/
 demos/
 tmp/
-paper/build/
-paper/*.log
-paper/*.synctex.gz
-paper/*.aux
-paper/*.fdb_latexmk
-paper/*.fls
-paper/*.out
+docs/paper/build/
+docs/paper/*.log
+docs/paper/*.synctex.gz
+docs/paper/*.aux
+docs/paper/*.fdb_latexmk
+docs/paper/*.fls
+docs/paper/*.out
 # Built tables and the deploy bundle: artifacts/dth/V.npy from python -m stl dth,
 # artifacts/leap from python -m stl leap, and artifacts/vercel from python -m stl deploy.
 artifacts/

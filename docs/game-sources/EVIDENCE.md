@@ -162,7 +162,7 @@ break ribs.
 
 Resuscitation is an active act by a referee whose capacity degrades. In
 reduced formulations this is folded into the accrued-TTD term; see
-[`REVIVAL_MODEL.md`](../REVIVAL_MODEL.md).
+[`RULES.md`](../RULES.md).
 
 <!-- evidence:E-THREE-DEATHS -->
 <a id="e-three-deaths"></a>
@@ -242,4 +242,4 @@ Numerical decay constants, curve shapes, physicality multipliers, and
 referee-fatigue surrogates are therefore explicit modeling assumptions. They
 must be versioned, must be identical across every formulation in this
 repository, and must never be presented as documentary odds. The frozen choice
-and its justification live in [`REVIVAL_MODEL.md`](../REVIVAL_MODEL.md).
+and its justification live in [`RULES.md`](../RULES.md).

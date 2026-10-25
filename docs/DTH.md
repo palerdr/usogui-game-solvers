@@ -5,15 +5,16 @@ Handkerchief: one certified game value for each of its 289,374,121 state
 classes, from a single backward pass. Everything is stated as pseudocode. You
 need a language with 64-bit floats, a linear-programming solver for the
 residue of classes that the cheap rungs cannot certify, and about 3 GiB of
-memory. `main.py` in this directory implements exactly this document (its
-docstrings cite the section numbers below), and the paper carries the proofs.
+memory. `src/stl/dth.py` implements the scalar ladder and table reader;
+`src/stl/dth_kernel.py` implements the numba sweep (their docstrings cite
+the section numbers below), and the paper carries the proofs.
 
 ## 1. What you are building
 
 | Output | Contents |
 | --- | --- |
 | `V` | 289,374,121 float64 values (2.16 GiB), one per state class: the exact game value from the current Dropper's perspective, in [−1, +1], certified to a saddle gap of at most 1e-6 |
-| `K` | one byte per class: which solver rung produced the value (0 pure, 1 equalizer, 2 LP) |
+| `K` (build memory only) | one byte per class: which solver rung produced the value (0 pure, 1 equalizer, 2 LP); not written to disk |
 
 Optimal strategies are not stored and do not need to be: any class's
 equilibrium pair is recomputable in microseconds from the stored child values
@@ -241,7 +242,7 @@ procedure SOLVE_LAYER(P):
 procedure SWEEP():
     for P in 1200 down to 0:  SOLVE_LAYER(P)
     FINALIZE()
-    write V and K to disk
+    write V to artifacts/dth/V.npy; discard K after verification
 ```
 
 The whole sweep takes under a minute (Section 5), so there is no checkpoint:
@@ -279,7 +280,7 @@ them.
 | one thread | 0.49 M classes/s | about ten minutes |
 
 Memory: about 2.5 GiB (`V` 2.16 GiB, `K` 0.27 GiB, tables and scratch). Disk:
-the same, written once at the end.
+`V.npy` only (2.16 GiB), written once at the end.
 
 Routing on the complete table: 334,177 classes pure, 289,039,944 equalizer,
 0 LP. Clipping the equalizer's negative entries, instead of rejecting the
@@ -309,10 +310,38 @@ procedure VERIFY():
 
 ## 7. Provenance
 
-The rules restated here are frozen by the repository (`docs/REVIVAL_MODEL.md`
-owns the revival surface; `src/dth/` is the behavioral authority). The six
+The rules restated here are frozen by the repository ([RULES.md](RULES.md)
+owns the revival surface; `stl.dth` and `stl.dth_kernel` implement it). The six
 anchors are reference values of an earlier, independently implemented
 artifact built by a different algorithm (two bordered 61×61 linear solves
 per class and an LP residue of 190,995 classes). This recipe reproduces five
 of them to within 2e-11 and the sixth, (250, 300, 40, 0), to 1.2e-9; the
 finalize recheck's worst disagreement on the complete table is 8.9e-16.
+
+## 8. Live reader and independent implementations
+
+`uv run python -m stl dth` builds `artifacts/dth/V.npy`. Its SHA-256 starts
+`e43977b7`; the leap manifest binds the full digest. `stl.dth.Table.open`
+checks shape and all six anchors; optional strided rechecks independently
+rebuild stage certificates. `Table.value` and `Table.stage` accept the
+role-relative state above. Alive TTD in 1..59 is off-domain and is rejected.
+
+`dth.py` imports NumPy and SciPy without numba, so hosted play does not load
+the build runtime. `dth_kernel.py` owns the numba sweep. Tests pin their parity,
+the six anchors, and the layer widths used by the paper.
+
+- `src/cpp/` is the independent C++/HiGHS DTH solver. It joins workers between
+  potential layers, commits values and routing bytes before a checkpoint,
+  and binds completion with a deterministic manifest. HiGHS proposes a
+  solution; the full-matrix `1e-6` certificate decides acceptance. Its
+  `SECTION` comments refer to `src/dth_cpp/BUILD.md` at commit `938fb25`.
+- `src/ocaml/lib/solver/` is the independent OCaml/GLPK pure-DTH reference.
+  `bin/solve_tablebase.ml` builds its table; a full run is very slow and has
+  not been completed. `play/` is the separate CS 3110 STL engine and terminal
+  UI within the same dune package; the solver does not link the game.
+- `src/c/fast_kernel.c` is a retired recurrence implementation retained as
+  native source. No live path calls it.
+- `src/lean/CLAIMS.md` maps the proofs to claims. Its source citations read
+  against `938fb25`; they do not name the reorganized working tree.
+
+Build and test commands are in the root [README](../README.md).
