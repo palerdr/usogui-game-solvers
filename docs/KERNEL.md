@@ -173,3 +173,39 @@ A trajectory needs five tables and ten unranks plus retries, so the DP alone
 supports about 5e5 trajectories/s on this machine, five times the K2 target.
 Allocating the table inside the parallel loop limited scaling to 3.2x on 15
 threads; one workspace per thread restored 11x.
+
+## K2 result (2026-10-29)
+
+`src/kernel/sampler.py` plays trajectories in a numba parallel loop:
+`play_round` builds the deck's table, draws each hand by `bounded` (top bits
+of a 64-bit word with rejection, so exactly uniform) and `unrank`, classifies
+with `evaluate5` (a port of the engine evaluator, equal on every canonical
+legal hand) and removes the union. The generator is splitmix64 on a state
+keyed by `(seed, batch, index)`. `sample_sequence` returns the dense
+`781 x 6` count array of one number sequence, one row per revealed prefix of
+each round; `sample_rounds` counts single rounds on any deck.
+
+`src/test/test_kernel_sampler.py` holds the gates at unit scale, each with a
+fixed seed: gate 3 on 4e5 rounds per pair and on the round-1 row of 2e5
+trajectories; gate 4 on 50 seeded decks of 14 to 32 cards at 1e5 rounds each
+against `exact_kernel_counts`; gate 5 on 204 sampled rounds replayed through
+the engine, class and next deck equal, all five reachable classes seen. The
+dense counts are consistent across rounds (each child row sums to its parent
+cell) and reproduce under the same seed and batch.
+
+Gate 3 at full scale, `uv run python -B -m src.kernel.sampler round1`:
+
+| Rounds per pair | Cells | Max abs z | Mean abs z | Wall |
+|---|---|---|---|---|
+| 1e8 | 150 | 2.33 | 0.51 | 1,006 s on 15 threads |
+
+The run is `docs/results/kernel-round1-parity.json`. Throughput of
+`uv run python -B -m src.kernel.sampler bench`, five-round trajectories:
+
+| Threads | Trajectories/s |
+|---|---|
+| 1 | 6.3e4 |
+| 15 | 7.2e5 |
+
+That is seven times the CPU target, so the 3e10-trajectory budget is twelve
+hours on this machine without the GPU.

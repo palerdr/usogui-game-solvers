@@ -32,8 +32,9 @@ depicted game, not a claim that every counterfactual is manga canon.
 - `src/sensitivity/` samples result-class trajectories exactly and measures how
   much past results move the kernel.
 - `src/kernel/` computes the exact round-1 result kernel by complete pair
-  enumeration and holds the numba count-and-unrank DP that draws one legal
-  hand from one bounded random integer; results sit in `docs/results/`.
+  enumeration, draws legal hands by a numba count-and-unrank DP, and samples
+  whole trajectories into dense prefix counts with a counter-based generator;
+  results sit in `docs/results/`.
 
 The engine foundation is complete. The candidate CFR+ implementation still needs
 an independent best response and exploitability oracle before production MCCFR
@@ -47,7 +48,7 @@ ruff check src
 git diff --check
 ```
 
-The current suite contains 76 tests. Its slowest test intentionally evaluates
+The current suite contains 86 tests. Its slowest test intentionally evaluates
 every five-card hand.
 
 ## Solver boundary
