@@ -102,6 +102,40 @@ Two further facts came out of the same run:
   the round ends with no judgement, antes return, play continues. The sampler
   records it as result class `N`.
 
+## Exact round-1 kernel (2026-10-29)
+
+`src/kernel/exact.py` enumerates every pair in `L(D,n0) x L(D,n1)` on the full
+deck: 52,341,125,760 hand pairs over the 25 number pairs, 46 s wall on 14
+cores, integer counts in `docs/results/kernel-round1.json`. Parity:
+`src/test/test_exact_kernel.py` matches the engine's own `iter_chance_outcomes`
+on 19-card decks including one-sided and two-sided no-rank, and all 100
+sampled class probabilities from the sensitivity run (800,000 samples per
+pair) fall within 2.9 standard errors of the exact values.
+
+Probability that Team 0 wins the judgement, with or without calamity:
+
+| Baku \ Lalo | 8 | 15 | 44 | 47 | 63 |
+|---|---|---|---|---|---|
+| 25 | 0.0155 | 0.1713 | 0.5085 | 0.4484 | 0.0006 |
+| 26 | 0.0039 | 0.1442 | 0.4695 | 0.4096 | 0.0001 |
+| 36 | 0.0024 | 0.1066 | 0.3693 | 0.3035 | 0.0001 |
+| 39 | 0.0025 | 0.1132 | 0.3898 | 0.3130 | 0.0001 |
+| 45 | 0.0140 | 0.1640 | 0.5509 | 0.4319 | 0.0002 |
+
+Probability of calamity (the loser pays its contribution again):
+
+| Baku \ Lalo | 8 | 15 | 44 | 47 | 63 |
+|---|---|---|---|---|---|
+| 25 | 0.686 | 0.604 | 0.322 | 0.292 | 0.128 |
+| 26 | 0.659 | 0.586 | 0.331 | 0.304 | 0.151 |
+| 36 | 0.374 | 0.393 | 0.419 | 0.423 | 0.431 |
+| 39 | 0.291 | 0.332 | 0.445 | 0.457 | 0.523 |
+| 45 | 0.138 | 0.210 | 0.497 | 0.525 | 0.699 |
+
+Lalo's extreme numbers are near-certain wins: 8 forces three or four aces, 63
+forces three or four kings. Baku's numbers beat only 44 and 47, and only about
+half the time. Calamity runs from 13% to 70% of judgements.
+
 ## The risk
 
 Sampling 21.9M result-keyed entries to half-width 0.005 each needs about 1e13

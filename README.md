@@ -28,6 +28,10 @@ depicted game, not a claim that every counterfactual is manga canon.
   hands and all 7,462 poker strengths.
 - `src/exact/` contains a tiny exhaustive Air Poker fixture and a candidate
   alternating CFR+ reference.
+- `src/sensitivity/` samples result-class trajectories exactly and measures how
+  much past results move the kernel.
+- `src/kernel/` computes the exact round-1 result kernel by complete pair
+  enumeration; results sit in `docs/results/`.
 
 The engine foundation is complete. The candidate CFR+ implementation still needs
 an independent best response and exploitability oracle before production MCCFR
@@ -41,7 +45,7 @@ ruff check src
 git diff --check
 ```
 
-The current suite contains 65 tests. Its slowest test intentionally evaluates
+The current suite contains 69 tests. Its slowest test intentionally evaluates
 every five-card hand.
 
 ## Solver boundary
