@@ -34,7 +34,10 @@ The core makes five explicit solver abstractions:
    in the modeled total-air comparison after Round 5.
 4. On a retry, stationary upper policies are conditioned on producing something
    other than another double no-rank. This exactly collapses repeated identical
-   retries when eventual resolution has nonzero probability.
+   retries when eventual resolution has nonzero probability. When the retry has
+   no resolving mass, the round ends with no judgement: antes return, the deck
+   is unchanged, and the next round begins. The depicted match never reaches
+   this state; it is a visible engine ruling (`EVIDENCE.md` G08).
 5. A fold settles without calamity because the hidden hands never reach judgement.
    The depicted match does not settle this counterfactual, so this is a visible
    engine ruling rather than a claimed manga rule.
@@ -189,8 +192,9 @@ available_deck_mask & ~(hand_0 | hand_1)
 The required baseline upper policy is uniform over every legal exact hand. If no
 legal hand exists, it returns no-rank with probability one. A supplied policy must
 return unique outcomes with finite, positive probabilities summing to one. On a
-retry, the two policies must have nonzero probability of something other than
-double no-rank. Calamity is never an independent random event; it is derived from
+retry, if the two policies give probability one to double no-rank, the only
+chance outcome is `(None, None)` and applying it settles the round with no
+judgement. Calamity is never an independent random event; it is derived from
 the sampled hand pair.
 
 ## 5. Betting and settlement

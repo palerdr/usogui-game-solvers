@@ -50,7 +50,7 @@ partition, and `u:Z→{(-1,1),(0,0),(1,-1)}` is terminal survival utility.
 | M07 | Upper observation | Each upper policy sees the pre-round deck and its own target. It sees the opposing target only on retry. | E11, G06 |
 | M08 | Chance timing | Both upper hands commit before lower betting and remain hidden from lower players. | G02 |
 | M09 | Shared deck | Both hands are sampled against the same pre-round deck; their exact union is removed after resolution. | D03–D04 |
-| M10 | Double no-rank | The first double no-rank enters retry. A stationary retry kernel is conditioned on eventual non-double-no-rank resolution. Zero resolving mass is a model error. | E11, G08 |
+| M10 | Double no-rank | The first double no-rank enters retry. A stationary retry kernel is conditioned on eventual non-double-no-rank resolution. If the retry has zero resolving mass, the round ends with no judgement: both antes return, no card leaves the deck, no calamity, no winner, and play continues with the next ante or the final survival comparison. | E11, G08 |
 | M11 | Fold | A fold settles immediately without calamity; committed constructed cards remain removed. | G03 |
 | M12 | Breathing | Continuous consumption, action duration, standing, and physiology are omitted. Residual seconds are fixed inputs. | G04 |
 | M13 | Final survival | After Round 5, compare `sealed_bios*300 + remaining_air_seconds`. Higher wins; equality ties. | E02, E13, G04 |
@@ -112,7 +112,11 @@ determines the next deck. A sampler must therefore return the complete pair, not
 sample winner, overlap, deck removal, or calamity separately.
 
 On retry, exclude `(⊥,⊥)` and divide remaining mass by
-`1-K(⊥,⊥)`. If that denominator is zero, the configuration is outside the model.
+`1-K(⊥,⊥)`. If that denominator is zero, the retry has the single outcome
+`(⊥,⊥)` with probability one and the round settles with no judgement (M10).
+The lower players observe it as a completed round with no winner and no
+calamity. Because the ten metal cards are distinct, equal poker rank is
+impossible, so a recorded round without a winner is always a no-judgement round.
 
 ## State and transition lock
 
@@ -138,7 +142,7 @@ reimplement pot size, deck depletion, retry, calamity, observations, or returns.
 The baseline is locked only after all of the following pass:
 
 - every reachable state has legal continuation or an explicit terminal result;
-- retry states have positive resolving mass;
+- retry states have positive resolving mass or settle as no judgement;
 - repeated information keys have one actor and one ordered action tuple;
 - repeated information keys preserve the acting player's own prior
   information/action sequence;

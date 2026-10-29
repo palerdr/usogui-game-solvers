@@ -1,0 +1,6410 @@
+{
+ "mode": "full",
+ "seed": 20261029,
+ "trajectories_per_sequence": 100000,
+ "sequences": 60,
+ "workers": 14,
+ "wall_seconds": 415.3,
+ "trajectories_per_second": 14448,
+ "commit": "972c68f",
+ "summary_by_round": {
+  "2": {
+   "mean_weighted_tv": 0.015963556996666663,
+   "max_weighted_tv": 0.0671715689,
+   "mean_null_weighted_tv": 0.003060384039,
+   "sequences": 60,
+   "mean_dead_rate": 0.0,
+   "max_dead_rate": 0.0
+  },
+  "3": {
+   "mean_weighted_tv": 0.026780780983333332,
+   "max_weighted_tv": 0.0972387664,
+   "mean_null_weighted_tv": 0.005388549267166667,
+   "sequences": 60,
+   "mean_dead_rate": 0.0,
+   "max_dead_rate": 0.0
+  },
+  "4": {
+   "mean_weighted_tv": 0.04484507779166667,
+   "max_weighted_tv": 0.11894962480000001,
+   "mean_null_weighted_tv": 0.008320374226333334,
+   "sequences": 60,
+   "mean_dead_rate": 0.00010066666666666667,
+   "max_dead_rate": 0.00403
+  },
+  "5": {
+   "mean_weighted_tv": 0.09025198720959456,
+   "max_weighted_tv": 0.2840579930091994,
+   "mean_null_weighted_tv": 0.011739923702077437,
+   "sequences": 60,
+   "mean_dead_rate": 0.02805111882884598,
+   "max_dead_rate": 0.44955
+  },
+  "1": {
+   "mean_dead_rate": 0.0,
+   "max_dead_rate": 0.0
+  }
+ },
+ "per_sequence": [
+  {
+   "numbers": [
+    [
+     26,
+     44
+    ],
+    [
+     25,
+     8
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     39,
+     63
+    ],
+    [
+     45,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0023104999999999875,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.31045,
+      "W0c": 0.15635,
+      "W1": 0.35698,
+      "W1c": 0.17622,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.007651766899999988,
+     "null_weighted_tv": 0.0029285809449999993,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.009818553712352986,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.0174,
+      "W0c": 0.00647,
+      "W1": 0.19926,
+      "W1c": 0.77687,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.007824599399999996,
+     "null_weighted_tv": 0.00640423102,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.03909041420118346,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.12994,
+      "W0c": 0.14845,
+      "W1": 0.32749,
+      "W1c": 0.39412,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0448131106,
+     "null_weighted_tv": 0.007566282869999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.13862210702341138,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.75101,
+      "W0c": 0.0,
+      "W1": 0.05407,
+      "W1c": 0.19492,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0984271712,
+     "null_weighted_tv": 0.013855772644999997,
+     "dead_rate": 0.0099,
+     "max_tv_prefixes_with_200_samples": 0.6402892660550459,
+     "prefixes": 190,
+     "marginal": {
+      "W0": 0.77957,
+      "W0c": 0.01445,
+      "W1": 0.09293,
+      "W1c": 0.10315,
+      "T": 0.0,
+      "X": 0.0099
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     63
+    ],
+    [
+     39,
+     47
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     26,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011044999999999968,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00027,
+      "W0c": 3e-05,
+      "W1": 0.30264,
+      "W1c": 0.69706,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.01864917419999999,
+     "null_weighted_tv": 0.003311516995000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.030635604017975125,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.11163,
+      "W0c": 0.19124,
+      "W1": 0.2454,
+      "W1c": 0.45173,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.011933565600000001,
+     "null_weighted_tv": 0.0034924516049999973,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.035588926487747946,
+     "prefixes": 15,
+     "marginal": {
+      "W0": 0.00244,
+      "W0c": 0.00077,
+      "W1": 0.69053,
+      "W1c": 0.30626,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.028021273200000012,
+     "null_weighted_tv": 0.00864195331,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09289332615715824,
+     "prefixes": 43,
+     "marginal": {
+      "W0": 0.17674,
+      "W0c": 0.23004,
+      "W1": 0.23832,
+      "W1c": 0.3549,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0749555037,
+     "null_weighted_tv": 0.012298146,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.16187812154696132,
+     "prefixes": 140,
+     "marginal": {
+      "W0": 0.18674,
+      "W0c": 0.08549,
+      "W1": 0.01336,
+      "W1c": 0.71441,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     63
+    ],
+    [
+     45,
+     47
+    ],
+    [
+     39,
+     15
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     26,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.001183500000000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 4e-05,
+      "W0c": 4e-05,
+      "W1": 0.56887,
+      "W1c": 0.43105,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.018203363000000007,
+     "null_weighted_tv": 0.0029686191000000014,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.021068269342303686,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.13256,
+      "W0c": 0.33527,
+      "W1": 0.13889,
+      "W1c": 0.39328,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.005573444799999987,
+     "null_weighted_tv": 0.005026055790000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.007177185017026105,
+     "prefixes": 13,
+     "marginal": {
+      "W0": 0.09534,
+      "W0c": 0.04514,
+      "W1": 0.5649,
+      "W1c": 0.29462,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.036301892300000006,
+     "null_weighted_tv": 0.010728638260000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.11722915514592938,
+     "prefixes": 38,
+     "marginal": {
+      "W0": 0.14069,
+      "W0c": 0.25958,
+      "W1": 0.20849,
+      "W1c": 0.39124,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.042435095,
+     "null_weighted_tv": 0.00970732654,
+     "dead_rate": 4e-05,
+     "max_tv_prefixes_with_200_samples": 0.2011966863905325,
+     "prefixes": 135,
+     "marginal": {
+      "W0": 0.8606,
+      "W0c": 0.00032,
+      "W1": 0.00493,
+      "W1c": 0.13411,
+      "T": 0.0,
+      "X": 4e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     63
+    ],
+    [
+     25,
+     15
+    ],
+    [
+     45,
+     8
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     39,
+     44
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011074999999999976,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00015,
+      "W0c": 0.0,
+      "W1": 0.84897,
+      "W1c": 0.15088,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.004702857099999993,
+     "null_weighted_tv": 0.002697758415000006,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.01547166489925774,
+     "prefixes": 3,
+     "marginal": {
+      "W0": 0.05597,
+      "W0c": 0.11314,
+      "W1": 0.27399,
+      "W1c": 0.5569,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.06552296959999998,
+     "null_weighted_tv": 0.0024622972100000013,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12788932996207328,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.85694,
+      "W0c": 2e-05,
+      "W1": 0.12236,
+      "W1c": 0.02068,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0103621022,
+     "null_weighted_tv": 0.00651034493,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.05249542536115571,
+     "prefixes": 34,
+     "marginal": {
+      "W0": 0.08307,
+      "W0c": 0.18372,
+      "W1": 0.22238,
+      "W1c": 0.51083,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.024646476799999997,
+     "null_weighted_tv": 0.010092046814999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10828564102564106,
+     "prefixes": 104,
+     "marginal": {
+      "W0": 0.01786,
+      "W0c": 0.29513,
+      "W1": 0.02927,
+      "W1c": 0.65774,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     63
+    ],
+    [
+     45,
+     8
+    ],
+    [
+     26,
+     15
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     39,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0015279999999999916,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 6e-05,
+      "W0c": 0.0,
+      "W1": 0.57273,
+      "W1c": 0.42721,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.001964444400000017,
+     "null_weighted_tv": 0.0016509206900000022,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.002277875049741361,
+     "prefixes": 3,
+     "marginal": {
+      "W0": 0.03934,
+      "W0c": 0.00018,
+      "W1": 0.88176,
+      "W1c": 0.07872,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.013122996399999984,
+     "null_weighted_tv": 0.003126440540000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.04392424688561723,
+     "prefixes": 11,
+     "marginal": {
+      "W0": 0.02789,
+      "W0c": 0.09459,
+      "W1": 0.13235,
+      "W1c": 0.74517,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.029345787999999994,
+     "null_weighted_tv": 0.007372528769999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09034236135957066,
+     "prefixes": 31,
+     "marginal": {
+      "W0": 0.23536,
+      "W0c": 0.29718,
+      "W1": 0.21227,
+      "W1c": 0.25519,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.033739308499999995,
+     "null_weighted_tv": 0.01046139032,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10997125412541255,
+     "prefixes": 109,
+     "marginal": {
+      "W0": 0.01993,
+      "W0c": 0.23426,
+      "W1": 0.04838,
+      "W1c": 0.69743,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     44
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     39,
+     63
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     26,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002430999999999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.34602,
+      "W0c": 0.16497,
+      "W1": 0.33047,
+      "W1c": 0.15854,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.003869251199999993,
+     "null_weighted_tv": 0.0037620170199999976,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.005648088810394813,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.12524,
+      "W0c": 0.03872,
+      "W1": 0.6188,
+      "W1c": 0.21724,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.03558682979999999,
+     "null_weighted_tv": 0.005907180094999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10543136471707083,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.53672,
+      "W0c": 0.0,
+      "W1": 0.13331,
+      "W1c": 0.32997,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.11894962480000001,
+     "null_weighted_tv": 0.01148705248,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.19506563338301042,
+     "prefixes": 48,
+     "marginal": {
+      "W0": 0.06562,
+      "W0c": 0.18408,
+      "W1": 0.16854,
+      "W1c": 0.58176,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.03159602279999999,
+     "null_weighted_tv": 0.00734368693,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1397971428571429,
+     "prefixes": 192,
+     "marginal": {
+      "W0": 0.93444,
+      "W0c": 0.00033,
+      "W1": 0.00111,
+      "W1c": 0.06412,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     8
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     39,
+     44
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0012524999999999906,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.01343,
+      "W0c": 0.00032,
+      "W1": 0.84716,
+      "W1c": 0.13909,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.029630604799999998,
+     "null_weighted_tv": 0.0020735514800000014,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1058374980228629,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.11136,
+      "W0c": 0.0,
+      "W1": 0.7886,
+      "W1c": 0.10004,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0213443298,
+     "null_weighted_tv": 0.004819312659999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08667685865607415,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.21781,
+      "W0c": 0.1212,
+      "W1": 0.41821,
+      "W1c": 0.24278,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0741529214,
+     "null_weighted_tv": 0.007980883065000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.2808000204185809,
+     "prefixes": 45,
+     "marginal": {
+      "W0": 0.30164,
+      "W0c": 0.04595,
+      "W1": 0.15202,
+      "W1c": 0.50039,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.04610720219999999,
+     "null_weighted_tv": 0.012632718385,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.2587153846153847,
+     "prefixes": 152,
+     "marginal": {
+      "W0": 0.02351,
+      "W0c": 0.28487,
+      "W1": 0.03989,
+      "W1c": 0.65173,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     47
+    ],
+    [
+     45,
+     63
+    ],
+    [
+     39,
+     15
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     25,
+     44
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0022370000000000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.2818,
+      "W0c": 0.12596,
+      "W1": 0.41446,
+      "W1c": 0.17778,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.06476307439999998,
+     "null_weighted_tv": 0.0032838272000000014,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.11230483645601777,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.19757,
+      "W0c": 7e-05,
+      "W1": 0.1454,
+      "W1c": 0.65696,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.017263776600000003,
+     "null_weighted_tv": 0.00590881169,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.044059872746553576,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.09274,
+      "W0c": 0.04926,
+      "W1": 0.54522,
+      "W1c": 0.31278,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.05590773200000002,
+     "null_weighted_tv": 0.008106717120000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.21978654275092935,
+     "prefixes": 54,
+     "marginal": {
+      "W0": 0.75862,
+      "W0c": 0.0002,
+      "W1": 0.10632,
+      "W1c": 0.13486,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.10546175959999998,
+     "null_weighted_tv": 0.019133478135,
+     "dead_rate": 0.00011,
+     "max_tv_prefixes_with_200_samples": 0.27083045643153525,
+     "prefixes": 162,
+     "marginal": {
+      "W0": 0.13645,
+      "W0c": 0.29548,
+      "W1": 0.16398,
+      "W1c": 0.40398,
+      "T": 0.0,
+      "X": 0.00011
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     15
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     45,
+     63
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     25,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0018460000000000095,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.05709,
+      "W0c": 0.0874,
+      "W1": 0.35531,
+      "W1c": 0.5002,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.002369725599999989,
+     "null_weighted_tv": 0.0041036083199999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.008763844393592679,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.16184,
+      "W0c": 0.13678,
+      "W1": 0.37862,
+      "W1c": 0.32276,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.048560421100000015,
+     "null_weighted_tv": 0.005994212554999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12793198036006548,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.34701,
+      "W0c": 3e-05,
+      "W1": 0.09794,
+      "W1c": 0.55502,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.07984427759999999,
+     "null_weighted_tv": 0.011361048184999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1604855638082377,
+     "prefixes": 51,
+     "marginal": {
+      "W0": 0.07136,
+      "W0c": 0.27001,
+      "W1": 0.11816,
+      "W1c": 0.54047,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0761806156,
+     "null_weighted_tv": 0.01142476789,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.22153123152709364,
+     "prefixes": 195,
+     "marginal": {
+      "W0": 0.83828,
+      "W0c": 0.00139,
+      "W1": 0.00434,
+      "W1c": 0.15599,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     44
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     39,
+     63
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     25,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002431500000000004,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.31456,
+      "W0c": 0.1535,
+      "W1": 0.35408,
+      "W1c": 0.17786,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.009231946199999997,
+     "null_weighted_tv": 0.0031358123100000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.011591302931596123,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.01135,
+      "W0c": 0.00072,
+      "W1": 0.53914,
+      "W1c": 0.44879,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.050354750000000004,
+     "null_weighted_tv": 0.005237203940000004,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.19265859910581218,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.32448,
+      "W0c": 0.0,
+      "W1": 0.24998,
+      "W1c": 0.42554,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0865116277,
+     "null_weighted_tv": 0.009957867779999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.23461855907780982,
+     "prefixes": 48,
+     "marginal": {
+      "W0": 0.39312,
+      "W0c": 0.02584,
+      "W1": 0.41605,
+      "W1c": 0.16499,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.18462123070000003,
+     "null_weighted_tv": 0.021616428085000004,
+     "dead_rate": 0.02026,
+     "max_tv_prefixes_with_200_samples": 0.5539967093235831,
+     "prefixes": 170,
+     "marginal": {
+      "W0": 0.26428,
+      "W0c": 0.20695,
+      "W1": 0.3354,
+      "W1c": 0.17311,
+      "T": 0.0,
+      "X": 0.02026
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     44
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     39,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0022899999999999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.21692,
+      "W0c": 0.1516,
+      "W1": 0.36187,
+      "W1c": 0.26961,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.004283081399999986,
+     "null_weighted_tv": 0.004132536739999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.005843122658655067,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.29201,
+      "W0c": 0.1596,
+      "W1": 0.35676,
+      "W1c": 0.19163,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.040532015399999996,
+     "null_weighted_tv": 0.0051440849,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07695452961672476,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.76685,
+      "W0c": 0.0,
+      "W1": 0.16312,
+      "W1c": 0.07003,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.08077379100000001,
+     "null_weighted_tv": 0.011542003690000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.2401833333333333,
+     "prefixes": 48,
+     "marginal": {
+      "W0": 0.16511,
+      "W0c": 0.05929,
+      "W1": 0.50891,
+      "W1c": 0.26669,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.03763613339999999,
+     "null_weighted_tv": 0.005244738734999999,
+     "dead_rate": 0.0208,
+     "max_tv_prefixes_with_200_samples": 0.39439130434782615,
+     "prefixes": 192,
+     "marginal": {
+      "W0": 0.97594,
+      "W0c": 1e-05,
+      "W1": 0.00105,
+      "W1c": 0.0022,
+      "T": 0.0,
+      "X": 0.0208
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     8
+    ],
+    [
+     26,
+     15
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     39,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0013744999999999973,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00175,
+      "W0c": 0.00083,
+      "W1": 0.62253,
+      "W1c": 0.37489,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.017810304200000012,
+     "null_weighted_tv": 0.00255707379,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.023567541412147557,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.03174,
+      "W0c": 0.09548,
+      "W1": 0.15222,
+      "W1c": 0.72056,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.006092708499999998,
+     "null_weighted_tv": 0.0056065491,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.02989497528830315,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.23165,
+      "W0c": 0.3349,
+      "W1": 0.1821,
+      "W1c": 0.25135,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.08062864460000002,
+     "null_weighted_tv": 0.007184771719999999,
+     "dead_rate": 0.00403,
+     "max_tv_prefixes_with_200_samples": 0.20790485623003194,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.56091,
+      "W0c": 3e-05,
+      "W1": 0.41957,
+      "W1c": 0.01546,
+      "T": 0.0,
+      "X": 0.00403
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.09483885046647324,
+     "null_weighted_tv": 0.013427970262997515,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.2108074205715701,
+     "prefixes": 156,
+     "marginal": {
+      "W0": 0.04127634366496983,
+      "W0c": 0.22560920509653906,
+      "W1": 0.09503298292117232,
+      "W1c": 0.6380814683173188,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 99597
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     63
+    ],
+    [
+     25,
+     8
+    ],
+    [
+     39,
+     15
+    ],
+    [
+     26,
+     44
+    ],
+    [
+     36,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011000000000000029,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00019,
+      "W0c": 5e-05,
+      "W1": 0.29956,
+      "W1c": 0.7002,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.007101991199999987,
+     "null_weighted_tv": 0.002108266405000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.011851614367739379,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.01113,
+      "W0c": 0.00605,
+      "W1": 0.31221,
+      "W1c": 0.67061,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.020776238399999997,
+     "null_weighted_tv": 0.004009901305000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08711893899204247,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.07731,
+      "W0c": 0.04706,
+      "W1": 0.48461,
+      "W1c": 0.39102,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.023167981600000005,
+     "null_weighted_tv": 0.008476240319999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0765629268292683,
+     "prefixes": 40,
+     "marginal": {
+      "W0": 0.1644,
+      "W0c": 0.21948,
+      "W1": 0.2758,
+      "W1c": 0.34032,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.037066058799999996,
+     "null_weighted_tv": 0.013162542630000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10853161500815664,
+     "prefixes": 142,
+     "marginal": {
+      "W0": 0.03088,
+      "W0c": 0.22066,
+      "W1": 0.07722,
+      "W1c": 0.67124,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     44
+    ],
+    [
+     45,
+     47
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     39,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0024260000000000163,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.34794,
+      "W0c": 0.16365,
+      "W1": 0.33096,
+      "W1c": 0.15745,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.004622974000000016,
+     "null_weighted_tv": 0.004414876175000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.010388243201955402,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.17131,
+      "W0c": 0.25791,
+      "W1": 0.21945,
+      "W1c": 0.35133,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.008550445400000002,
+     "null_weighted_tv": 0.007225328540000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.024749798169443782,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.05518,
+      "W0c": 0.05131,
+      "W1": 0.43333,
+      "W1c": 0.46018,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.019873194799999997,
+     "null_weighted_tv": 0.004313636865,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0877454716981132,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.95567,
+      "W0c": 0.0,
+      "W1": 0.02845,
+      "W1c": 0.01588,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.005818873699999996,
+     "null_weighted_tv": 0.002270562465000001,
+     "dead_rate": 0.00067,
+     "max_tv_prefixes_with_200_samples": 0.02232852459016392,
+     "prefixes": 190,
+     "marginal": {
+      "W0": 0.99295,
+      "W0c": 2e-05,
+      "W1": 0.00115,
+      "W1c": 0.00521,
+      "T": 0.0,
+      "X": 0.00067
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     63
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     25,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011079999999999974,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00017,
+      "W0c": 0.0,
+      "W1": 0.84908,
+      "W1c": 0.15075,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.006372844999999981,
+     "null_weighted_tv": 0.0029832685600000046,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.021137131011608648,
+     "prefixes": 3,
+     "marginal": {
+      "W0": 0.12675,
+      "W0c": 0.1542,
+      "W1": 0.32402,
+      "W1c": 0.39503,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.009210990599999991,
+     "null_weighted_tv": 0.004860303890000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.023876310853059378,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.20558,
+      "W0c": 0.04388,
+      "W1": 0.58343,
+      "W1c": 0.16711,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.02610555239999999,
+     "null_weighted_tv": 0.007936151365000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07542718804920912,
+     "prefixes": 40,
+     "marginal": {
+      "W0": 0.02991,
+      "W0c": 0.29215,
+      "W1": 0.04891,
+      "W1c": 0.62903,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.02948016490000002,
+     "null_weighted_tv": 0.00817769279,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.14570175438596492,
+     "prefixes": 139,
+     "marginal": {
+      "W0": 0.86377,
+      "W0c": 0.00123,
+      "W1": 0.00273,
+      "W1c": 0.13227,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     44
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     26,
+     47
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     36,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002305500000000004,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.21954,
+      "W0c": 0.16853,
+      "W1": 0.33616,
+      "W1c": 0.27577,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0552459224,
+     "null_weighted_tv": 0.003606345794999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09638334243161456,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.28899,
+      "W0c": 7e-05,
+      "W1": 0.5844,
+      "W1c": 0.12654,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.05352618149999999,
+     "null_weighted_tv": 0.007048265965,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09524120147874308,
+     "prefixes": 15,
+     "marginal": {
+      "W0": 0.1685,
+      "W0c": 0.14661,
+      "W1": 0.37654,
+      "W1c": 0.30835,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0859394277,
+     "null_weighted_tv": 0.012583851419999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1616004483188045,
+     "prefixes": 53,
+     "marginal": {
+      "W0": 0.26704,
+      "W0c": 0.06268,
+      "W1": 0.48771,
+      "W1c": 0.18257,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.04434836500000001,
+     "null_weighted_tv": 0.007745338975000002,
+     "dead_rate": 0.03031,
+     "max_tv_prefixes_with_200_samples": 0.22255779783393503,
+     "prefixes": 198,
+     "marginal": {
+      "W0": 0.95966,
+      "W0c": 1e-05,
+      "W1": 0.00296,
+      "W1c": 0.00706,
+      "T": 0.0,
+      "X": 0.03031
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     8
+    ],
+    [
+     36,
+     44
+    ],
+    [
+     39,
+     47
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     45,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011070000000000023,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00112,
+      "W0c": 0.00287,
+      "W1": 0.34234,
+      "W1c": 0.65367,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0013422138999999997,
+     "null_weighted_tv": 0.003268211029999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.022147979094076675,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.18981,
+      "W0c": 0.15567,
+      "W1": 0.34719,
+      "W1c": 0.30733,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.010914817000000004,
+     "null_weighted_tv": 0.00614866573,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.017965404896421823,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.12296,
+      "W0c": 0.1707,
+      "W1": 0.28431,
+      "W1c": 0.42203,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.042336932400000006,
+     "null_weighted_tv": 0.0060142044399999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10671571428571433,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.86443,
+      "W0c": 1e-05,
+      "W1": 0.10985,
+      "W1c": 0.02571,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.1137099741,
+     "null_weighted_tv": 0.011778966694999999,
+     "dead_rate": 0.00787,
+     "max_tv_prefixes_with_200_samples": 0.6121174074074074,
+     "prefixes": 161,
+     "marginal": {
+      "W0": 0.79383,
+      "W0c": 0.0162,
+      "W1": 0.07122,
+      "W1c": 0.11088,
+      "T": 0.0,
+      "X": 0.00787
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     47
+    ],
+    [
+     45,
+     8
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     26,
+     44
+    ],
+    [
+     25,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0021909999999999976,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.17175,
+      "W0c": 0.14285,
+      "W1": 0.37004,
+      "W1c": 0.31536,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0015923670000000147,
+     "null_weighted_tv": 0.002357645680000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0035398981077147066,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.01392,
+      "W0c": 0.00026,
+      "W1": 0.84007,
+      "W1c": 0.14575,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.011628354600000003,
+     "null_weighted_tv": 0.005024091559999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06002484978540775,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.05094,
+      "W0c": 0.04857,
+      "W1": 0.36543,
+      "W1c": 0.53506,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.026139282200000002,
+     "null_weighted_tv": 0.010791754945,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08094739809193409,
+     "prefixes": 59,
+     "marginal": {
+      "W0": 0.15553,
+      "W0c": 0.27075,
+      "W1": 0.21452,
+      "W1c": 0.3592,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.20687193299999998,
+     "null_weighted_tv": 0.013476679450000004,
+     "dead_rate": 0.44955,
+     "max_tv_prefixes_with_200_samples": 0.5060055555555556,
+     "prefixes": 208,
+     "marginal": {
+      "W0": 0.54265,
+      "W0c": 0.0,
+      "W1": 0.00745,
+      "W1c": 0.00035,
+      "T": 0.0,
+      "X": 0.44955
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     15
+    ],
+    [
+     26,
+     44
+    ],
+    [
+     45,
+     47
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     39,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002159999999999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.06649,
+      "W0c": 0.10613,
+      "W1": 0.32943,
+      "W1c": 0.49795,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.004118151200000005,
+     "null_weighted_tv": 0.0040193432900000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.007191717551511531,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.27288,
+      "W0c": 0.17867,
+      "W1": 0.32989,
+      "W1c": 0.21856,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.007351148499999999,
+     "null_weighted_tv": 0.007941667315000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.024526247478143914,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.15677,
+      "W0c": 0.27829,
+      "W1": 0.19752,
+      "W1c": 0.36742,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.034366587,
+     "null_weighted_tv": 0.005735344290000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07082499999999997,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.93012,
+      "W0c": 8e-05,
+      "W1": 0.01391,
+      "W1c": 0.05589,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.021277504099999997,
+     "null_weighted_tv": 0.005503657974999998,
+     "dead_rate": 1e-05,
+     "max_tv_prefixes_with_200_samples": 0.057591140939597316,
+     "prefixes": 198,
+     "marginal": {
+      "W0": 0.95691,
+      "W0c": 0.0,
+      "W1": 0.0032,
+      "W1c": 0.03988,
+      "T": 0.0,
+      "X": 1e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     8
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     26,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0013355000000000081,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00195,
+      "W0c": 0.00064,
+      "W1": 0.70531,
+      "W1c": 0.2921,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.017475183399999986,
+     "null_weighted_tv": 0.0016622313800000027,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.029875967134542974,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.0363,
+      "W0c": 6e-05,
+      "W1": 0.88319,
+      "W1c": 0.08045,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.024950689800000002,
+     "null_weighted_tv": 0.003610285685,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12023056603773584,
+     "prefixes": 13,
+     "marginal": {
+      "W0": 0.06847,
+      "W0c": 0.05461,
+      "W1": 0.33213,
+      "W1c": 0.54479,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.01789907410000001,
+     "null_weighted_tv": 0.007406978139999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1632933009708738,
+     "prefixes": 39,
+     "marginal": {
+      "W0": 0.11894,
+      "W0c": 0.51302,
+      "W1": 0.07699,
+      "W1c": 0.29105,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.057251144500000004,
+     "null_weighted_tv": 0.015348014995000003,
+     "dead_rate": 0.00339,
+     "max_tv_prefixes_with_200_samples": 0.24613488479262674,
+     "prefixes": 136,
+     "marginal": {
+      "W0": 0.14453,
+      "W0c": 0.18849,
+      "W1": 0.26769,
+      "W1c": 0.3959,
+      "T": 0.0,
+      "X": 0.00339
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     44
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     45,
+     8
+    ],
+    [
+     26,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002311999999999992,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.22062,
+      "W0c": 0.16912,
+      "W1": 0.33356,
+      "W1c": 0.2767,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.003030098400000008,
+     "null_weighted_tv": 0.0036495474700000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.005287376219732579,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.06136,
+      "W0c": 0.04454,
+      "W1": 0.49795,
+      "W1c": 0.39615,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.009097497099999996,
+     "null_weighted_tv": 0.007756151725000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.033608101265822754,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.25071,
+      "W0c": 0.19353,
+      "W1": 0.31869,
+      "W1c": 0.23707,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.029232572300000002,
+     "null_weighted_tv": 0.005946102305000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06085776806989671,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.92023,
+      "W0c": 4e-05,
+      "W1": 0.05179,
+      "W1c": 0.02794,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.044703444,
+     "null_weighted_tv": 0.004670006149999999,
+     "dead_rate": 0.02356,
+     "max_tv_prefixes_with_200_samples": 0.29738952380952377,
+     "prefixes": 196,
+     "marginal": {
+      "W0": 0.97358,
+      "W0c": 0.0,
+      "W1": 0.00151,
+      "W1c": 0.00135,
+      "T": 0.0,
+      "X": 0.02356
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     44
+    ],
+    [
+     39,
+     63
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     45,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0024300000000000077,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.31574,
+      "W0c": 0.15436,
+      "W1": 0.35457,
+      "W1c": 0.17533,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.045049225999999984,
+     "null_weighted_tv": 0.003701424135000006,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06620022544700696,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.13513,
+      "W0c": 0.0,
+      "W1": 0.32402,
+      "W1c": 0.54085,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.036774777599999996,
+     "null_weighted_tv": 0.005307638749999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1308218181818182,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.04889,
+      "W0c": 0.00061,
+      "W1": 0.56203,
+      "W1c": 0.38847,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0339976737,
+     "null_weighted_tv": 0.011298117604999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.16867252336448596,
+     "prefixes": 46,
+     "marginal": {
+      "W0": 0.20692,
+      "W0c": 0.16736,
+      "W1": 0.32565,
+      "W1c": 0.30007,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.2044477187,
+     "null_weighted_tv": 0.016823226570000002,
+     "dead_rate": 0.12036,
+     "max_tv_prefixes_with_200_samples": 0.6102749392712551,
+     "prefixes": 176,
+     "marginal": {
+      "W0": 0.76117,
+      "W0c": 0.0066,
+      "W1": 0.0813,
+      "W1c": 0.03057,
+      "T": 0.0,
+      "X": 0.12036
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     47
+    ],
+    [
+     36,
+     44
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     26,
+     8
+    ],
+    [
+     45,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0021920000000000043,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.17152,
+      "W0c": 0.14213,
+      "W1": 0.37127,
+      "W1c": 0.31508,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.009131070600000006,
+     "null_weighted_tv": 0.004088076809999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.010915812988109452,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.17998,
+      "W0c": 0.18685,
+      "W1": 0.30337,
+      "W1c": 0.3298,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0349451718,
+     "null_weighted_tv": 0.004004069164999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07553113475177303,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.87428,
+      "W0c": 1e-05,
+      "W1": 0.08827,
+      "W1c": 0.03744,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.034087031399999995,
+     "null_weighted_tv": 0.008599129955000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.18122380761523044,
+     "prefixes": 49,
+     "marginal": {
+      "W0": 0.22661,
+      "W0c": 0.00271,
+      "W1": 0.09978,
+      "W1c": 0.6709,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.27561311180000003,
+     "null_weighted_tv": 0.01570702563,
+     "dead_rate": 0.01117,
+     "max_tv_prefixes_with_200_samples": 0.597348604286461,
+     "prefixes": 176,
+     "marginal": {
+      "W0": 0.68759,
+      "W0c": 0.0185,
+      "W1": 0.16066,
+      "W1c": 0.12208,
+      "T": 0.0,
+      "X": 0.01117
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     44
+    ],
+    [
+     26,
+     15
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     39,
+     8
+    ],
+    [
+     45,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0024170000000000116,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.21624,
+      "W0c": 0.15423,
+      "W1": 0.36154,
+      "W1c": 0.26799,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.003237034,
+     "null_weighted_tv": 0.0036549565800000025,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.007640677559489061,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.04877,
+      "W0c": 0.09488,
+      "W1": 0.30314,
+      "W1c": 0.55321,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.046172538,
+     "null_weighted_tv": 0.0057297797450000035,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10864705882352946,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.30347,
+      "W0c": 3e-05,
+      "W1": 0.59495,
+      "W1c": 0.10155,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0204266265,
+     "null_weighted_tv": 0.0031252220249999977,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.03307052816901412,
+     "prefixes": 50,
+     "marginal": {
+      "W0": 0.96889,
+      "W0c": 3e-05,
+      "W1": 0.01234,
+      "W1c": 0.01874,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.07941905270000003,
+     "null_weighted_tv": 0.012246327135000004,
+     "dead_rate": 3e-05,
+     "max_tv_prefixes_with_200_samples": 0.1836964197530864,
+     "prefixes": 127,
+     "marginal": {
+      "W0": 0.0326,
+      "W0c": 0.41944,
+      "W1": 0.03679,
+      "W1c": 0.51114,
+      "T": 0.0,
+      "X": 3e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     47
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     25,
+     15
+    ],
+    [
+     45,
+     8
+    ],
+    [
+     36,
+     44
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002194000000000006,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.17032,
+      "W0c": 0.14298,
+      "W1": 0.37204,
+      "W1c": 0.31466,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0642876424,
+     "null_weighted_tv": 0.003690710899999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12700011330255978,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.35969,
+      "W0c": 0.0,
+      "W1": 0.50087,
+      "W1c": 0.13944,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.01514831779999999,
+     "null_weighted_tv": 0.005992784925,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.020695271374557875,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.04752,
+      "W0c": 0.12358,
+      "W1": 0.22595,
+      "W1c": 0.60295,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0338244164,
+     "null_weighted_tv": 0.0041607454950000015,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.05620247879359096,
+     "prefixes": 48,
+     "marginal": {
+      "W0": 0.94097,
+      "W0c": 2e-05,
+      "W1": 0.04938,
+      "W1c": 0.00963,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.10739722219999999,
+     "null_weighted_tv": 0.01349741414,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.18097000000000002,
+     "prefixes": 136,
+     "marginal": {
+      "W0": 0.04756,
+      "W0c": 0.24153,
+      "W1": 0.08397,
+      "W1c": 0.62694,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     44
+    ],
+    [
+     45,
+     8
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     39,
+     15
+    ],
+    [
+     36,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.00243050000000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.31518,
+      "W0c": 0.15358,
+      "W1": 0.35577,
+      "W1c": 0.17547,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.006649268000000005,
+     "null_weighted_tv": 0.0025001676949999996,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.008059301986166624,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.02094,
+      "W0c": 0.0003,
+      "W1": 0.81319,
+      "W1c": 0.16557,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0467415999,
+     "null_weighted_tv": 0.00465888182,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.2068076923076923,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.53939,
+      "W0c": 0.00011,
+      "W1": 0.42082,
+      "W1c": 0.03968,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.10613454680000001,
+     "null_weighted_tv": 0.008458107219999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.42964943887775553,
+     "prefixes": 49,
+     "marginal": {
+      "W0": 0.56993,
+      "W0c": 0.02134,
+      "W1": 0.13078,
+      "W1c": 0.27795,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.1285108948,
+     "null_weighted_tv": 0.014526269594999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.21019198347107437,
+     "prefixes": 163,
+     "marginal": {
+      "W0": 0.05372,
+      "W0c": 0.20071,
+      "W1": 0.11692,
+      "W1c": 0.62865,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     8
+    ],
+    [
+     26,
+     47
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     39,
+     63
+    ],
+    [
+     36,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0009935000000000083,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.01391,
+      "W0c": 0.00038,
+      "W1": 0.84932,
+      "W1c": 0.13639,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0023066062999999876,
+     "null_weighted_tv": 0.003185228135000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.024223932422717476,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.24132,
+      "W0c": 0.12767,
+      "W1": 0.4144,
+      "W1c": 0.21661,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.011190640299999992,
+     "null_weighted_tv": 0.006010959275000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06308985074626863,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.25635,
+      "W0c": 0.22491,
+      "W1": 0.27459,
+      "W1c": 0.24415,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.019963223299999992,
+     "null_weighted_tv": 0.0047553508000000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0763508695652174,
+     "prefixes": 63,
+     "marginal": {
+      "W0": 0.90191,
+      "W0c": 0.0,
+      "W1": 0.01401,
+      "W1c": 0.08408,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.086892615,
+     "null_weighted_tv": 0.010739631225,
+     "dead_rate": 2e-05,
+     "max_tv_prefixes_with_200_samples": 0.25212128939828077,
+     "prefixes": 160,
+     "marginal": {
+      "W0": 0.71915,
+      "W0c": 0.02167,
+      "W1": 0.01232,
+      "W1c": 0.24684,
+      "T": 0.0,
+      "X": 2e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     8
+    ],
+    [
+     26,
+     15
+    ],
+    [
+     36,
+     44
+    ],
+    [
+     45,
+     63
+    ],
+    [
+     39,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0015150000000000016,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.0092,
+      "W0c": 0.00585,
+      "W1": 0.30371,
+      "W1c": 0.68124,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.024360102199999994,
+     "null_weighted_tv": 0.0023875543549999965,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0398520104705146,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.02587,
+      "W0c": 0.09604,
+      "W1": 0.1208,
+      "W1c": 0.75729,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.018493616900000006,
+     "null_weighted_tv": 0.005305281870000004,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10252054794520546,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.15327,
+      "W0c": 0.19151,
+      "W1": 0.27973,
+      "W1c": 0.37549,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0401585171,
+     "null_weighted_tv": 0.008603212639999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.13358181818181813,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.19034,
+      "W0c": 6e-05,
+      "W1": 0.18431,
+      "W1c": 0.62529,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0529486407,
+     "null_weighted_tv": 0.013982946400000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.16192300970873783,
+     "prefixes": 185,
+     "marginal": {
+      "W0": 0.03248,
+      "W0c": 0.20944,
+      "W1": 0.08533,
+      "W1c": 0.67275,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     63
+    ],
+    [
+     25,
+     15
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     39,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011000000000000007,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.0001,
+      "W0c": 0.0,
+      "W1": 0.85028,
+      "W1c": 0.14962,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0036105478000000046,
+     "null_weighted_tv": 0.002776891729999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.011961571982355292,
+     "prefixes": 3,
+     "marginal": {
+      "W0": 0.05662,
+      "W0c": 0.11213,
+      "W1": 0.27417,
+      "W1c": 0.55708,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.007639061999999983,
+     "null_weighted_tv": 0.0047280565,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.059221292775665416,
+     "prefixes": 10,
+     "marginal": {
+      "W0": 0.18144,
+      "W0c": 0.41429,
+      "W1": 0.12816,
+      "W1c": 0.27611,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.025264975000000002,
+     "null_weighted_tv": 0.008659738109999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08455000000000001,
+     "prefixes": 38,
+     "marginal": {
+      "W0": 0.05217,
+      "W0c": 0.21084,
+      "W1": 0.13828,
+      "W1c": 0.59871,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.040492059399999995,
+     "null_weighted_tv": 0.007146230555000001,
+     "dead_rate": 0.01431,
+     "max_tv_prefixes_with_200_samples": 0.26187925925925926,
+     "prefixes": 138,
+     "marginal": {
+      "W0": 0.94012,
+      "W0c": 6e-05,
+      "W1": 0.02274,
+      "W1c": 0.02277,
+      "T": 0.0,
+      "X": 0.01431
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     8
+    ],
+    [
+     45,
+     63
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     26,
+     47
+    ],
+    [
+     36,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0015670000000000107,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.01007,
+      "W0c": 0.0061,
+      "W1": 0.30549,
+      "W1c": 0.67834,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.008438206100000005,
+     "null_weighted_tv": 0.0018413812100000024,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.025796544190665363,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.00016,
+      "W0c": 9e-05,
+      "W1": 0.31184,
+      "W1c": 0.68791,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.018873231699999996,
+     "null_weighted_tv": 0.004780021015000004,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.060175882352941176,
+     "prefixes": 13,
+     "marginal": {
+      "W0": 0.13193,
+      "W0c": 0.22087,
+      "W1": 0.2246,
+      "W1c": 0.4226,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0249788094,
+     "null_weighted_tv": 0.008875551030000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08320283066554338,
+     "prefixes": 46,
+     "marginal": {
+      "W0": 0.13037,
+      "W0c": 0.16147,
+      "W1": 0.32464,
+      "W1c": 0.38352,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.1524752007,
+     "null_weighted_tv": 0.016007230795,
+     "dead_rate": 0.00064,
+     "max_tv_prefixes_with_200_samples": 0.3238131590413943,
+     "prefixes": 149,
+     "marginal": {
+      "W0": 0.36464,
+      "W0c": 0.05077,
+      "W1": 0.12421,
+      "W1c": 0.45974,
+      "T": 0.0,
+      "X": 0.00064
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     63
+    ],
+    [
+     26,
+     44
+    ],
+    [
+     39,
+     47
+    ],
+    [
+     45,
+     8
+    ],
+    [
+     36,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011965,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00053,
+      "W0c": 8e-05,
+      "W1": 0.87208,
+      "W1c": 0.12731,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.004790387900000002,
+     "null_weighted_tv": 0.0030840860100000006,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.01834292592883513,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.25416,
+      "W0c": 0.16356,
+      "W1": 0.36191,
+      "W1c": 0.22037,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.015567516200000008,
+     "null_weighted_tv": 0.005239411440000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06535404385517593,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.08034,
+      "W0c": 0.21518,
+      "W1": 0.18118,
+      "W1c": 0.5233,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.06000612900000001,
+     "null_weighted_tv": 0.00766400572,
+     "dead_rate": 0.00201,
+     "max_tv_prefixes_with_200_samples": 0.2590489743589743,
+     "prefixes": 52,
+     "marginal": {
+      "W0": 0.34031,
+      "W0c": 0.00015,
+      "W1": 0.61615,
+      "W1c": 0.04138,
+      "T": 0.0,
+      "X": 0.00201
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.2840579930091994,
+     "null_weighted_tv": 0.015213878666648728,
+     "dead_rate": 0.0035471297307588254,
+     "max_tv_prefixes_with_200_samples": 0.47217458686707,
+     "prefixes": 134,
+     "marginal": {
+      "W0": 0.5736931231775869,
+      "W0c": 0.036413190512930994,
+      "W1": 0.1554524594434814,
+      "W1c": 0.23089409713524184,
+      "T": 0.0,
+      "X": 0.0035471297307588254
+     },
+     "samples": 99799
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     44
+    ],
+    [
+     26,
+     8
+    ],
+    [
+     39,
+     15
+    ],
+    [
+     36,
+     63
+    ],
+    [
+     45,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0023130000000000013,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.34456,
+      "W0c": 0.16512,
+      "W1": 0.3328,
+      "W1c": 0.15752,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.01089422799999998,
+     "null_weighted_tv": 0.0027030252399999955,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.016259603859827294,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.01285,
+      "W0c": 0.00247,
+      "W1": 0.22689,
+      "W1c": 0.75779,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.08081791219999998,
+     "null_weighted_tv": 0.005786883784999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.23494120401337792,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.28173,
+      "W0c": 0.02701,
+      "W1": 0.24641,
+      "W1c": 0.44485,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0790462662,
+     "null_weighted_tv": 0.009913704575,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.2958578466741826,
+     "prefixes": 62,
+     "marginal": {
+      "W0": 0.39594,
+      "W0c": 6e-05,
+      "W1": 0.37607,
+      "W1c": 0.22793,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.08310873059999999,
+     "null_weighted_tv": 0.016748058280000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.16589073394495413,
+     "prefixes": 185,
+     "marginal": {
+      "W0": 0.04336,
+      "W0c": 0.41384,
+      "W1": 0.04763,
+      "W1c": 0.49517,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     44
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     25,
+     8
+    ],
+    [
+     39,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002314500000000011,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.27589,
+      "W0c": 0.27509,
+      "W1": 0.22653,
+      "W1c": 0.22249,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.011881054399999993,
+     "null_weighted_tv": 0.004053032145000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.012486035738881449,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.1427,
+      "W0c": 0.16247,
+      "W1": 0.32446,
+      "W1c": 0.37037,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.027869912599999994,
+     "null_weighted_tv": 0.003150226025,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.062222296555167284,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.93042,
+      "W0c": 0.0,
+      "W1": 0.04255,
+      "W1c": 0.02703,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.021420518399999998,
+     "null_weighted_tv": 0.007585941454999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.11145206477732793,
+     "prefixes": 48,
+     "marginal": {
+      "W0": 0.13303,
+      "W0c": 0.00636,
+      "W1": 0.11122,
+      "W1c": 0.74939,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.16864620219999998,
+     "null_weighted_tv": 0.014230970979999999,
+     "dead_rate": 0.00041,
+     "max_tv_prefixes_with_200_samples": 0.5956485776805251,
+     "prefixes": 176,
+     "marginal": {
+      "W0": 0.65979,
+      "W0c": 0.0198,
+      "W1": 0.08655,
+      "W1c": 0.23345,
+      "T": 0.0,
+      "X": 0.00041
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     8
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     39,
+     47
+    ],
+    [
+     36,
+     44
+    ],
+    [
+     45,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0015214999999999972,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00966,
+      "W0c": 0.00622,
+      "W1": 0.30318,
+      "W1c": 0.68094,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.005310181399999985,
+     "null_weighted_tv": 0.0012389336200000019,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.014080062111801229,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.00048,
+      "W0c": 0.0,
+      "W1": 0.90801,
+      "W1c": 0.09151,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0073547959999999924,
+     "null_weighted_tv": 0.004204407125000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.03265111111111113,
+     "prefixes": 10,
+     "marginal": {
+      "W0": 0.11156,
+      "W0c": 0.17281,
+      "W1": 0.26596,
+      "W1c": 0.44967,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.02162016489999999,
+     "null_weighted_tv": 0.007447278515000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07046980126467928,
+     "prefixes": 40,
+     "marginal": {
+      "W0": 0.07882,
+      "W0c": 0.2269,
+      "W1": 0.16417,
+      "W1c": 0.53011,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.16327942359999997,
+     "null_weighted_tv": 0.015404220689999998,
+     "dead_rate": 0.04651,
+     "max_tv_prefixes_with_200_samples": 0.3872607468879668,
+     "prefixes": 148,
+     "marginal": {
+      "W0": 0.56785,
+      "W0c": 0.02645,
+      "W1": 0.2348,
+      "W1c": 0.12439,
+      "T": 0.0,
+      "X": 0.04651
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     8
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     26,
+     44
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0013215000000000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00184,
+      "W0c": 0.00071,
+      "W1": 0.70831,
+      "W1c": 0.28914,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0025314928000000074,
+     "null_weighted_tv": 0.003459935259999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.004316920522930062,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.1494,
+      "W0c": 0.12944,
+      "W1": 0.38396,
+      "W1c": 0.3372,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.060653413299999986,
+     "null_weighted_tv": 0.004351080569999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12880929944429256,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.55212,
+      "W0c": 4e-05,
+      "W1": 0.39063,
+      "W1c": 0.05721,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0904419968,
+     "null_weighted_tv": 0.008777228179999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1817680392156863,
+     "prefixes": 49,
+     "marginal": {
+      "W0": 0.31333,
+      "W0c": 0.03536,
+      "W1": 0.43568,
+      "W1c": 0.21563,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.12323044140000002,
+     "null_weighted_tv": 0.01789083113,
+     "dead_rate": 0.0024,
+     "max_tv_prefixes_with_200_samples": 0.32460879712746854,
+     "prefixes": 159,
+     "marginal": {
+      "W0": 0.09276,
+      "W0c": 0.27788,
+      "W1": 0.2797,
+      "W1c": 0.34726,
+      "T": 0.0,
+      "X": 0.0024
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     8
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     39,
+     63
+    ],
+    [
+     25,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011125000000000028,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00135,
+      "W0c": 0.00271,
+      "W1": 0.34094,
+      "W1c": 0.655,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0011733191000000106,
+     "null_weighted_tv": 0.0026972069600000024,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.056493837638376385,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.15461,
+      "W0c": 0.12665,
+      "W1": 0.39147,
+      "W1c": 0.32727,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.009068855500000004,
+     "null_weighted_tv": 0.006149100189999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.012032085308056883,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.19819,
+      "W0c": 0.36354,
+      "W1": 0.16053,
+      "W1c": 0.27774,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.031679532,
+     "null_weighted_tv": 0.004465000640000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0773445392231531,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.92426,
+      "W0c": 0.0,
+      "W1": 0.00818,
+      "W1c": 0.06756,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.11017314689999999,
+     "null_weighted_tv": 0.011438767725,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.20466658289028516,
+     "prefixes": 145,
+     "marginal": {
+      "W0": 0.20036,
+      "W0c": 0.10783,
+      "W1": 0.00571,
+      "W1c": 0.6861,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     44
+    ],
+    [
+     25,
+     15
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     39,
+     8
+    ],
+    [
+     36,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0023919999999999996,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.27544,
+      "W0c": 0.27755,
+      "W1": 0.22577,
+      "W1c": 0.22124,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0024192372000000056,
+     "null_weighted_tv": 0.003741870039999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0034958307720122962,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.05941,
+      "W0c": 0.10999,
+      "W1": 0.29884,
+      "W1c": 0.53176,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.07660378980000002,
+     "null_weighted_tv": 0.006232315145000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12047861209964411,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.46671,
+      "W0c": 0.0,
+      "W1": 0.42987,
+      "W1c": 0.10342,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.03812025660000001,
+     "null_weighted_tv": 0.0049421971849999986,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07459982776089157,
+     "prefixes": 48,
+     "marginal": {
+      "W0": 0.92765,
+      "W0c": 4e-05,
+      "W1": 0.03233,
+      "W1c": 0.03998,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.1268524087,
+     "null_weighted_tv": 0.014234465195,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.19516391304347822,
+     "prefixes": 145,
+     "marginal": {
+      "W0": 0.05316,
+      "W0c": 0.19103,
+      "W1": 0.11282,
+      "W1c": 0.64299,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     63
+    ],
+    [
+     25,
+     15
+    ],
+    [
+     45,
+     47
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     26,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011805000000000019,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 7e-05,
+      "W0c": 1e-05,
+      "W1": 0.56822,
+      "W1c": 0.4317,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0047899966999999915,
+     "null_weighted_tv": 0.0025961282799999924,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.005516689830901041,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.06151,
+      "W0c": 0.10659,
+      "W1": 0.30415,
+      "W1c": 0.52775,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.015684534099999994,
+     "null_weighted_tv": 0.005333856809999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.030812645185462714,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.12024,
+      "W0c": 0.35334,
+      "W1": 0.12021,
+      "W1c": 0.40621,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.030268414799999994,
+     "null_weighted_tv": 0.009065660489999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08682114832535884,
+     "prefixes": 38,
+     "marginal": {
+      "W0": 0.04486,
+      "W0c": 0.29232,
+      "W1": 0.075,
+      "W1c": 0.58782,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0765648335,
+     "null_weighted_tv": 0.0105391815,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.16590315403422984,
+     "prefixes": 135,
+     "marginal": {
+      "W0": 0.7962,
+      "W0c": 0.00051,
+      "W1": 0.01101,
+      "W1c": 0.19228,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     15
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     26,
+     44
+    ],
+    [
+     39,
+     8
+    ],
+    [
+     45,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0017650000000000124,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.06776,
+      "W0c": 0.03868,
+      "W1": 0.54219,
+      "W1c": 0.35137,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.003323983199999999,
+     "null_weighted_tv": 0.003924953364999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.01704950361944156,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.29161,
+      "W0c": 0.15254,
+      "W1": 0.36392,
+      "W1c": 0.19193,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.014228826000000002,
+     "null_weighted_tv": 0.007718726045000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.04178219512195122,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.23153,
+      "W0c": 0.22227,
+      "W1": 0.27738,
+      "W1c": 0.26882,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.009073323199999992,
+     "null_weighted_tv": 0.002577538979999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.03041929078014187,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.98428,
+      "W0c": 4e-05,
+      "W1": 0.00326,
+      "W1c": 0.01242,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.013428431099999995,
+     "null_weighted_tv": 0.004793369089999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.038523255813953536,
+     "prefixes": 179,
+     "marginal": {
+      "W0": 0.94515,
+      "W0c": 1e-05,
+      "W1": 0.00034,
+      "W1c": 0.0545,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     15
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     26,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0018009999999999977,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.13112,
+      "W0c": 0.03167,
+      "W1": 0.66103,
+      "W1c": 0.17618,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.031655618400000016,
+     "null_weighted_tv": 0.0029405365100000024,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09823769497947585,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.12634,
+      "W0c": 0.0006,
+      "W1": 0.4429,
+      "W1c": 0.43016,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.029033153900000018,
+     "null_weighted_tv": 0.0066351855,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09781917031456785,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.3085,
+      "W0c": 0.21027,
+      "W1": 0.28655,
+      "W1c": 0.19468,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.017607378499999993,
+     "null_weighted_tv": 0.011817489010000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.05631333333333337,
+     "prefixes": 60,
+     "marginal": {
+      "W0": 0.10485,
+      "W0c": 0.25363,
+      "W1": 0.17217,
+      "W1c": 0.46935,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.20660388770000002,
+     "null_weighted_tv": 0.014854371935,
+     "dead_rate": 0.23573,
+     "max_tv_prefixes_with_200_samples": 0.6361403976435935,
+     "prefixes": 217,
+     "marginal": {
+      "W0": 0.74825,
+      "W0c": 0.0,
+      "W1": 0.01478,
+      "W1c": 0.00124,
+      "T": 0.0,
+      "X": 0.23573
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     8
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     26,
+     44
+    ],
+    [
+     39,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011744999999999954,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.01361,
+      "W0c": 0.00034,
+      "W1": 0.84657,
+      "W1c": 0.13948,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.03186585200000001,
+     "null_weighted_tv": 0.001993355599999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.11356849154000574,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.11141,
+      "W0c": 4e-05,
+      "W1": 0.81098,
+      "W1c": 0.07757,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.018796361200000007,
+     "null_weighted_tv": 0.003733406269999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08028585133098945,
+     "prefixes": 13,
+     "marginal": {
+      "W0": 0.05969,
+      "W0c": 0.05406,
+      "W1": 0.35968,
+      "W1c": 0.52657,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0386256076,
+     "null_weighted_tv": 0.008525591464999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10496038749449581,
+     "prefixes": 46,
+     "marginal": {
+      "W0": 0.15521,
+      "W0c": 0.2244,
+      "W1": 0.26503,
+      "W1c": 0.35536,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.04371001979999999,
+     "null_weighted_tv": 0.011504589365000002,
+     "dead_rate": 1e-05,
+     "max_tv_prefixes_with_200_samples": 0.20137333333333335,
+     "prefixes": 154,
+     "marginal": {
+      "W0": 0.02017,
+      "W0c": 0.22208,
+      "W1": 0.04971,
+      "W1c": 0.70803,
+      "T": 0.0,
+      "X": 1e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     47
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     39,
+     15
+    ],
+    [
+     36,
+     44
+    ],
+    [
+     45,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0022655000000000045,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.28187,
+      "W0c": 0.12712,
+      "W1": 0.41318,
+      "W1c": 0.17783,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0638249665,
+     "null_weighted_tv": 0.003280124445000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.11528753933291376,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.1971,
+      "W0c": 5e-05,
+      "W1": 0.67586,
+      "W1c": 0.12699,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.022205393000000004,
+     "null_weighted_tv": 0.006130642795,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07109417754569189,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.08719,
+      "W0c": 0.05715,
+      "W1": 0.50195,
+      "W1c": 0.35371,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.056020343099999995,
+     "null_weighted_tv": 0.011249964869999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.17848286432160804,
+     "prefixes": 52,
+     "marginal": {
+      "W0": 0.07585,
+      "W0c": 0.22764,
+      "W1": 0.16024,
+      "W1c": 0.53627,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.12129287779999999,
+     "null_weighted_tv": 0.01164147878,
+     "dead_rate": 0.16283,
+     "max_tv_prefixes_with_200_samples": 0.5000052490421456,
+     "prefixes": 196,
+     "marginal": {
+      "W0": 0.83076,
+      "W0c": 0.0,
+      "W1": 0.00535,
+      "W1c": 0.00106,
+      "T": 0.0,
+      "X": 0.16283
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     63
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     26,
+     8
+    ],
+    [
+     25,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0010995000000000004,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00017,
+      "W0c": 2e-05,
+      "W1": 0.30172,
+      "W1c": 0.69809,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.017354832800000004,
+     "null_weighted_tv": 0.003076816590000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.02872681028768395,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.15039,
+      "W0c": 0.2237,
+      "W1": 0.23592,
+      "W1c": 0.38999,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.008459106600000002,
+     "null_weighted_tv": 0.004951108350000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.019932220367278784,
+     "prefixes": 13,
+     "marginal": {
+      "W0": 0.075,
+      "W0c": 0.04917,
+      "W1": 0.5044,
+      "W1c": 0.37143,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0671561512,
+     "null_weighted_tv": 0.008273394935000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.21225565597667637,
+     "prefixes": 40,
+     "marginal": {
+      "W0": 0.43383,
+      "W0c": 0.00097,
+      "W1": 0.06577,
+      "W1c": 0.49943,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.10004333099999999,
+     "null_weighted_tv": 0.01761715062,
+     "dead_rate": 0.00074,
+     "max_tv_prefixes_with_200_samples": 0.31998396475770924,
+     "prefixes": 132,
+     "marginal": {
+      "W0": 0.20794,
+      "W0c": 0.2419,
+      "W1": 0.19142,
+      "W1c": 0.358,
+      "T": 0.0,
+      "X": 0.00074
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     44
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     39,
+     47
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     45,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0024320000000000027,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.31366,
+      "W0c": 0.15623,
+      "W1": 0.35444,
+      "W1c": 0.17567,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.005746109000000007,
+     "null_weighted_tv": 0.0037763569049999992,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.010228180110434349,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.05645,
+      "W0c": 0.04625,
+      "W1": 0.47223,
+      "W1c": 0.42507,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.008340878999999994,
+     "null_weighted_tv": 0.0074744603749999985,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.03880329670329669,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.12185,
+      "W0c": 0.18625,
+      "W1": 0.27165,
+      "W1c": 0.42025,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0314832552,
+     "null_weighted_tv": 0.006159547314999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08521062893081757,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.90911,
+      "W0c": 0.0,
+      "W1": 0.06483,
+      "W1c": 0.02606,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.02691480659999999,
+     "null_weighted_tv": 0.003710361980000001,
+     "dead_rate": 0.01372,
+     "max_tv_prefixes_with_200_samples": 0.1830726680244399,
+     "prefixes": 190,
+     "marginal": {
+      "W0": 0.98348,
+      "W0c": 0.0,
+      "W1": 0.00142,
+      "W1c": 0.00138,
+      "T": 0.0,
+      "X": 0.01372
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     8
+    ],
+    [
+     26,
+     15
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     39,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0012770000000000116,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00182,
+      "W0c": 0.0008,
+      "W1": 0.62544,
+      "W1c": 0.37194,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.01772382719999999,
+     "null_weighted_tv": 0.0027420329000000044,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.023560536107974456,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.03091,
+      "W0c": 0.09627,
+      "W1": 0.15352,
+      "W1c": 0.7193,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.019791573,
+     "null_weighted_tv": 0.0056317337100000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06301048973143758,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.28242,
+      "W0c": 0.2225,
+      "W1": 0.27899,
+      "W1c": 0.21609,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.016678330199999997,
+     "null_weighted_tv": 0.010354606595,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0670948780487805,
+     "prefixes": 60,
+     "marginal": {
+      "W0": 0.15526,
+      "W0c": 0.42071,
+      "W1": 0.12156,
+      "W1c": 0.30247,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0445526377,
+     "null_weighted_tv": 0.009586207945000001,
+     "dead_rate": 0.00154,
+     "max_tv_prefixes_with_200_samples": 0.1795320137299771,
+     "prefixes": 202,
+     "marginal": {
+      "W0": 0.88777,
+      "W0c": 0.0,
+      "W1": 0.02351,
+      "W1c": 0.08718,
+      "T": 0.0,
+      "X": 0.00154
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     44
+    ],
+    [
+     39,
+     8
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     45,
+     47
+    ],
+    [
+     36,
+     15
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0023144999999999945,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.3448,
+      "W0c": 0.16581,
+      "W1": 0.33327,
+      "W1c": 0.15612,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.011556557300000004,
+     "null_weighted_tv": 0.0029960852749999975,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.01935816807583908,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.01329,
+      "W0c": 0.00062,
+      "W1": 0.63407,
+      "W1c": 0.35202,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.05617418069999999,
+     "null_weighted_tv": 0.0045439602599999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.19609333333333337,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.37724,
+      "W0c": 0.0,
+      "W1": 0.55815,
+      "W1c": 0.06461,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.10278734220000002,
+     "null_weighted_tv": 0.009546455800000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.15086173215717724,
+     "prefixes": 45,
+     "marginal": {
+      "W0": 0.0713,
+      "W0c": 0.39401,
+      "W1": 0.07856,
+      "W1c": 0.45613,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.1262709436,
+     "null_weighted_tv": 0.013428306599999999,
+     "dead_rate": 0.00046,
+     "max_tv_prefixes_with_200_samples": 0.659557572815534,
+     "prefixes": 160,
+     "marginal": {
+      "W0": 0.71735,
+      "W0c": 0.01831,
+      "W1": 0.04256,
+      "W1c": 0.22132,
+      "T": 0.0,
+      "X": 0.00046
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     63
+    ],
+    [
+     25,
+     15
+    ],
+    [
+     26,
+     8
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     45,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0015330000000000022,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 8e-05,
+      "W0c": 0.0,
+      "W1": 0.56642,
+      "W1c": 0.4335,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.004147774799999986,
+     "null_weighted_tv": 0.0030518738899999965,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.00477809688581312,
+     "prefixes": 3,
+     "marginal": {
+      "W0": 0.06044,
+      "W0c": 0.10708,
+      "W1": 0.30275,
+      "W1c": 0.52973,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.09607073360000001,
+     "null_weighted_tv": 0.004036629550000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1848388828022529,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.65684,
+      "W0c": 0.0008,
+      "W1": 0.02642,
+      "W1c": 0.31594,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.020178474100000003,
+     "null_weighted_tv": 0.008335546360000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06421675324675326,
+     "prefixes": 37,
+     "marginal": {
+      "W0": 0.11627,
+      "W0c": 0.23915,
+      "W1": 0.1947,
+      "W1c": 0.44988,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.023788178900000005,
+     "null_weighted_tv": 0.012440351340000001,
+     "dead_rate": 1e-05,
+     "max_tv_prefixes_with_200_samples": 0.07931206185567012,
+     "prefixes": 125,
+     "marginal": {
+      "W0": 0.01712,
+      "W0c": 0.42169,
+      "W1": 0.01697,
+      "W1c": 0.54421,
+      "T": 0.0,
+      "X": 1e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     44
+    ],
+    [
+     39,
+     63
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     26,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0024289999999999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.34686,
+      "W0c": 0.1628,
+      "W1": 0.33255,
+      "W1c": 0.15779,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.048717264399999995,
+     "null_weighted_tv": 0.0037449079899999965,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.06493781326781328,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.12667,
+      "W0c": 0.0,
+      "W1": 0.331,
+      "W1c": 0.54233,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.026034253200000003,
+     "null_weighted_tv": 0.006341999170000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10652563081503537,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.22557,
+      "W0c": 0.04694,
+      "W1": 0.56499,
+      "W1c": 0.1625,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0592001514,
+     "null_weighted_tv": 0.010223062945,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.28959835616438356,
+     "prefixes": 48,
+     "marginal": {
+      "W0": 0.03772,
+      "W0c": 0.18483,
+      "W1": 0.10429,
+      "W1c": 0.67316,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0305040861,
+     "null_weighted_tv": 0.007884728569999996,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.20616222222222225,
+     "prefixes": 192,
+     "marginal": {
+      "W0": 0.91961,
+      "W0c": 0.00021,
+      "W1": 0.00183,
+      "W1c": 0.07835,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     8
+    ],
+    [
+     26,
+     44
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     36,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0014535000000000114,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00199,
+      "W0c": 0.00054,
+      "W1": 0.70756,
+      "W1c": 0.28991,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.003930642600000007,
+     "null_weighted_tv": 0.0033005748100000025,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.006499646786933835,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.25677,
+      "W0c": 0.16249,
+      "W1": 0.35337,
+      "W1c": 0.22737,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.019371824699999995,
+     "null_weighted_tv": 0.0054072907050000014,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0446865826569842,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.12404,
+      "W0c": 0.03936,
+      "W1": 0.54331,
+      "W1c": 0.29329,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.032934863099999996,
+     "null_weighted_tv": 0.01097742605,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10803721991701247,
+     "prefixes": 60,
+     "marginal": {
+      "W0": 0.26036,
+      "W0c": 0.34602,
+      "W1": 0.18347,
+      "W1c": 0.21015,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.07031949220000001,
+     "null_weighted_tv": 0.009028868850000002,
+     "dead_rate": 0.05004,
+     "max_tv_prefixes_with_200_samples": 0.37146809213587717,
+     "prefixes": 210,
+     "marginal": {
+      "W0": 0.92624,
+      "W0c": 0.0,
+      "W1": 0.00939,
+      "W1c": 0.01433,
+      "T": 0.0,
+      "X": 0.05004
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     36,
+     47
+    ],
+    [
+     39,
+     8
+    ],
+    [
+     45,
+     15
+    ],
+    [
+     26,
+     63
+    ],
+    [
+     25,
+     44
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0021739999999999975,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.17371,
+      "W0c": 0.1296,
+      "W1": 0.40305,
+      "W1c": 0.29364,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.003977405399999993,
+     "null_weighted_tv": 0.002733284520000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.005134438087454007,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.00214,
+      "W0c": 0.0006,
+      "W1": 0.67851,
+      "W1c": 0.31875,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.014087749099999993,
+     "null_weighted_tv": 0.004996386015,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.03127106215296438,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.11166,
+      "W0c": 0.03531,
+      "W1": 0.59402,
+      "W1c": 0.25901,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0309830766,
+     "null_weighted_tv": 0.00393540348,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10443892189218924,
+     "prefixes": 59,
+     "marginal": {
+      "W0": 0.91522,
+      "W0c": 0.0,
+      "W1": 0.0779,
+      "W1c": 0.00688,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.1788344289,
+     "null_weighted_tv": 0.013330744510000003,
+     "dead_rate": 0.00028,
+     "max_tv_prefixes_with_200_samples": 0.40103402640264024,
+     "prefixes": 132,
+     "marginal": {
+      "W0": 0.06183,
+      "W0c": 0.37375,
+      "W1": 0.38674,
+      "W1c": 0.1774,
+      "T": 0.0,
+      "X": 0.00028
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     15
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     25,
+     47
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     45,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.001845499999999996,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.05767,
+      "W0c": 0.08799,
+      "W1": 0.35518,
+      "W1c": 0.49916,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0038705432000000184,
+     "null_weighted_tv": 0.004002083865000006,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.01575730362406795,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.20368,
+      "W0c": 0.18458,
+      "W1": 0.31043,
+      "W1c": 0.30131,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.008609867400000007,
+     "null_weighted_tv": 0.007807900905000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.03728590855803046,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.25562,
+      "W0c": 0.18669,
+      "W1": 0.32065,
+      "W1c": 0.23704,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.020560452300000004,
+     "null_weighted_tv": 0.004206175595,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.04120655834564256,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.96287,
+      "W0c": 5e-05,
+      "W1": 0.00568,
+      "W1c": 0.0314,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0254769161,
+     "null_weighted_tv": 0.005972848485,
+     "dead_rate": 1e-05,
+     "max_tv_prefixes_with_200_samples": 0.08486515151515153,
+     "prefixes": 184,
+     "marginal": {
+      "W0": 0.93237,
+      "W0c": 0.0,
+      "W1": 0.00097,
+      "W1c": 0.06665,
+      "T": 0.0,
+      "X": 1e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     26,
+     15
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     39,
+     8
+    ],
+    [
+     36,
+     47
+    ],
+    [
+     45,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.001846000000000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.05724,
+      "W0c": 0.08754,
+      "W1": 0.35553,
+      "W1c": 0.49969,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.006710654999999993,
+     "null_weighted_tv": 0.0038491238699999964,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.00842434224959919,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.30342,
+      "W0c": 0.19413,
+      "W1": 0.30546,
+      "W1c": 0.19699,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.04625784660000001,
+     "null_weighted_tv": 0.0037511505599999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0673279465776294,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.89344,
+      "W0c": 0.00011,
+      "W1": 0.04156,
+      "W1c": 0.06489,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.016921769899999994,
+     "null_weighted_tv": 0.010730066940000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12489857142857144,
+     "prefixes": 53,
+     "marginal": {
+      "W0": 0.10776,
+      "W0c": 0.18475,
+      "W1": 0.26096,
+      "W1c": 0.44653,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0313974093,
+     "null_weighted_tv": 0.007458543620000001,
+     "dead_rate": 1e-05,
+     "max_tv_prefixes_with_200_samples": 0.1849779245283019,
+     "prefixes": 202,
+     "marginal": {
+      "W0": 0.9161,
+      "W0c": 0.0,
+      "W1": 0.00171,
+      "W1c": 0.08218,
+      "T": 0.0,
+      "X": 1e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     63
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     26,
+     15
+    ],
+    [
+     45,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0015495000000000007,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00012,
+      "W0c": 0.0,
+      "W1": 0.47443,
+      "W1c": 0.52545,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.007111216399999997,
+     "null_weighted_tv": 0.0020770361849999906,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.007494173218388321,
+     "prefixes": 3,
+     "marginal": {
+      "W0": 0.00179,
+      "W0c": 0.00067,
+      "W1": 0.65958,
+      "W1c": 0.33796,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.01066451249999999,
+     "null_weighted_tv": 0.004654569595000006,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.016224866626166665,
+     "prefixes": 10,
+     "marginal": {
+      "W0": 0.24823,
+      "W0c": 0.18705,
+      "W1": 0.32239,
+      "W1c": 0.24233,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.05506754099999999,
+     "null_weighted_tv": 0.0063369643150000005,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09868430625449316,
+     "prefixes": 39,
+     "marginal": {
+      "W0": 0.14757,
+      "W0c": 0.08157,
+      "W1": 0.01791,
+      "W1c": 0.75295,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.024613864500000006,
+     "null_weighted_tv": 0.01095495941,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.07795351351351348,
+     "prefixes": 120,
+     "marginal": {
+      "W0": 0.01925,
+      "W0c": 0.43556,
+      "W1": 0.01767,
+      "W1c": 0.52752,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     47
+    ],
+    [
+     25,
+     63
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     26,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002192500000000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.16966,
+      "W0c": 0.14369,
+      "W1": 0.37288,
+      "W1c": 0.31377,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.06260746129999999,
+     "null_weighted_tv": 0.0033171116699999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12858271904795043,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.36058,
+      "W0c": 3e-05,
+      "W1": 0.52237,
+      "W1c": 0.11702,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0972387664,
+     "null_weighted_tv": 0.006905674805000003,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.15125879424115177,
+     "prefixes": 15,
+     "marginal": {
+      "W0": 0.11996,
+      "W0c": 0.49878,
+      "W1": 0.08481,
+      "W1c": 0.29645,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.040335430400000004,
+     "null_weighted_tv": 0.011364989715,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.08531369181380413,
+     "prefixes": 51,
+     "marginal": {
+      "W0": 0.07067,
+      "W0c": 0.06392,
+      "W1": 0.42022,
+      "W1c": 0.44519,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0587666786,
+     "null_weighted_tv": 0.009506042475,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.18853053140096615,
+     "prefixes": 195,
+     "marginal": {
+      "W0": 0.89598,
+      "W0c": 0.00028,
+      "W1": 0.00331,
+      "W1c": 0.10043,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     15
+    ],
+    [
+     36,
+     63
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     39,
+     47
+    ],
+    [
+     26,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0021595000000000004,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.06716,
+      "W0c": 0.10468,
+      "W1": 0.33165,
+      "W1c": 0.49651,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.006035563200000003,
+     "null_weighted_tv": 0.002342916659999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.020002596783799884,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 6e-05,
+      "W0c": 2e-05,
+      "W1": 0.59316,
+      "W1c": 0.40676,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.018916559000000013,
+     "null_weighted_tv": 0.005344146580000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.029095745507527943,
+     "prefixes": 12,
+     "marginal": {
+      "W0": 0.16465,
+      "W0c": 0.43487,
+      "W1": 0.11481,
+      "W1c": 0.28567,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.02850001900000001,
+     "null_weighted_tv": 0.00858901033,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.10071476658476662,
+     "prefixes": 39,
+     "marginal": {
+      "W0": 0.02971,
+      "W0c": 0.2343,
+      "W1": 0.07012,
+      "W1c": 0.66587,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.075771913,
+     "null_weighted_tv": 0.009745262459999997,
+     "dead_rate": 1e-05,
+     "max_tv_prefixes_with_200_samples": 0.1865368544600939,
+     "prefixes": 135,
+     "marginal": {
+      "W0": 0.81094,
+      "W0c": 0.00039,
+      "W1": 0.01004,
+      "W1c": 0.17862,
+      "T": 0.0,
+      "X": 1e-05
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     15
+    ],
+    [
+     36,
+     8
+    ],
+    [
+     45,
+     47
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     26,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0017674999999999972,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.07708,
+      "W0c": 0.03635,
+      "W1": 0.59064,
+      "W1c": 0.29593,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0513193604,
+     "null_weighted_tv": 0.0030183253599999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1169735900962861,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.1874,
+      "W0c": 0.00068,
+      "W1": 0.39153,
+      "W1c": 0.42039,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.005112592099999996,
+     "null_weighted_tv": 0.006708106804999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.021504999999999996,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.1633,
+      "W0c": 0.27032,
+      "W1": 0.20431,
+      "W1c": 0.36207,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.048280583499999995,
+     "null_weighted_tv": 0.013225839039999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12618317725752504,
+     "prefixes": 62,
+     "marginal": {
+      "W0": 0.22064,
+      "W0c": 0.34023,
+      "W1": 0.17835,
+      "W1c": 0.26078,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.2034303874,
+     "null_weighted_tv": 0.014816438309999999,
+     "dead_rate": 0.21362,
+     "max_tv_prefixes_with_200_samples": 0.6964519424460431,
+     "prefixes": 229,
+     "marginal": {
+      "W0": 0.77208,
+      "W0c": 0.0,
+      "W1": 0.0131,
+      "W1c": 0.0012,
+      "T": 0.0,
+      "X": 0.21362
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     47
+    ],
+    [
+     45,
+     63
+    ],
+    [
+     26,
+     15
+    ],
+    [
+     36,
+     44
+    ],
+    [
+     39,
+     8
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002403500000000012,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.31557,
+      "W0c": 0.13045,
+      "W1": 0.39298,
+      "W1c": 0.161,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0671715689,
+     "null_weighted_tv": 0.003272495625,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.1053230548102721,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.18862,
+      "W0c": 3e-05,
+      "W1": 0.14874,
+      "W1c": 0.66261,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.010528811999999985,
+     "null_weighted_tv": 0.005651445080000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.033657909319899246,
+     "prefixes": 14,
+     "marginal": {
+      "W0": 0.04352,
+      "W0c": 0.09539,
+      "W1": 0.27175,
+      "W1c": 0.58934,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.04878888520000002,
+     "null_weighted_tv": 0.011733845530000002,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.15365062937062934,
+     "prefixes": 51,
+     "marginal": {
+      "W0": 0.07887,
+      "W0c": 0.23127,
+      "W1": 0.16558,
+      "W1c": 0.52428,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.028905583099999993,
+     "null_weighted_tv": 0.007575653634999999,
+     "dead_rate": 0.00546,
+     "max_tv_prefixes_with_200_samples": 0.29402428571428574,
+     "prefixes": 195,
+     "marginal": {
+      "W0": 0.95827,
+      "W0c": 4e-05,
+      "W1": 0.0164,
+      "W1c": 0.01983,
+      "T": 0.0,
+      "X": 0.00546
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     25,
+     63
+    ],
+    [
+     26,
+     8
+    ],
+    [
+     45,
+     44
+    ],
+    [
+     39,
+     15
+    ],
+    [
+     36,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0011935000000000025,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00056,
+      "W0c": 3e-05,
+      "W1": 0.87174,
+      "W1c": 0.12767,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.006667517500000028,
+     "null_weighted_tv": 0.002094402365,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.024239919323255227,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.00379,
+      "W0c": 0.00183,
+      "W1": 0.26632,
+      "W1c": 0.72806,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.008503240099999995,
+     "null_weighted_tv": 0.004220820195,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.026622285345384133,
+     "prefixes": 13,
+     "marginal": {
+      "W0": 0.1822,
+      "W0c": 0.41331,
+      "W1": 0.13172,
+      "W1c": 0.27277,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.1092748172,
+     "null_weighted_tv": 0.007710921875000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.4208351300236407,
+     "prefixes": 45,
+     "marginal": {
+      "W0": 0.26238,
+      "W0c": 0.03157,
+      "W1": 0.2977,
+      "W1c": 0.40835,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.039305236800000004,
+     "null_weighted_tv": 0.011177046559999999,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.12538043956043954,
+     "prefixes": 145,
+     "marginal": {
+      "W0": 0.0315,
+      "W0c": 0.21962,
+      "W1": 0.06306,
+      "W1c": 0.68582,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     45,
+     47
+    ],
+    [
+     26,
+     8
+    ],
+    [
+     39,
+     44
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     25,
+     63
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.002340000000000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.20839,
+      "W0c": 0.22319,
+      "W1": 0.26731,
+      "W1c": 0.30111,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.002815820299999993,
+     "null_weighted_tv": 0.0026351320050000014,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.004626210355019788,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.00131,
+      "W0c": 0.0024,
+      "W1": 0.32162,
+      "W1c": 0.67467,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0134578638,
+     "null_weighted_tv": 0.0063205632299999995,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.01770971698113208,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.15136,
+      "W0c": 0.2161,
+      "W1": 0.24872,
+      "W1c": 0.38382,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0453806564,
+     "null_weighted_tv": 0.010555963605,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09319638696939786,
+     "prefixes": 64,
+     "marginal": {
+      "W0": 0.09725,
+      "W0c": 0.05481,
+      "W1": 0.21657,
+      "W1c": 0.63137,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.16978003120000001,
+     "null_weighted_tv": 0.012899958255,
+     "dead_rate": 0.22975,
+     "max_tv_prefixes_with_200_samples": 0.730116220735786,
+     "prefixes": 229,
+     "marginal": {
+      "W0": 0.75864,
+      "W0c": 0.0,
+      "W1": 0.01087,
+      "W1c": 0.00074,
+      "T": 0.0,
+      "X": 0.22975
+     },
+     "samples": 100000
+    }
+   ]
+  },
+  {
+   "numbers": [
+    [
+     39,
+     8
+    ],
+    [
+     25,
+     44
+    ],
+    [
+     45,
+     63
+    ],
+    [
+     36,
+     15
+    ],
+    [
+     26,
+     47
+    ]
+   ],
+   "rounds": [
+    {
+     "weighted_tv": 0.0,
+     "null_weighted_tv": 0.0014535000000000001,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.0,
+     "prefixes": 1,
+     "marginal": {
+      "W0": 0.00196,
+      "W0c": 0.0006,
+      "W1": 0.7088,
+      "W1c": 0.28864,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.0047879392000000015,
+     "null_weighted_tv": 0.003377344039999996,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.008076252771618622,
+     "prefixes": 4,
+     "marginal": {
+      "W0": 0.29547,
+      "W0c": 0.18439,
+      "W1": 0.31889,
+      "W1c": 0.20125,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.04564430950000002,
+     "null_weighted_tv": 0.004628802554999998,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.09255216482878698,
+     "prefixes": 16,
+     "marginal": {
+      "W0": 0.33189,
+      "W0c": 5e-05,
+      "W1": 0.10477,
+      "W1c": 0.56329,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.05275372799999999,
+     "null_weighted_tv": 0.008752100919999997,
+     "dead_rate": 0.0,
+     "max_tv_prefixes_with_200_samples": 0.15398758620689657,
+     "prefixes": 52,
+     "marginal": {
+      "W0": 0.10679,
+      "W0c": 0.05712,
+      "W1": 0.25334,
+      "W1c": 0.58275,
+      "T": 0.0,
+      "X": 0.0
+     },
+     "samples": 100000
+    },
+    {
+     "weighted_tv": 0.09612556320000001,
+     "null_weighted_tv": 0.01871953025,
+     "dead_rate": 0.00298,
+     "max_tv_prefixes_with_200_samples": 0.4011210799136069,
+     "prefixes": 165,
+     "marginal": {
+      "W0": 0.13214,
+      "W0c": 0.19006,
+      "W1": 0.33538,
+      "W1c": 0.33944,
+      "T": 0.0,
+      "X": 0.00298
+     },
+     "samples": 100000
+    }
+   ]
+  }
+ ]
+}

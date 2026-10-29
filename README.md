@@ -9,6 +9,7 @@ depicted game, not a claim that every counterfactual is manga canon.
 
 ## Documentation
 
+- [GOALS.md](docs/GOALS.md) — the solve targets, the public-information reformulation, and measured reductions.
 - [EVIDENCE.md](docs/EVIDENCE.md) — source facts, derivations, and unresolved gaps.
 - [MODEL.md](docs/MODEL.md) — the named and fingerprinted baseline assumptions.
 - [SOLVER.md](docs/SOLVER.md) — equilibrium target, exact oracle, sampling, and MCCFR.
@@ -40,7 +41,7 @@ ruff check src
 git diff --check
 ```
 
-The current suite contains 54 tests. Its slowest test intentionally evaluates
+The current suite contains 65 tests. Its slowest test intentionally evaluates
 every five-card hand.
 
 ## Solver boundary

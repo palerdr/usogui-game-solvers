@@ -231,8 +231,42 @@ class UpperChanceAndSharedDeckTests(TestCase):
         self.assertEqual(len(outcomes), 3)
         self.assertNotIn((None, None), tuple(outcome for outcome, _ in outcomes))
         self.assertAlmostEqual(sum(probability for _, probability in outcomes), 1.0)
-        with self.assertRaises(ValueError):
-            apply(retry, (None, None))
+
+    def test_g08_retry_without_resolving_mass_settles_with_no_judgement(self) -> None:
+        state = apply(apply(initial_state(), 25), 8)
+        retry = apply(state, (None, None))
+        self.assertTrue(retry.round.retry)
+
+        def impossible(_deck: int, _target: int, _opposing: int | None):
+            return ((None, 1.0),)
+
+        outcomes = tuple(iter_chance_outcomes(retry, (impossible, impossible)))
+        self.assertEqual(outcomes, (((None, None), 1.0),))
+        settled = apply(retry, (None, None))
+        self.assertEqual(settled.phase, Phase.NUMBER_CHOICE_0)
+        self.assertEqual(settled.available_deck_mask, FULL_DECK_MASK)
+        record = settled.history[-1]
+        self.assertIsNone(record.winner)
+        self.assertFalse(record.calamity)
+        self.assertEqual(record.actions, ())
+        self.assertEqual(record.chosen_metal_cards, (25, 8))
+        # Round-1 antes returned (23 -> 24), then the round-2 ante of 2 is paid.
+        self.assertEqual(tuple(p.sealed_bios for p in settled.lower), (22, 22))
+        self.assertEqual(tuple(p.remaining_metal_cards for p in settled.lower),
+                         ((26, 36, 39, 45), (15, 44, 47, 63)))
+
+    def test_g08_no_judgement_in_round_five_resolves_by_air(self) -> None:
+        state = initial_state()
+        for team_0, team_1 in zip((25, 26, 36, 39), (8, 15, 44, 47)):
+            state = apply(apply(state, team_0), team_1)
+            state = apply(state, (None, None))
+            state = apply(state, (None, None))
+        state = apply(apply(state, 45), 63)
+        final = apply(apply(state, (None, None)), (None, None))
+        self.assertEqual(final.phase, Phase.TERMINAL)
+        self.assertIsNone(final.winner)
+        self.assertEqual(terminal_returns(final), (0.0, 0.0))
+        self.assertEqual(len(final.history), 5)
 
     def test_policy_distribution_validation_rejects_invalid_chance_models(self) -> None:
         state = upper_chance_state()

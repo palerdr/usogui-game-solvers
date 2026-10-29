@@ -83,7 +83,7 @@ model decisions, not facts.
 | G05 | A probability distribution over unseen metal-card allocations or residual air. | Choose a fixed conditional root or an explicit root prior. |
 | G06 | How accidental failure, deliberate no-rank, memory, communication, and Witch Pain change construction probabilities. | Define separate behavioral models; do not merge causes silently. |
 | G07 | What lower players observe about exact upper hands, hand categories, failure causes, and the remaining deck outside depicted events. | Freeze the lower information partition. |
-| G08 | What happens if a retry policy has probability one of another double no-rank. | Reject the model or define an evidenced fallback. |
+| G08 | What happens if a retry policy has probability one of another double no-rank. | Ruled 2026-10-29 in `MODEL.md` M10: the round ends with no judgement. The ruling is an engine ruling, not manga canon; the depicted match never reaches this state. Sampling showed it reachable in round 5 (`docs/GOALS.md`). |
 | G09 | The utility of pain, time, regret, or manner of death relative to binary survival. | Fix terminal utility. |
 
 ## Source-to-code trace

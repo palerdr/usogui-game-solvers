@@ -214,7 +214,10 @@ def iter_chance_outcomes(
                    * sum(p for hand, p in outcomes_1 if hand is None))
     resolving = 1.0 - double_none if state.round.retry else 1.0
     if resolving <= 1e-12:
-        raise ValueError("retry policies must have a nonzero chance to resolve")
+        # No resolving mass: the retry can only repeat double no-rank, and the
+        # round settles with no judgement (MODEL.md M10, EVIDENCE.md G08).
+        yield (None, None), 1.0
+        return
     for hand_0, probability_0 in outcomes_0:
         for hand_1, probability_1 in outcomes_1:
             if state.round.retry and hand_0 is None and hand_1 is None:
@@ -350,14 +353,17 @@ def _apply_upper_hands(state: GameState, action: object) -> GameState:
     hands: HandPair = action
     _validate_hand(hands[0], state.available_deck_mask, metal_0)
     _validate_hand(hands[1], state.available_deck_mask, metal_1)
-    if hands == (None, None):
-        if state.round.retry:
-            raise ValueError("retry chance outcomes exclude double no-rank")
-        return replace(state, round=replace(state.round, retry=True))
     first = (other_team(state.history[-1].first_bettor) if state.history else
              Team.ZERO if metal_0 < metal_1 else Team.ONE)
     ante = ANTES[len(state.history)]
     betting = BettingState(first, first, (ante, ante))
+    if hands == (None, None):
+        if not state.round.retry:
+            return replace(state, round=replace(state.round, retry=True))
+        # A double no-rank on retry is yielded only when no resolving mass
+        # exists; the round ends with no judgement and both antes return.
+        successor = replace(state, round=replace(state.round, hands=hands, betting=betting))
+        return _settle_round(successor, None, False)
     consumed = (hands[0] or 0) | (hands[1] or 0)
     return replace(state, phase=Phase.BETTING,
                    available_deck_mask=remove_cards(state.available_deck_mask, consumed),
@@ -396,6 +402,8 @@ def _apply_betting_action(state: GameState, action: BettingAction) -> GameState:
 def _poker_winner(hands: HandPair | None) -> Team | None:
     if hands is None or hands == (None, None):
         raise ValueError("judgement requires a resolved upper hand pair")
+    # Equal scores need equal rank multisets and therefore equal metal cards,
+    # which initial_state forbids; a None winner in a record means no judgement.
     hand_0, hand_1 = hands
     if hand_0 is None:
         return Team.ONE

@@ -1,5 +1,11 @@
 # Air Poker Solver Contract
 
+> `GOALS.md` supersedes the MCCFR production path below for
+> `canonical-uniform-v1`: the lower players share one information set after
+> the numbers are revealed, so backward induction over public states replaces
+> sampled regret minimization. The exact oracle, sampler, and evaluation
+> contracts in this file still apply.
+
 ## Claim
 
 We solve the game identified in `MODEL.md`, not an informal version of Air
