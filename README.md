@@ -10,6 +10,7 @@ depicted game, not a claim that every counterfactual is manga canon.
 ## Documentation
 
 - [GOALS.md](docs/GOALS.md) — the solve targets, the public-information reformulation, and measured reductions.
+- [KERNEL.md](docs/KERNEL.md) — the rounds 2 to 5 kernel sampler: entries, DP sampling, compute path, parity gates, confidence sets.
 - [EVIDENCE.md](docs/EVIDENCE.md) — source facts, derivations, and unresolved gaps.
 - [MODEL.md](docs/MODEL.md) — the named and fingerprinted baseline assumptions.
 - [SOLVER.md](docs/SOLVER.md) — equilibrium target, exact oracle, sampling, and MCCFR.

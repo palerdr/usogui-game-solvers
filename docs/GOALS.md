@@ -148,7 +148,7 @@ move to a GPU or a compiled kernel.
 1. Result-sensitivity measurement with an exact uniform sampler.
 2. Exact round-1 kernel.
 3. Sampled kernels for rounds 2 to 5 with rigorous per-entry intervals,
-   samples allocated by reach.
+   samples allocated by reach. Design: `KERNEL.md`.
 4. Robust backward induction over public states.
 5. Certification: saddle gaps, best response, engine self-play.
 6. Report in the form of this file's headline.
