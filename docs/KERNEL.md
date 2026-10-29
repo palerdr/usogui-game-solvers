@@ -79,7 +79,7 @@ with the filter replaced by the DP; the classification does not change.
 | Stage | Where | Throughput target | Why |
 |---|---|---|---|
 | Reference | NumPy filter sampler, exists | 1.4e4 trajectories/s on 14 cores | parity oracle |
-| CPU | the DP sampler in a compiled hot loop (numba if it supports the pinned Python, else Rust through PyO3) | at least 1e5 trajectories/s on 14 cores | overnight budgets of 1e10 |
+| CPU | the DP sampler in a numba hot loop (numba 0.68.1 supports the pinned Python 3.14) | at least 1e5 trajectories/s on 14 cores | overnight budgets of 1e10 |
 | GPU | the same DP as a CUDA kernel, one thread per trajectory, counts accumulated with atomic adds into a dense array | at least 2e6 trajectories/s on the laptop 4070 | budgets of 3e10 in hours |
 
 The dense count array is indexed by number-sequence id (14,400) times the
@@ -152,3 +152,24 @@ the solve reports the achieved width.
 | K5 | adaptive allocation loop with the robust solver | width falls with budget; seeds reproduce |
 
 K1 to K4 run on this machine. K3 needs the laptop and its CUDA toolchain.
+
+## K1 result (2026-10-29)
+
+`src/kernel/dp.py` holds `fill_value_counts`, `fill_table`, `count` and
+`unrank` as numba functions with caller-owned workspaces, and
+`src/test/test_kernel_dp.py` holds gates 1 and 2: counts equal
+`generate_legal_hands` on the full deck, on 200 seeded decks of 5 to 42 cards
+and for every target 0..69 on eleven small decks; unranking every integer in
+`[0, count)` yields every legal hand exactly once on 21 decks of 8 to 19 cards
+for every target 6..64. `uv run python -B -m src.kernel.dp` builds one table
+and unranks ten hands per deck over 200,000 seeded decks of 12 to 52 cards:
+
+| Threads | Tables/s | Unranks/s | Time per table and ten unranks |
+|---|---|---|---|
+| 1 | 2.5e5 | 2.5e6 | 4.0 us |
+| 15 | 2.8e6 | 2.8e7 | 0.36 us |
+
+A trajectory needs five tables and ten unranks plus retries, so the DP alone
+supports about 5e5 trajectories/s on this machine, five times the K2 target.
+Allocating the table inside the parallel loop limited scaling to 3.2x on 15
+threads; one workspace per thread restored 11x.
