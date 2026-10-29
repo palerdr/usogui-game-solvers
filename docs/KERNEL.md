@@ -113,18 +113,29 @@ Each gate runs on the reference sampler, the CPU path, and the GPU path.
 
 ## Confidence sets
 
-Per entry, a time-uniform confidence sequence for each class probability, so
-the sets stay valid under the adaptive allocation of fact 3 at any sample
-size. An empirical-Bernstein form is used because most entries sit near 0 or
-1 (63 and 8 almost always win), where it shrinks as `log(1/delta)/n` rather
-than `1/sqrt(n)`. The per-entry confidence level is `delta / E`, with `E` the
-21,904,800 entries the solver reads, by union bound; the extra width against
-a per-entry bound is a factor near 1.8 and is accepted for a certificate that
-needs no further argument. Pooled hidden-prefix entries receive their own
-sets from their pooled counts.
+Per entry and class, a time-uniform confidence sequence from the counts alone,
+so the sets stay valid under the adaptive allocation of fact 3 at any sample
+size. Each class indicator is a Bernoulli variable, so its likelihood is known
+exactly and the Beta(1/2, 1/2) mixture likelihood ratio is a mean-one
+martingale (Robbins' mixture method); Ville's inequality makes
+
+```text
+C_n = { p : p^k (1 - p)^(n - k) >= alpha * B(k + 1/2, n - k + 1/2) / pi }
+```
+
+cover `p` at every `n` simultaneously with probability at least `1 - alpha`.
+This replaces the empirical-Bernstein form named in the first draft: for an
+indicator it is exact, has no slack constants, and shrinks near 0 and 1 as
+`(log(1/alpha) + log(n)/2) / n`, the behavior the design wanted, since most
+entries sit near 0 or 1 (63 and 8 almost always win). The per-entry level is
+`delta / E`, with `E` the 21,904,800 entries the solver reads, by union bound,
+and each of the five reachable classes takes a fifth of it; the tie class is
+pinned to zero because ties are impossible. Pooled hidden-prefix entries
+receive their own sets from their pooled counts.
 
 The solver turns the five one-dimensional sets into one confidence set on the
-simplex (a box intersected with the simplex). The adversarial and favorable
+simplex, the box intersected with the simplex; `tighten` applies the implied
+bounds `p_i >= 1 - sum of the other upper ends`. The adversarial and favorable
 kernel choices inside that set are closed-form: sort the children by value
 and push mass toward the worst or best classes within the box.
 
@@ -209,3 +220,25 @@ The run is `docs/results/kernel-round1-parity.json`. Throughput of
 
 That is seven times the CPU target, so the 3e10-trajectory budget is twelve
 hours on this machine without the GPU.
+
+## K4 result (2026-10-29)
+
+`src/kernel/confidence.py` holds `interval` (bisection on the mixture
+confidence sequence above, endpoints rounded outward), vectorized `intervals`,
+`boxes` and `tighten`. `src/kernel/table.py` holds `Sequences` (the 14,400
+number sequences and the index of every number prefix: 25, 400, 3,600,
+14,400, 14,400) and `KernelCounts`, which adds a sequence's `781 x 6` sampler
+output into the entries of its number prefixes and pools hidden positions by
+one summation per position over base-6 class codes; `entries` is 21,904,800,
+as counted by hand in the first draft.
+
+`src/test/test_kernel_confidence.py` holds the gate: 1,000 seeded 19-card
+decks with a random canonical pair, 2,000 single rounds each, the five
+reachable class intervals at level `0.05 / 5` checked against
+`exact_kernel_counts` at every sample size from 1 to 2,000. Seeds with any
+violation: 16 of 1,000, against an allowance of 50; mean final width 0.031. The
+table test adds three sampled sequences sharing two rounds and checks the
+aggregation and the pooled rows against sums of revealed rows.
+
+Boxes for all 18,662,400 round-5 entries at `delta = 1e-3` take 1.6 s on 15
+threads and 0.9 GB per bound array.

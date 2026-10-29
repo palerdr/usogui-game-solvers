@@ -33,8 +33,9 @@ depicted game, not a claim that every counterfactual is manga canon.
   much past results move the kernel.
 - `src/kernel/` computes the exact round-1 result kernel by complete pair
   enumeration, draws legal hands by a numba count-and-unrank DP, and samples
-  whole trajectories into dense prefix counts with a counter-based generator;
-  results sit in `docs/results/`.
+  whole trajectories into dense prefix counts with a counter-based generator,
+  and turns pooled entry counts into time-uniform confidence boxes; results
+  sit in `docs/results/`.
 
 The engine foundation is complete. The candidate CFR+ implementation still needs
 an independent best response and exploitability oracle before production MCCFR
@@ -48,7 +49,7 @@ ruff check src
 git diff --check
 ```
 
-The current suite contains 86 tests. Its slowest test intentionally evaluates
+The current suite contains 95 tests. Its slowest test intentionally evaluates
 every five-card hand.
 
 ## Solver boundary

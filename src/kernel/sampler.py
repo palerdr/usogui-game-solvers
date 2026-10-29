@@ -253,6 +253,15 @@ def _count_rounds(deck, target_0, target_1, seed, batch, n, counts, values, tabl
         counts[thread, result] += 1
 
 
+@njit(parallel=True, cache=True)
+def _round_classes(deck, target_0, target_1, seed, batch, out, values, tables):
+    """Write the class of single round ``i`` on ``deck`` to ``out[i]``."""
+    for i in prange(out.shape[0]):
+        thread = get_thread_id()
+        state = stream_state(seed, batch, i)
+        out[i] = play_round(deck, target_0, target_1, values[thread], tables[thread], state)[0]
+
+
 def _workspaces():
     threads = get_num_threads()
     return (np.empty((threads, VALUES + 1), np.int64),
@@ -279,6 +288,14 @@ def sample_rounds(deck: int, target_0: int, target_1: int, seed: int, batch: int
 def stream(seed: int, batch: int, index: int) -> np.uint64:
     """Python-facing ``stream_state``: the word stays ``uint64`` across the call boundary."""
     return np.uint64(stream_state(seed, batch, index))
+
+
+def sample_round_classes(deck: int, target_0: int, target_1: int, seed: int, batch: int, n: int) -> np.ndarray:
+    """Return the class of each of ``n`` single rounds on ``deck``, in stream order."""
+    values, tables = _workspaces()
+    out = np.empty(n, np.int8)
+    _round_classes(np.int64(deck), target_0, target_1, seed, batch, out, values, tables)
+    return out
 
 
 def sample_round_hands(deck: int, target_0: int, target_1: int, seed: int, index: int):
