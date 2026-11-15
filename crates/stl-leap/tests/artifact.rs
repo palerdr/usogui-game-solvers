@@ -1,6 +1,6 @@
 //! Parity with the Python-built artifact and the DTH table. Every test here needs
-//! `~/Desktop/projects/stl/artifacts/leap` (74 GB, built by stl at 55e342e's predecessor) and
-//! `~/Desktop/projects/stl/artifacts/dth/V.npy`; run them with `cargo test -- --ignored`.
+//! `artifacts/leap` (74 GB, the Python build that predates stl 55e342e) and
+//! `artifacts/dth/V.npy`; run them with `cargo test -- --ignored`.
 
 use serde_json::Value;
 use std::collections::HashMap;
@@ -114,7 +114,7 @@ fn reader_maps_revival_columns_and_certifies_window_stages() {
 }
 
 #[test]
-#[ignore = "reads ~/Desktop/projects/stl/artifacts/leap (74 GB) and writes 2.3 GB to the temp directory"]
+#[ignore = "reads artifacts/leap (74 GB) and writes 2.3 GB to the temp directory"]
 fn resweeps_reproduce_stored_window_keys_bit_for_bit() {
     let output = std::env::temp_dir().join(format!("stl-leap-resweep-{}", std::process::id()));
     let dth = dth();
@@ -127,7 +127,7 @@ fn resweeps_reproduce_stored_window_keys_bit_for_bit() {
 }
 
 #[test]
-#[ignore = "reads ~/Desktop/projects/stl/artifacts/dth/V.npy"]
+#[ignore = "reads artifacts/dth/V.npy"]
 fn kernel_reproduces_dth() {
     let dth = dth();
     let p = profiles();
@@ -236,7 +236,7 @@ fn pairs(seed: u64) -> Vec<(usize, usize)> {
 }
 
 #[test]
-#[ignore = "reads ~/Desktop/projects/stl/artifacts/dth/V.npy"]
+#[ignore = "reads artifacts/dth/V.npy"]
 fn keys_beyond_the_leap_equal_dth_and_window_stages_match_lp() {
     let dth = dth();
     let mut memo = HashMap::new();
