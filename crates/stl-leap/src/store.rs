@@ -6,10 +6,10 @@
 //! `KEY.values.npy`, their values in the same order. The Python reference reads and writes the same
 //! files.
 
-use crate::Error;
 use crate::npy::{Npy, NpyMut};
 use crate::reach::Bits;
 use crate::rules::{Key, N};
+use crate::{Error, io};
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -22,11 +22,6 @@ pub struct Store {
     dir: PathBuf,
     source: PathBuf,
     dense: BTreeSet<Key>,
-}
-
-fn io(path: &Path) -> impl FnOnce(std::io::Error) -> Error {
-    let path = path.to_path_buf();
-    move |source| Error::Io { path, source }
 }
 
 impl Store {
@@ -128,7 +123,7 @@ impl Store {
     /// # Errors
     ///
     /// As [`Store::pack`].
-    pub fn pack_after(&mut self, clock: u32) -> Result<(), Error> {
+    pub(crate) fn pack_after(&mut self, clock: u32) -> Result<(), Error> {
         let late: Vec<Key> = self
             .dense
             .iter()

@@ -4,7 +4,7 @@ use crate::Error;
 use crate::build::{TOTALS, stage_inputs};
 use crate::kernel::GAP;
 use crate::lp::{self, Certificate};
-use crate::rules::{ACTIONS as A, Key, WIN, profiles};
+use crate::rules::{Key, WIN, profiles};
 use crate::store::PackedReader;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -51,10 +51,7 @@ pub struct LeapTable {
 /// coverage and a Bellman residual of at most `1e-6`, and the errors of [`Dth::open`].
 pub fn open_leap(artifact: &Path, dth: &Path) -> Result<LeapTable, Error> {
     let path = artifact.join("report.json");
-    let text = std::fs::read_to_string(&path).map_err(|source| Error::Io {
-        path: path.clone(),
-        source,
-    })?;
+    let text = std::fs::read_to_string(&path).map_err(crate::io(&path))?;
     let complete = serde_json::from_str::<Completed>(&text).is_ok_and(|report| {
         report.states == TOTALS.iter().map(|&(_, n)| n).sum::<u64>()
             && report.rows.len() == TOTALS.len()
@@ -111,8 +108,7 @@ impl LeapTable {
         let stored_value = self.value(key, checker, dropper)?;
         let (s, f) = stage_inputs(&self.reader, key, checker, dropper, &self.dth)?;
         let place = format!("{key} checker {checker} dropper {dropper}");
-        let rows = A + usize::from(key.is_window());
-        let certificate = lp::certify(&lp::stage_matrix(&s, f, key.is_window()), rows)
+        let certificate = lp::certify(&s, f, key.is_window())
             .map_err(|error| Error::Uncertified(format!("{place}: {error}")))?;
         let bellman_residual = (stored_value - certificate.value).abs();
         if bellman_residual > GAP {

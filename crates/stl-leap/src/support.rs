@@ -149,8 +149,7 @@ fn reduced_weights(r: &[f64; A], p_mask: u64, q_mask: u64) -> Option<[f64; A]> {
 /// Certify the stage `(s, f)` on the supports `(p_mask, q_mask)` and return the square-stage value.
 ///
 /// In a window stage both bounds are lifted through `max(., f)`, which certifies the leap row.
-#[must_use]
-pub fn attempt(
+pub(crate) fn attempt(
     s: &[f64; A],
     f: f64,
     r: &[f64; A],
@@ -181,8 +180,7 @@ pub fn attempt(
 
 /// Return the index `k` of the most negative step `s[k] - s[k-1]`, the first on a tie, or `None`
 /// when `s` never decreases.
-#[must_use]
-pub fn kink_index(s: &[f64; A]) -> Option<usize> {
+pub(crate) fn kink_index(s: &[f64; A]) -> Option<usize> {
     let mut best = 0.0;
     let mut index = None;
     for k in 1..A {
@@ -229,8 +227,7 @@ fn move_holes(mask: u64, near: i64, old: i64, delta: i64) -> u64 {
 ///
 /// Dropper holes use the anchors `old` and `59 - old`, Checker holes `old - 1` and `59 - old`.
 /// The masks stay unchanged when either kink is absent or the kinks agree.
-#[must_use]
-pub fn kink_seed(p: u64, q: u64, old: Option<usize>, new: Option<usize>) -> (u64, u64) {
+pub(crate) fn kink_seed(p: u64, q: u64, old: Option<usize>, new: Option<usize>) -> (u64, u64) {
     match (old, new) {
         (Some(old), Some(new)) if old != new => {
             let (old, delta) = (old as i64, new as i64 - old as i64);
@@ -249,7 +246,7 @@ mod tests {
     use super::*;
 
     #[rustfmt::skip]
-    pub(crate) const S: [f64; A] = [
+    const S: [f64; A] = [
         -0.1284722791674977, -0.12311238213031911, -0.11783938104329245, -0.11229663346467983,
         -0.10668796350604809, -0.10083315349960814, -0.09537470669625181, -0.08977130778795045,
         -0.08339761432886156, -0.07769516443214197, -0.07192164010554408, -0.06616436419483152,
@@ -266,10 +263,10 @@ mod tests {
         0.14894853172567968, 0.15561553076972012, 0.1622855862936653, 0.17099723315775567,
         0.1901691314113193, 0.19683910407608857, 0.20375096839599455, 0.2099309116592808,
     ];
-    pub(crate) const F: f64 = 0.813835962781682;
+    const F: f64 = 0.813835962781682;
     const P: u64 = 1_152_921_500_328_656_895;
     const Q: u64 = 1_152_921_500_588_703_743;
-    pub(crate) const VALUE: f64 = 0.1504047730058836;
+    const VALUE: f64 = 0.1504047730058836;
 
     fn recurrence(s: &[f64; A], f: f64) -> [f64; A] {
         let d = s[0] - f;

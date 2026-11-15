@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use stl_dth::Table as Dth;
 use stl_leap::build::{audit, resweep};
 use stl_leap::kernel::{Children, Residue, Table, kind, sweep};
-use stl_leap::lp::{certify, stage_matrix};
+use stl_leap::lp::certify;
 use stl_leap::open_leap;
 use stl_leap::reach::forward;
 use stl_leap::rules::{ACTIONS as A, Key, N, WIN, profile_index, profiles};
@@ -219,9 +219,7 @@ fn solve(s: &[f64; A], f: f64, window: bool) -> f64 {
 }
 
 fn lp(s: &[f64; A], f: f64, window: bool) -> f64 {
-    certify(&stage_matrix(s, f, window), A + usize::from(window))
-        .expect("a certificate")
-        .value
+    certify(s, f, window).expect("a certificate").value
 }
 
 fn pairs(seed: u64) -> Vec<(usize, usize)> {

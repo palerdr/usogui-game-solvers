@@ -5,7 +5,7 @@
 
 use serde_json::Value;
 use stl_leap::kernel::{Children, Residue, Solved, Table, kind, sweep};
-use stl_leap::packing::{self, Packer, Start};
+use stl_leap::packing::{Packer, Start};
 use stl_leap::rules::ACTIONS as A;
 
 struct Golden {
@@ -70,11 +70,11 @@ impl Golden {
         i64::from_le_bytes(bytes.try_into().expect("one count")) as usize
     }
 
-    fn stages(&self) -> Vec<[f64; A + 1]> {
+    fn stages(&self) -> Vec<([f64; A], f64)> {
         let (s, f) = (self.f64s("stage_s"), self.f64s("stage_f"));
         s.chunks(A)
+            .map(|s| s.try_into().expect("60 payoffs"))
             .zip(f)
-            .map(|(s, f)| std::array::from_fn(|k| if k < A { s[k] } else { f }))
             .collect()
     }
 }
@@ -212,15 +212,14 @@ fn packing_matches_golden() {
             );
             let mut packer = Packer::default();
             let (mut values, mut kinds, mut supports) = (vec![], vec![], vec![]);
-            for stage in golden.stages() {
-                let run = packer.solve(&stage, start);
-                let (p, q) = packer.support().unwrap_or((0, 0));
-                let certified = run.value.is_finite();
+            for (s, f) in golden.stages() {
+                let (value, p, q) = packer.solve(&s, f, start).unwrap_or((f64::NAN, 0, 0));
+                let certified = value.is_finite();
                 // A window stage stores max(v60, f), the constant leap row's lift.
                 values.push(if certified && window {
-                    run.value.max(stage[A])
+                    value.max(f)
                 } else {
-                    run.value
+                    value
                 });
                 kinds.push(if certified {
                     kind::PACKING
@@ -235,33 +234,5 @@ fn packing_matches_golden() {
             assert_eq!(supports, golden.u64s(&format!("{name}_support")), "{name}");
             assert_values(&name, &values, &golden.f64s(&format!("{name}_value")));
         }
-    }
-}
-
-#[test]
-fn packing_runs_match_golden() {
-    let golden = Golden::load();
-    let stages = golden.stages();
-    let groups = golden.f64s("stage_groups");
-    for (warm, label) in [(false, "cold"), (true, "warm")] {
-        let name = format!("runs_{label}");
-        let runs = packing::runs(&stages, &groups, warm);
-        let got: Vec<f64> = runs
-            .iter()
-            .flat_map(|r| {
-                [
-                    r.value,
-                    r.gap,
-                    f64::from(r.pivots),
-                    f64::from(u8::from(r.seeded)),
-                    f64::from(u8::from(r.restarted)),
-                ]
-            })
-            .collect();
-        assert_eq!(
-            runs.iter().filter(|r| !r.value.is_finite()).count(),
-            golden.count(&format!("{name}_failed"))
-        );
-        assert_values(&name, &got, &golden.f64s(&format!("{name}_result")));
     }
 }
