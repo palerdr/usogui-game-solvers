@@ -37,37 +37,37 @@ mod profiles;
 mod sweep;
 mod table;
 
-pub use ladder::{Certificate, Matrix, Mix, Rung, full_matrix, lp, pure, solve_class, support};
-pub use profiles::{Profiles, revival, survives};
+pub use ladder::{Certificate, Matrix, Mix, Rung, full_matrix, lp, pure, support};
+pub use profiles::Profiles;
 pub use sweep::{Values, build, finalize};
 pub use table::{Stage, Table};
 
 /// Largest squandered time a live vial holds.
-pub const MAX_ST: usize = 299;
+pub(crate) const MAX_ST: usize = 299;
 /// Largest accrued toxin time of the domain.
-pub const MAX_TTD: usize = 300;
+pub(crate) const MAX_TTD: usize = 300;
 /// A successful check that grows the Checker's ST to this wins for the Dropper.
-pub const CAPACITY: usize = 300;
+pub(crate) const CAPACITY: usize = 300;
 /// The fixed penalty a failed check adds to the Checker's dose.
-pub const DOSE: usize = 60;
+pub(crate) const DOSE: usize = 60;
 /// Actions are the seconds 1..=LAGS.
 pub const LAGS: usize = 60;
 /// Alive profiles, ids `0..N_ALIVE` in the normative order.
 pub const N_ALIVE: usize = 16_711;
 /// Dead sentinels, id `N_ALIVE + st`.
-pub const N_DEAD: usize = 300;
+pub(crate) const N_DEAD: usize = 300;
 /// All profiles.
 pub const N: usize = N_ALIVE + N_DEAD;
 /// State classes: one per (Checker profile, Dropper profile).
-pub const CLASSES: usize = N * N;
+pub(crate) const CLASSES: usize = N * N;
 /// The child column that means "the mover wins": `V[pd, WIN] == -1`.
-pub const WIN: usize = N;
+pub(crate) const WIN: usize = N;
 /// The potential offset, and stored TTD, of a dead profile.
-pub const DEAD_PHI: usize = 301;
+pub(crate) const DEAD_PHI: usize = 301;
 /// Largest profile potential.
-pub const MAX_PHI: usize = MAX_ST + DEAD_PHI;
+pub(crate) const MAX_PHI: usize = MAX_ST + DEAD_PHI;
 /// Largest class potential.
-pub const MAX_LAYER: usize = 2 * MAX_PHI;
+pub(crate) const MAX_LAYER: usize = 2 * MAX_PHI;
 /// The certificate gate: the largest accepted saddle gap.
 pub const MAX_SADDLE_GAP: f64 = 1e-6;
 /// Classes that `finalize` re-derives from their stored children.

@@ -155,12 +155,10 @@ fn normalized(x: &[f64]) -> Option<Mix> {
 
 /// Rung 3, the linear program: maximize `v` subject to `Mᵀ p ≥ v`, `Σ p = 1`, `p ≥ 0` for the
 /// Dropper's mix `p`, and read the Checker's mix from the row duals. Simplex first, then
-/// interior point; the gate never changes. Returns the narrowest certificate found, certified or
-/// not, and `None` when both solves fail.
+/// interior point; the gate never changes. `None` when neither solve certifies.
 #[must_use]
 pub fn lp(s: &Mix, f: f64) -> Option<Certificate> {
     let m = full_matrix(s, f);
-    let mut best: Option<Certificate> = None;
     for solver in ["simplex", "ipm"] {
         let mut problem = ColProblem::default();
         let rows: Vec<_> = (0..LAGS).map(|_| problem.add_row(0.0..)).collect();
@@ -196,11 +194,8 @@ pub fn lp(s: &Mix, f: f64) -> Option<Certificate> {
         if cert.certified() {
             return Some(cert);
         }
-        if best.as_ref().is_none_or(|b| cert.gap() < b.gap()) {
-            best = Some(cert);
-        }
     }
-    best
+    None
 }
 
 /// The certificate of a strategy pair against the full matrix.
@@ -222,12 +217,11 @@ pub(crate) fn certify(m: &Matrix, drop: &Mix, check: &Mix, rung: Rung) -> Certif
 }
 
 /// The ladder for one class: the first rung that certifies, or `None` when none does.
-#[must_use]
-pub fn solve_class(s: &Mix, f: f64) -> Option<Certificate> {
+pub(crate) fn solve_class(s: &Mix, f: f64) -> Option<Certificate> {
     Some(pure(s, f))
         .filter(Certificate::certified)
         .or_else(|| support(s, f).filter(Certificate::certified))
-        .or_else(|| lp(s, f).filter(Certificate::certified))
+        .or_else(|| lp(s, f))
 }
 
 #[cfg(test)]

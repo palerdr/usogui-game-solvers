@@ -5,21 +5,17 @@ use std::path::Path;
 
 use memmap2::Mmap;
 
-use crate::ladder::certify;
+use crate::ladder::{certify, solve_class};
 use crate::{
-    ANCHORS, Certificate, Error, MAX_SADDLE_GAP, Matrix, Mix, N, Profiles, State, full_matrix,
-    recheck, solve_class, strided,
+    ANCHORS, Certificate, Error, MAX_SADDLE_GAP, Mix, N, Profiles, State, full_matrix, recheck,
+    strided,
 };
 
-/// One certified stage game: Dropper rows, Checker columns, values from the Dropper's side.
+/// The certified solution of one stage game, from the Dropper's side.
 #[derive(Clone, Debug)]
 pub struct Stage {
-    /// The state `(s_c, t_c, s_d, t_d)`.
-    pub state: State,
     /// The stored value `V[pc, pd]`.
     pub value: f64,
-    /// `M[d][c]` for the seconds `d, c` in 1..=60.
-    pub matrix: Matrix,
     /// A certified Dropper mix.
     pub drop: Mix,
     /// A certified Checker mix.
@@ -30,15 +26,8 @@ pub struct Stage {
 
 impl Stage {
     /// Check `cert` against the full matrix of `(s, f)` and the stored `value` against the result.
-    fn certify(
-        state: State,
-        value: f64,
-        s: &Mix,
-        f: f64,
-        cert: &Certificate,
-    ) -> Result<Self, Error> {
-        let matrix = full_matrix(s, f);
-        let c = certify(&matrix, &cert.drop, &cert.check, cert.rung);
+    fn certify(value: f64, s: &Mix, f: f64, cert: &Certificate) -> Result<Self, Error> {
+        let c = certify(&full_matrix(s, f), &cert.drop, &cert.check, cert.rung);
         if !c.certified() {
             return Err(Error::StageGap(c.gap()));
         }
@@ -53,9 +42,7 @@ impl Stage {
             return Err(Error::OutsideCertificate(value, lower, upper));
         }
         Ok(Self {
-            state,
             value,
-            matrix,
             drop,
             check,
             gap: (upper - lower).max(0.0),
@@ -106,8 +93,9 @@ impl Table {
         if !wrong.is_empty() {
             return Err(Error::Anchors(wrong));
         }
+        let values = table.values();
         for c in strided(rechecks) {
-            recheck(c, |i| table.get(i), &table.profiles)?;
+            recheck(c, |i| values[i], &table.profiles)?;
         }
         Ok(table)
     }
@@ -132,11 +120,6 @@ impl Table {
         body
     }
 
-    /// The entry at flat index `i`.
-    fn get(&self, i: usize) -> f64 {
-        self.values()[i]
-    }
-
     /// The certified value of a state, from the current Dropper's side.
     ///
     /// # Errors
@@ -144,7 +127,7 @@ impl Table {
     /// [`Error::OutOfRange`] or [`Error::OffDomain`].
     pub fn value(&self, state: State) -> Result<f64, Error> {
         let (pc, pd) = self.profiles.classes(state)?;
-        Ok(self.get(pc * (N + 1) + pd))
+        Ok(self.values()[pc * (N + 1) + pd])
     }
 
     /// Rebuild a state's stage game from its stored children, solve it, and check the certificate
@@ -155,10 +138,11 @@ impl Table {
     /// A domain error, [`Error::Unsolved`], [`Error::Uncertified`], [`Error::StageGap`] or
     /// [`Error::OutsideCertificate`].
     pub fn stage(&self, state: State) -> Result<Stage, Error> {
+        let values = self.values();
         let (pc, pd) = self.profiles.classes(state)?;
-        let (s, f) = self.profiles.class_values(pc, pd, |i| self.get(i))?;
+        let (s, f) = self.profiles.class_values(pc, pd, |i| values[i])?;
         let cert = solve_class(&s, f).ok_or(Error::Uncertified(pc, pd))?;
-        Stage::certify(state, self.get(pc * (N + 1) + pd), &s, f, &cert)
+        Stage::certify(values[pc * (N + 1) + pd], &s, f, &cert)
     }
 }
 
@@ -168,14 +152,11 @@ mod tests {
     use crate::{LAGS, Rung};
 
     #[test]
-    fn stage_is_the_certified_full_matrix() {
+    fn stage_certifies_the_solved_class() {
         let s: Mix = std::array::from_fn(|k| -0.9 + 1.7 * (k as f64 / 59.0).powi(2));
         let cert = solve_class(&s, 0.3).expect("certified");
-        let stage = Stage::certify([0; 4], cert.value(), &s, 0.3, &cert).expect("certified stage");
-        assert_eq!(
-            (stage.value, stage.matrix),
-            (cert.value(), full_matrix(&s, 0.3))
-        );
+        let stage = Stage::certify(cert.value(), &s, 0.3, &cert).expect("certified stage");
+        assert_eq!(stage.value, cert.value());
         assert!(stage.gap <= MAX_SADDLE_GAP);
         assert!((stage.drop.iter().sum::<f64>() - 1.0).abs() < 1e-12);
         assert!((stage.check.iter().sum::<f64>() - 1.0).abs() < 1e-12);
@@ -193,7 +174,7 @@ mod tests {
             check: first,
         };
         assert!(matches!(
-            Stage::certify([0; 4], 0.0, &s, 0.0, &cert),
+            Stage::certify(0.0, &s, 0.0, &cert),
             Err(Error::StageGap(_))
         ));
     }
@@ -202,7 +183,7 @@ mod tests {
     fn stage_fails_closed_when_the_stored_value_leaves_its_certificate() {
         let cert = solve_class(&[0.25; LAGS], 0.25).expect("pure");
         assert!(matches!(
-            Stage::certify([0; 4], 0.5, &[0.25; LAGS], 0.25, &cert),
+            Stage::certify(0.5, &[0.25; LAGS], 0.25, &cert),
             Err(Error::OutsideCertificate(..))
         ));
     }

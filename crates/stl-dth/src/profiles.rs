@@ -1,21 +1,20 @@
 //! Profiles, their rule tables and the class encoding (DTH.md 4.1-4.3).
 
+use crate::ladder::solve_class;
 use crate::{
     CAPACITY, Certificate, DEAD_PHI, DOSE, Error, LAGS, MAX_PHI, MAX_ST, MAX_TTD, Mix, N, N_ALIVE,
-    N_DEAD, State, WIN, solve_class,
+    N_DEAD, State, WIN,
 };
 
 /// Whether a Checker at `(st, ttd)` can survive a failed check: the dose `st + 60` stays below
 /// capacity and the TTD it leaves stays within 300.
-#[must_use]
-pub fn survives(st: usize, ttd: usize) -> bool {
+fn survives(st: usize, ttd: usize) -> bool {
     st + DOSE <= MAX_ST && st + DOSE + ttd <= MAX_TTD
 }
 
 /// The frozen revival probability `0.95 · (1 − st/240) · 0.75^(ttd/60)` of a failed check, or 0
 /// when the Checker cannot survive it (RULES.md).
-#[must_use]
-pub fn revival(st: usize, ttd: usize) -> f64 {
+fn revival(st: usize, ttd: usize) -> f64 {
     if survives(st, ttd) {
         0.95 * (1.0 - st as f64 / 240.0) * 0.75_f64.powf(ttd as f64 / 60.0)
     } else {
@@ -41,7 +40,7 @@ pub struct Profiles {
     /// `succ[p][lag - 1]`: the profile a successful check of `lag` seconds grows into, or `WIN`.
     pub succ: Vec<[u32; LAGS]>,
     /// `bucket[v]`: the ascending ids with potential `v`, for `v` in `0..=MAX_PHI`.
-    pub bucket: Vec<Vec<usize>>,
+    pub(crate) bucket: Vec<Vec<usize>>,
 }
 
 impl Profiles {
@@ -50,7 +49,7 @@ impl Profiles {
     ///
     /// # Panics
     ///
-    /// When the census or the strictly increasing potential fails: the rules are broken.
+    /// When the census fails: the rules are broken.
     #[must_use]
     pub fn build() -> Self {
         let mut alive_id = vec![None; (MAX_ST + 1) * (MAX_TTD + 1)];
@@ -76,7 +75,7 @@ impl Profiles {
             .map(|p| {
                 std::array::from_fn(|k| match st[p] + k + 1 {
                     grown if grown >= CAPACITY => WIN as u32,
-                    grown if p < N_ALIVE && survives(grown, ttd[p]) => id(grown, ttd[p]),
+                    grown if survives(grown, ttd[p]) => id(grown, ttd[p]),
                     grown => (N_ALIVE + grown) as u32,
                 })
             })
@@ -93,27 +92,7 @@ impl Profiles {
         for (p, &v) in phi.iter().enumerate() {
             bucket[v].push(p);
         }
-        for p in 0..N {
-            for &c in succ[p]
-                .iter()
-                .chain([&fail[p]])
-                .filter(|&&c| c as usize != WIN)
-            {
-                assert!(
-                    phi[c as usize] > phi[p],
-                    "phi strictly increases on every move"
-                );
-            }
-        }
-        let rev = (0..N)
-            .map(|p| {
-                if p < N_ALIVE {
-                    revival(st[p], ttd[p])
-                } else {
-                    0.0
-                }
-            })
-            .collect();
+        let rev = st.iter().zip(&ttd).map(|(&s, &t)| revival(s, t)).collect();
         Self {
             alive_id,
             st,
@@ -132,7 +111,7 @@ impl Profiles {
     ///
     /// [`Error::OutOfRange`] outside ST 0..=299 and TTD 0..=300, and [`Error::OffDomain`] for an
     /// alive TTD in 1..=59.
-    pub fn profile(&self, st: usize, ttd: usize) -> Result<usize, Error> {
+    fn profile(&self, st: usize, ttd: usize) -> Result<usize, Error> {
         if st > MAX_ST || ttd > MAX_TTD {
             Err(Error::OutOfRange(st, ttd))
         } else if !survives(st, ttd) {
@@ -146,7 +125,7 @@ impl Profiles {
     ///
     /// # Errors
     ///
-    /// As [`Profiles::profile`].
+    /// [`Error::OutOfRange`] or [`Error::OffDomain`].
     pub fn classes(&self, [sc, tc, sd, td]: State) -> Result<(usize, usize), Error> {
         Ok((self.profile(sc, tc)?, self.profile(sd, td)?))
     }
@@ -158,7 +137,7 @@ impl Profiles {
     /// # Errors
     ///
     /// [`Error::Unsolved`] when a child is not a finished value.
-    pub fn class_values(
+    pub(crate) fn class_values(
         &self,
         pc: usize,
         pd: usize,
@@ -180,7 +159,7 @@ impl Profiles {
     /// # Errors
     ///
     /// [`Error::Unsolved`] or [`Error::Uncertified`].
-    pub fn solve(
+    pub(crate) fn solve(
         &self,
         pc: usize,
         pd: usize,
