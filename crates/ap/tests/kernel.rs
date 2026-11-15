@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use ap::cards::{FULL_DECK, evaluate, legal_hands, rank_sum};
 use ap::confidence::{entry_box, interval, log_mixture};
 use ap::dp::HandTable;
-use ap::engine::{Bet, GameState, Move, Phase, Team, uniform_upper_policy};
+use ap::engine::{Bet, GameState, Move, Phase, Team};
 use ap::exact::{kernel_counts, round_one};
 use ap::sampler::{
     Counts, ROW_OFFSET, ROWS, bounded, mix64, play_round, round_classes, row, sample_rounds,
@@ -122,12 +122,11 @@ fn record_class(state: &GameState) -> usize {
 /// The class probabilities from the engine's own chance enumeration on `deck`.
 fn engine_kernel(deck: u64, targets: (u8, u8)) -> [f64; 6] {
     let state = engine_round(deck, targets);
-    let uniform = [&uniform_upper_policy as &ap::engine::UpperPolicy<'_>; 2];
     let mut mass = [0.0; 6];
-    for (hands, p) in state.chance_outcomes(uniform).expect("valid policy") {
+    for (hands, p) in state.chance_outcomes().expect("the chance phase") {
         let next = state.apply(Move::Hands(hands)).expect("legal");
         if next.phase == Phase::UpperChance {
-            for (retry, q) in next.chance_outcomes(uniform).expect("valid policy") {
+            for (retry, q) in next.chance_outcomes().expect("the chance phase") {
                 let (class, _) = engine_replay(deck, targets, retry);
                 mass[class] += p * q;
             }

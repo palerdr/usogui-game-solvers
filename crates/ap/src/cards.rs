@@ -60,10 +60,6 @@ pub fn rank_sum(mask: u64) -> u32 {
 pub fn legal_hands(target: u32, deck: u64) -> Vec<u64> {
     let ids: Vec<u32> = cards(deck & FULL_DECK).collect();
     let n = ids.len();
-    let mut hands = Vec::new();
-    if !(6..=64).contains(&target) || n < 5 {
-        return hands;
-    }
     // bounds[start][k] = (least, greatest) sum of k cards from ids[start..].
     let mut bounds = vec![[None::<(u32, u32)>; 6]; n + 1];
     for row in &mut bounds {
@@ -80,6 +76,7 @@ pub fn legal_hands(target: u32, deck: u64) -> Vec<u64> {
             };
         }
     }
+    let mut hands = Vec::new();
     let mut stack = vec![(0, 5, target, 0u64)];
     while let Some((start, needed, remainder, mask)) = stack.pop() {
         if needed == 0 {

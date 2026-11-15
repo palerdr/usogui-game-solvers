@@ -11,8 +11,13 @@ use std::collections::{BTreeSet, HashMap};
 use crate::engine::STARTING_BIOS;
 use crate::{ANTES, NOJ, ROUNDS, W0, W0C, W1, W1C};
 
+/// Sealed BIOS of each player at the start of round 1, after the ante.
+pub const ROOT_CHIPS: (usize, usize) = {
+    let start = (STARTING_BIOS - 1 - ANTES[0]) as usize;
+    (start, start)
+};
 /// Chip counts `0..CHIPS` one side can hold after round 1: at most 46 sealed BIOS.
-pub const CHIPS: usize = 2 * (STARTING_BIOS as usize - 1) - 2 * ANTES[0] as usize + 1;
+pub const CHIPS: usize = 2 * ROOT_CHIPS.0 + 1;
 
 /// The keys of an id map in id order.
 fn by_id<K>(map: HashMap<K, u32>) -> Vec<K> {
@@ -63,7 +68,7 @@ impl BettingDag {
             let (c0, c1, i, checked) = order[node];
             let c = [c0, c1];
             let sealed = [s0 + ante - c0, s1 + ante - c1];
-            let to_call = c[1 - i] - c[i].min(c[1 - i]);
+            let to_call = c[1 - i].saturating_sub(c[i]);
             let mut visit = |key: Key, order: &mut Vec<Key>| {
                 let next = order.len();
                 Target::Node(*index.entry(key).or_insert_with(|| {
@@ -232,8 +237,8 @@ pub fn settle(r: usize, s0: usize, s1: usize, c0: usize, c1: usize, end: End) ->
 /// Per round, the reachable `(sealed 0, sealed 1, first bettor)` after the ante.
 #[must_use]
 pub fn reachable_configurations() -> Vec<BTreeSet<(usize, usize, usize)>> {
-    let start = (STARTING_BIOS - 1 - ANTES[0]) as usize;
-    let mut reach = vec![BTreeSet::from([(start, start, 0), (start, start, 1)])];
+    let (s0, s1) = ROOT_CHIPS;
+    let mut reach = vec![BTreeSet::from([(s0, s1, 0), (s0, s1, 1)])];
     for r in 0..ROUNDS - 1 {
         let mut next = BTreeSet::new();
         for &(s0, s1, first) in &reach[r] {

@@ -22,7 +22,9 @@ use std::time::Instant;
 
 use rayon::prelude::*;
 
-use crate::betting::{BettingDag, CHIPS, End, Settled, reachable_configurations, settle};
+use crate::betting::{
+    BettingDag, CHIPS, End, ROOT_CHIPS, Settled, reachable_configurations, settle,
+};
 use crate::confidence::entry_box;
 use crate::matrix::{MAX_SIZE, Matrix, solve};
 use crate::sampler::Counts;
@@ -30,8 +32,6 @@ use crate::table::{ENTRIES, HIDDEN, KernelCounts, Sequences};
 use crate::{ANTES, NOJ, ROUNDS, TEAM_0_METAL_CARDS, TEAM_1_METAL_CARDS, W0, W0C, W1, W1C, digit};
 
 const WIN: [usize; 4] = [W0, W0C, W1, W1C];
-/// Sealed BIOS of each player at the start of round 1, after the ante.
-pub const ROOT_CHIPS: (usize, usize) = (23, 23);
 
 /// The index of `(code, s0, s1)` in a dense value table.
 #[must_use]
@@ -55,15 +55,11 @@ impl Arena {
         let reach = reachable_configurations();
         let chips: [[Vec<_>; 2]; ROUNDS] = std::array::from_fn(|r| {
             std::array::from_fn(|first| {
-                if r == 0 {
-                    vec![ROOT_CHIPS]
-                } else {
-                    reach[r]
-                        .iter()
-                        .filter(|c| c.2 == first)
-                        .map(|&(s0, s1, _)| (s0, s1))
-                        .collect()
-                }
+                reach[r]
+                    .iter()
+                    .filter(|c| c.2 == first)
+                    .map(|&(s0, s1, _)| (s0, s1))
+                    .collect()
             })
         });
         let mut config = vec![usize::MAX; ROUNDS * CHIPS * CHIPS * 2];
@@ -88,8 +84,7 @@ impl Arena {
     }
 
     /// The DAG of round `r` with sealed BIOS `(s0, s1)` and this first bettor.
-    #[must_use]
-    pub fn dag(&self, r: usize, s0: usize, s1: usize, first: usize) -> &BettingDag {
+    fn dag(&self, r: usize, s0: usize, s1: usize, first: usize) -> &BettingDag {
         &self.dags[self.config[((r * CHIPS + s0) * CHIPS + s1) * 2 + first]]
     }
 }
@@ -149,6 +144,7 @@ pub struct Stage {
 }
 
 /// Stages kept for self-play: every number prefix of length up to `depth`.
+#[derive(Default)]
 pub struct Kept {
     /// The deepest round whose stages are kept.
     pub depth: usize,
@@ -185,10 +181,6 @@ pub struct Chance<'a> {
     /// The next round's values; `None` in the last round.
     pub next: Option<&'a Values>,
 }
-
-/// Reusable scratch for one round value: the `(lo, hi)` value slots of a DAG.
-#[derive(Default)]
-pub struct Scratch(Vec<[f64; 2]>);
 
 /// The extreme of `sum q[c] u[c]` over the box `[q_lo, q_hi]` intersected with the simplex.
 ///
@@ -369,7 +361,7 @@ impl Solver {
                                 *cell = if upper { table.hi[i] } else { table.lo[i] };
                             }
                         }
-                        solve(&m, k, k)
+                        solve(&m, k)
                     };
                     let (low, high) = (game(false), game(true));
                     (lo[j], hi[j]) = (low.low, high.high);
@@ -437,7 +429,7 @@ impl Solver {
                     hi: &self.box_hi[r][base + code],
                     next: next.as_ref().map(|stage| &stage.values),
                 };
-                let mut scratch = Scratch::default();
+                let mut scratch = Vec::new();
                 for &(s0, s1) in &self.arena.chips[r][first] {
                     (lo[s0 * CHIPS + s1], hi[s0 * CHIPS + s1]) =
                         self.arena.round_value(&chance, s0, s1, &mut scratch);
@@ -463,19 +455,19 @@ impl Solver {
 }
 
 impl Arena {
-    /// `(W_lo, W_hi)` of one round after its pair is revealed, at chips `(s0, s1)`; `p` is
-    /// reusable scratch.
+    /// `(W_lo, W_hi)` of one round after its pair is revealed, at chips `(s0, s1)`; `scratch`
+    /// is reused for the `(lo, hi)` value slots of the DAG.
     #[must_use]
     pub fn round_value(
         &self,
         chance: &Chance<'_>,
         s0: usize,
         s1: usize,
-        scratch: &mut Scratch,
+        scratch: &mut Vec<[f64; 2]>,
     ) -> (f64, f64) {
         let dag = self.dag(chance.r, s0, s1, chance.first);
         let [t_lo, t_hi, n_lo, n_hi] = Self::payoffs(chance, dag, s0, s1, scratch);
-        let [b_lo, b_hi] = dag.evaluate(&mut scratch.0);
+        let [b_lo, b_hi] = dag.evaluate(scratch);
         let w_lo = (t_lo * n_lo + (1.0 - t_lo) * b_lo).min(t_hi * n_lo + (1.0 - t_hi) * b_lo);
         let w_hi = (t_lo * n_hi + (1.0 - t_lo) * b_hi).max(t_hi * n_hi + (1.0 - t_hi) * b_hi);
         (w_lo, w_hi)
@@ -488,7 +480,7 @@ impl Arena {
         dag: &BettingDag,
         s0: usize,
         s1: usize,
-        scratch: &mut Scratch,
+        values: &mut Vec<[f64; 2]>,
     ) -> [f64; 4] {
         let (t_lo, t_hi) = (chance.lo[NOJ], chance.hi[NOJ]);
         let q_lo = WIN.map(|c| {
@@ -520,7 +512,6 @@ impl Arena {
                 [next.lo[i], next.hi[i]]
             }
         };
-        let values = &mut scratch.0;
         values.resize(dag.slots(), [0.0; 2]);
         let showdowns = dag.showdowns.iter().map(|&(c0, c1)| {
             let u = WIN.map(|class| continuation(c0, c1, End::Class(class), class));
@@ -561,14 +552,14 @@ impl Arena {
         use_hi: bool,
     ) -> usize {
         let dag = self.dag(chance.r, chips.0, chips.1, chance.first);
-        let mut scratch = Scratch::default();
-        Self::payoffs(chance, dag, chips.0, chips.1, &mut scratch);
-        dag.evaluate(&mut scratch.0);
+        let mut values = Vec::new();
+        Self::payoffs(chance, dag, chips.0, chips.1, &mut values);
+        dag.evaluate(&mut values);
         let index = dag
             .nodes
             .iter()
             .position(|&n| n == node)
             .expect("the engine's betting node is in the DAG");
-        dag.best(index, &scratch.0, usize::from(use_hi))
+        dag.best(index, &values, usize::from(use_hi))
     }
 }

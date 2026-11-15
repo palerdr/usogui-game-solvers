@@ -12,15 +12,13 @@ use crate::{ROUNDS, TEAM_0_METAL_CARDS, TEAM_1_METAL_CARDS, digit};
 
 /// The class digit of a fold, which hides the class.
 pub const HIDDEN: usize = 5;
-/// Number pairs played so far, in order.
-pub type Prefix = Vec<(u8, u8)>;
 
 /// The 14,400 number sequences and the index of every number prefix.
 pub struct Sequences {
     /// Sequence `s = i0 * 120 + i1` pairs the `i0`-th and `i1`-th orders of the two teams.
     pub targets: Vec<[(u8, u8); ROUNDS]>,
     /// Per length `r + 1`, the index of each number prefix in order of first appearance.
-    pub prefix_index: Vec<HashMap<Prefix, usize>>,
+    pub prefix_index: Vec<HashMap<Vec<(u8, u8)>, usize>>,
     /// `prefix_of_sequence[r][s]`: the index of the length-`r + 1` prefix of sequence `s`.
     pub prefix_of_sequence: Vec<Vec<usize>>,
 }

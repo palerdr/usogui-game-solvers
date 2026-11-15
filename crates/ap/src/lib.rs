@@ -103,8 +103,6 @@ pub enum Error {
     Setup(&'static str),
     /// A move or query that the current state does not allow.
     Illegal(&'static str),
-    /// An upper policy that is not a probability distribution over legal hands.
-    Policy(&'static str),
 }
 
 impl fmt::Display for Error {
@@ -113,7 +111,6 @@ impl fmt::Display for Error {
             Self::Card(text) => write!(f, "invalid card {text:?}"),
             Self::Setup(why) => write!(f, "invalid setup: {why}"),
             Self::Illegal(why) => write!(f, "illegal: {why}"),
-            Self::Policy(why) => write!(f, "invalid upper policy: {why}"),
         }
     }
 }
