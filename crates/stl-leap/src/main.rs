@@ -3,8 +3,9 @@
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 use std::process::ExitCode;
+use stl_dth::Table as Dth;
 use stl_leap::rules::Key;
-use stl_leap::{Error, build, dth::Dth, open_leap, reach};
+use stl_leap::{Error, build, open_leap, reach};
 
 #[derive(Parser)]
 #[command(about = "Build, audit and read the certified leap table of Surpassing the Leader")]
@@ -73,7 +74,7 @@ fn run(command: Command) -> Result<String, Error> {
             json(&build::audit(
                 &artifact.join("tables"),
                 &reach,
-                &Dth::open(&dth)?,
+                &Dth::open(&dth, 0)?,
             )?)
         }
         Command::Resweep {
@@ -81,7 +82,7 @@ fn run(command: Command) -> Result<String, Error> {
             output,
             keys,
         } => {
-            let dth = Dth::open(&inputs.dth)?;
+            let dth = Dth::open(&inputs.dth, 0)?;
             let tables = inputs.artifact.join("tables");
             let mut lines = Vec::new();
             for key in keys {

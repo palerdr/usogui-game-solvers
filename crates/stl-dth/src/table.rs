@@ -64,6 +64,7 @@ impl Stage {
 }
 
 /// The finished `V.npy`, memory-mapped read-only.
+#[cfg(target_endian = "little")]
 pub struct Table {
     map: Mmap,
     profiles: Profiles,
@@ -111,10 +112,29 @@ impl Table {
         Ok(table)
     }
 
+    /// The whole table in row-major order: `values()[pc * (N + 1) + pd]`, with column `N` the
+    /// "mover wins" sentinel.
+    ///
+    /// # Panics
+    ///
+    /// Never: a memory map is page-aligned.
+    #[must_use]
+    pub fn values(&self) -> &[f64] {
+        // SAFETY: the map is page-aligned and the body starts at byte 128, so it is f64-aligned;
+        // `open` checked its length; every bit pattern is an f64; the header declares `<f8` and
+        // the target is little-endian.
+        #[allow(unsafe_code)]
+        let (head, body, tail) = unsafe { self.map[Self::DATA..].align_to::<f64>() };
+        assert!(
+            head.is_empty() && tail.is_empty(),
+            "the table body is f64-aligned"
+        );
+        body
+    }
+
     /// The entry at flat index `i`.
     fn get(&self, i: usize) -> f64 {
-        let at = Self::DATA + 8 * i;
-        f64::from_le_bytes(self.map[at..at + 8].try_into().expect("a slice of 8 bytes"))
+        self.values()[i]
     }
 
     /// The certified value of a state, from the current Dropper's side.

@@ -2,7 +2,6 @@
 
 use crate::Error;
 use crate::build::{TOTALS, stage_inputs};
-use crate::dth::Dth;
 use crate::kernel::GAP;
 use crate::lp::{self, Certificate};
 use crate::rules::{ACTIONS as A, Key, WIN, profiles};
@@ -10,6 +9,7 @@ use crate::store::PackedReader;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
+use stl_dth::Table as Dth;
 
 /// The fields of `report.json` that mark a complete, audited build.
 #[derive(Deserialize)]
@@ -71,7 +71,7 @@ pub fn open_leap(artifact: &Path, dth: &Path) -> Result<LeapTable, Error> {
     }
     Ok(LeapTable {
         reader: PackedReader::new(&artifact.join("tables")),
-        dth: Dth::open(dth)?,
+        dth: Dth::open(dth, 0)?,
     })
 }
 

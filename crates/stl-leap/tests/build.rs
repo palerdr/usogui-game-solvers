@@ -3,8 +3,8 @@
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+use stl_dth::Table as Dth;
 use stl_leap::build::{run_full, sweep_key};
-use stl_leap::dth::Dth;
 use stl_leap::kernel::{Children, Residue, Table, kind, sweep};
 use stl_leap::lp::{certify, stage_matrix};
 use stl_leap::reach::Bits;
@@ -117,9 +117,10 @@ fn open_leap_requires_a_complete_checked_result_and_a_valid_dth() {
     file.write_all(&npy_header("(2, 3)")).expect("a header");
     file.write_all(&[0; 48]).expect("a body");
     let artifact = fake_artifact(&dir, COMPLETE);
-    assert!(
-        matches!(open_leap(&artifact, &small), Err(Error::Format { reason, .. }) if reason.contains("is not float64"))
-    );
+    assert!(matches!(
+        open_leap(&artifact, &small),
+        Err(Error::Dth(stl_dth::Error::Format(_)))
+    ));
     std::fs::remove_dir_all(&dir).expect("cleanup");
 }
 
@@ -176,7 +177,7 @@ fn sweep_stores_kernel_and_highs_values() {
         (hard, p.fail[0] as usize, child),
     ]);
     fake_dth(&dir.join("V.npy"), &cells);
-    let dth = Dth::open(&dir.join("V.npy")).expect("a fake DTH");
+    let dth = Dth::open(&dir.join("V.npy"), 0).expect("a fake DTH");
     let mut reach = Bits::new(RESETS);
     reach.set(0, 0);
     reach.set(0, 1);

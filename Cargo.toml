@@ -16,6 +16,7 @@ rayon = "1.12"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.11"
+stl-dth = { path = "crates/stl-dth" }
 
 [workspace.lints.rust]
 missing_docs = "warn"

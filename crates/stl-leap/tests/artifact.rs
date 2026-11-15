@@ -5,8 +5,8 @@
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use stl_dth::Table as Dth;
 use stl_leap::build::{audit, resweep};
-use stl_leap::dth::Dth;
 use stl_leap::kernel::{Children, Residue, Table, kind, sweep};
 use stl_leap::lp::{certify, stage_matrix};
 use stl_leap::open_leap;
@@ -14,12 +14,11 @@ use stl_leap::reach::forward;
 use stl_leap::rules::{ACTIONS as A, Key, N, WIN, profile_index, profiles};
 
 fn artifacts() -> PathBuf {
-    PathBuf::from(std::env::var("HOME").expect("a home directory"))
-        .join("Desktop/projects/stl/artifacts")
+    PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../../artifacts"))
 }
 
 fn dth() -> Dth {
-    Dth::open(&artifacts().join("dth/V.npy")).expect("the DTH table")
+    Dth::open(&artifacts().join("dth/V.npy"), 0).expect("the DTH table")
 }
 
 fn report() -> Value {
@@ -28,7 +27,7 @@ fn report() -> Value {
 }
 
 #[test]
-#[ignore = "reads ~/Desktop/projects/stl/artifacts/leap (74 GB) and artifacts/dth/V.npy"]
+#[ignore = "reads the leap build at artifacts/leap (74 GB) and artifacts/dth/V.npy"]
 fn audit_reproduces_the_report() {
     let reach = forward(3600).expect("reachability");
     let audit = audit(&artifacts().join("leap/tables"), &reach, &dth()).expect("a passing audit");
@@ -59,7 +58,7 @@ fn audit_reproduces_the_report() {
 }
 
 #[test]
-#[ignore = "reads ~/Desktop/projects/stl/artifacts/leap (74 GB) and artifacts/dth/V.npy"]
+#[ignore = "reads the leap build at artifacts/leap (74 GB) and artifacts/dth/V.npy"]
 fn reader_recertifies_the_figure_3_records() {
     let artifacts = artifacts();
     let table = open_leap(&artifacts.join("leap"), &artifacts.join("dth/V.npy"))
@@ -86,7 +85,7 @@ fn reader_recertifies_the_figure_3_records() {
 }
 
 #[test]
-#[ignore = "reads ~/Desktop/projects/stl/artifacts/leap (74 GB) and artifacts/dth/V.npy"]
+#[ignore = "reads the leap build at artifacts/leap (74 GB) and artifacts/dth/V.npy"]
 fn reader_maps_revival_columns_and_certifies_window_stages() {
     let artifacts = artifacts();
     let table = open_leap(&artifacts.join("leap"), &artifacts.join("dth/V.npy"))

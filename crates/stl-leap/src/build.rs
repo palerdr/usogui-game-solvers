@@ -1,7 +1,6 @@
 //! The full build: reachability, the backward sweep of every key, the audit and the report.
 
 use crate::Error;
-use crate::dth::Dth;
 use crate::kernel::{self, Children, Residue, Table, kind};
 use crate::lp;
 use crate::reach::{self, Bits};
@@ -13,6 +12,7 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Instant;
+use stl_dth::Table as Dth;
 
 /// The reachable states of each key type in the complete game.
 pub const TOTALS: [(&str, u64); 3] = [
@@ -408,7 +408,7 @@ pub fn run_full(dth: &Path, output: &Path) -> Result<Value, Error> {
             output.display()
         )));
     }
-    let dth = Dth::open(dth)?;
+    let dth = Dth::open(dth, 0)?;
     if dth.values().chunks(N + 1).any(|row| row[N] != -1.0) {
         return Err(Error::Invalid("DTH table sentinel mismatch".into()));
     }

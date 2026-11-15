@@ -42,7 +42,6 @@
 //! `max` are IEEE `minNum` and `maxNum`, as in the reference.
 
 pub mod build;
-pub mod dth;
 pub mod kernel;
 pub mod lp;
 mod npy;
@@ -78,6 +77,8 @@ pub enum Error {
     Invalid(String),
     /// A stage has no certificate within the saddle gate.
     Uncertified(String),
+    /// The DTH table failed to open or certify.
+    Dth(stl_dth::Error),
 }
 
 impl std::fmt::Display for Error {
@@ -86,6 +87,7 @@ impl std::fmt::Display for Error {
             Self::Io { path, source } => write!(f, "{}: {source}", path.display()),
             Self::Format { path, reason } => write!(f, "{}: {reason}", path.display()),
             Self::Invalid(reason) | Self::Uncertified(reason) => f.write_str(reason),
+            Self::Dth(error) => write!(f, "DTH table: {error}"),
         }
     }
 }
@@ -94,7 +96,14 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Io { source, .. } => Some(source),
+            Self::Dth(error) => Some(error),
             _ => None,
         }
+    }
+}
+
+impl From<stl_dth::Error> for Error {
+    fn from(error: stl_dth::Error) -> Self {
+        Self::Dth(error)
     }
 }
