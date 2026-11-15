@@ -50,8 +50,12 @@ impl Stage {
     }
 }
 
+const _: () = assert!(
+    cfg!(target_endian = "little"),
+    "the table is read in place as little-endian f64"
+);
+
 /// The finished `V.npy`, memory-mapped read-only.
-#[cfg(target_endian = "little")]
 pub struct Table {
     map: Mmap,
     profiles: Profiles,

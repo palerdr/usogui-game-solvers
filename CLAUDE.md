@@ -19,7 +19,8 @@ cargo test --workspace -- --ignored   # needs the real artifacts named in each t
   instantiations, no option nobody passes, no dead code, no commented-out code.
 - Library code returns `Result` with a crate error enum for bad input or bad artifacts. It panics
   only on a broken internal invariant, through `expect("<the invariant>")` or `assert!`.
-- `unsafe` appears only for memory maps, with a `// SAFETY:` comment.
+- `unsafe` appears only to map a file and to view a mapped little-endian array in place, each
+  with a `// SAFETY:` comment.
 - Every public item has a doc comment that says what it computes, in the game's terms.
 - Each numerical port proves parity with the Python reference through a golden fixture in
   `crates/<crate>/tests/data/`. `tests/data/README.md` names the source repository, commit and
