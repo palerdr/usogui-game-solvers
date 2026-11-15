@@ -7,7 +7,9 @@ The golden fixture of the leap stage kernel. Commit `13aa898` of the stl reposit
 `tests/leap_kernel_golden.npz`; the numba kernel at `55e342e` still reproduces it bit for bit.
 It holds seeded stage families and child tables with the values, kinds, failure counts and basis
 masks of the square and window sweeps (rungs only, and the production residue options), of the
-packing LP from the slack and crash bases, and of the warm and cold packing runs.
+packing LP from the slack and crash bases, and of the warm and cold packing runs. No test reads
+the packing-run arrays: the crate dropped the warm-start path, which the build never used. They
+stay so the converted fixture remains a byte copy of the npz.
 
 The `.bin` file concatenates the arrays as raw little-endian bytes, each padded to 8 bytes. The
 `.json` file holds the fixture's `meta` record and, per array, its numpy dtype, shape and byte
