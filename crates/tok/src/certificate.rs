@@ -14,7 +14,7 @@
 use rayon::prelude::*;
 
 use crate::rules::{Action, GameState, Player};
-use crate::table::StrategyTable;
+use crate::table::{MAX_HORIZON, StrategyTable};
 use crate::{Error, HANDS, TOTALS};
 
 type Group = Vec<(GameState, f64)>;
@@ -86,13 +86,19 @@ fn index(action: Action, base: u8) -> usize {
 ///
 /// # Errors
 ///
-/// [`Error::Horizon`] for horizon 0, [`Error::Artifact`] when the table lacks an information
-/// state the walk reaches.
+/// [`Error::Horizon`] for horizon 0, [`Error::Artifact`] when the horizon exceeds the table key
+/// format (longer transcripts would alias shorter keys) or the table lacks an information state
+/// the walk reaches.
 pub fn best_response_value(
     horizon: usize,
     player: Player,
     table: &StrategyTable,
 ) -> Result<f64, Error> {
+    if horizon > MAX_HORIZON {
+        return Err(Error::Artifact(format!(
+            "strategy tables hold at most K = {MAX_HORIZON}"
+        )));
+    }
     let root = GameState::new(horizon)?;
     let mut group = Group::new();
     for c0 in root.legal_actions() {

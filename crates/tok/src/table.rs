@@ -21,6 +21,10 @@ use crate::{Error, HANDS, TOTALS};
 
 const MAGIC: &[u8; 8] = b"TOKTABLE";
 
+/// The largest horizon whose transcripts (at most 2K - 1 announcements) fit the 3-bit length
+/// field of [`pack`].
+pub(crate) const MAX_HORIZON: usize = 4;
+
 /// The key of own beads after a transcript of `len` announcements with base-19 code `code`.
 fn pack(code: u64, len: usize, own_beads: u8) -> u64 {
     (code * 8 + len as u64) * HANDS as u64 + u64::from(own_beads) - 1
@@ -31,8 +35,7 @@ fn pack(code: u64, len: usize, own_beads: u8) -> u64 {
 pub struct StrategyTable {
     /// Bead-pick probabilities, indexed by beads - 1.
     pub(crate) choose: Vec<f64>,
-    /// The [`pack`] key of each row. The format holds at most 7 announcements, which covers
-    /// K <= 4.
+    /// The [`pack`] key of each row, for horizons up to [`MAX_HORIZON`].
     keys: Vec<u64>,
     /// Rows of 10 action probabilities, row-major.
     probs: Vec<f64>,
@@ -136,8 +139,10 @@ fn transcript_codes(layers: &[Layer]) -> Vec<Vec<u64>> {
 
 /// The keys of player p's slots on each of p's layers.
 fn layer_keys(layers: &[Layer], p: usize) -> Result<Vec<(usize, Vec<u64>)>, Error> {
-    if layers.len() > 8 {
-        return Err(Error::Artifact("strategy tables hold at most K = 4".into()));
+    if layers.len() > 2 * MAX_HORIZON {
+        return Err(Error::Artifact(format!(
+            "strategy tables hold at most K = {MAX_HORIZON}"
+        )));
     }
     let codes = transcript_codes(layers);
     let mut out = Vec::new();

@@ -110,6 +110,17 @@ fn announcing_eleven_guarantees_zero() {
 }
 
 #[test]
+fn horizons_past_the_key_format_are_rejected() {
+    // A transcript of 9 announcements would pack onto the key of a 1-announcement one.
+    let layers = tree::build(1).expect("positive horizon");
+    let p1 = hand_table(&layers, 1, false);
+    assert!(matches!(
+        best_response_value(5, Player::P0, &p1),
+        Err(tok::Error::Artifact(_))
+    ));
+}
+
+#[test]
 fn uniform_guessing_leaks_for_p0() {
     let layers = tree::build(1).expect("positive horizon");
     let p0 = hand_table(&layers, 0, false);
