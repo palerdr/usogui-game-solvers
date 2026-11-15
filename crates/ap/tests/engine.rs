@@ -1,8 +1,8 @@
-//! Card arithmetic, the exhaustive evaluator check, and the engine's rules and information
-//! boundary (ports of `test_poker_math.py` and `test_game.py`).
+//! Card arithmetic, the exhaustive evaluator check, and the engine's rules (ports of
+//! `test_poker_math.py` and `test_game.py`).
 
 use ap::cards::{FULL_DECK, evaluate, legal_hands, parse_card, rank_sum};
-use ap::engine::{Bet, GameState, HandPair, Move, Phase, Team, UpperPolicy, uniform_upper_policy};
+use ap::engine::{Bet, GameState, HandPair, Move, Phase, Team};
 use ap::{TEAM_0_METAL_CARDS, TEAM_1_METAL_CARDS};
 
 fn hand(names: &[&str]) -> u64 {
@@ -230,25 +230,16 @@ fn the_root_has_23_sealed_bios_full_air_the_canonical_cards_and_the_full_deck() 
 }
 
 #[test]
-fn numbers_stay_private_until_both_are_chosen() {
+fn each_metal_card_plays_once_and_chance_has_no_actor() {
     let chosen = GameState::canonical()
         .apply(Move::Number(36))
         .expect("legal");
-    assert_eq!(chosen.information(Team::Zero).visible, [Some(36), None]);
-    assert_eq!(chosen.information(Team::One).visible, [None, None]);
     assert_eq!(chosen.actor(), Some(Team::One));
     assert!(chosen.apply(Move::Number(36)).is_err());
     assert_eq!(chosen.lower[0].metal_cards.len(), 4);
     let state = upper_chance();
-    for team in [Team::Zero, Team::One] {
-        assert_eq!(state.information(team).visible, [Some(36), Some(15)]);
-    }
+    assert_eq!(state.round.chosen, [Some(36), Some(15)]);
     assert_eq!((state.actor(), state.legal_moves()), (None, vec![]));
-    let info = betting([Some(hand(&HAND_36)), Some(hand(&HAND_15))]).information(Team::Zero);
-    assert_eq!(
-        (info.opponent_metal_card_count, info.visible),
-        (4, [Some(36), Some(15)])
-    );
 }
 
 #[test]
@@ -289,32 +280,11 @@ fn hands_are_checked_against_the_pre_round_deck_and_remove_their_union() {
 }
 
 #[test]
-fn upper_policies_see_only_their_own_target_until_a_retry() {
+fn chance_is_uniform_over_legal_hands_and_a_double_no_rank_retries() {
     let only = hand(&HAND_15);
-    assert_eq!(
-        uniform_upper_policy(only, 15, None),
-        vec![(Some(only), 1.0)]
-    );
-    assert_eq!(uniform_upper_policy(only, 64, None), vec![(None, 1.0)]);
-    let seen = std::cell::RefCell::new(Vec::new());
-    let p0 = |deck: u64, target: u8, opposing: Option<u8>| {
-        assert_eq!(deck, FULL_DECK);
-        seen.borrow_mut().push((target, opposing));
-        vec![(Some(hand(&HAND_36)), 1.0)]
-    };
-    let p1 = |_: u64, target: u8, opposing: Option<u8>| {
-        seen.borrow_mut().push((target, opposing));
-        vec![(Some(hand(&HAND_15)), 1.0)]
-    };
-    let outcomes = upper_chance()
-        .chance_outcomes([&p0, &p1])
-        .expect("valid policies");
-    assert_eq!(
-        outcomes,
-        vec![([Some(hand(&HAND_36)), Some(hand(&HAND_15))], 1.0)]
-    );
-    assert_eq!(seen.take(), vec![(36, None), (15, None)]);
-
+    let mut state = upper_chance();
+    state.deck = only;
+    assert_eq!(state.chance_outcomes(), Ok(vec![([None, Some(only)], 1.0)]));
     let retry = upper_chance()
         .apply(Move::Hands([None, None]))
         .expect("legal");
@@ -322,19 +292,6 @@ fn upper_policies_see_only_their_own_target_until_a_retry() {
         (retry.phase, retry.round.retry, retry.deck),
         (Phase::UpperChance, true, FULL_DECK)
     );
-    let q0 = |_: u64, target: u8, opposing: Option<u8>| {
-        seen.borrow_mut().push((target, opposing));
-        vec![(None, 0.25), (Some(hand(&HAND_36)), 0.75)]
-    };
-    let q1 = |_: u64, target: u8, opposing: Option<u8>| {
-        seen.borrow_mut().push((target, opposing));
-        vec![(None, 0.40), (Some(hand(&HAND_15)), 0.60)]
-    };
-    let outcomes = retry.chance_outcomes([&q0, &q1]).expect("valid policies");
-    assert_eq!(seen.take(), vec![(36, Some(15)), (15, Some(36))]);
-    assert_eq!(outcomes.len(), 3);
-    assert!(outcomes.iter().all(|(h, _)| *h != [None, None]));
-    assert!((outcomes.iter().map(|(_, p)| p).sum::<f64>() - 1.0).abs() < 1e-12);
 }
 
 #[test]
@@ -343,11 +300,9 @@ fn a_retry_without_resolving_mass_ends_with_no_judgement() {
         &GameState::canonical(),
         &[Move::Number(25), Move::Number(8), Move::Hands([None, None])],
     );
-    let impossible = |_: u64, _: u8, _: Option<u8>| vec![(None, 1.0)];
-    assert_eq!(
-        retry.chance_outcomes([&impossible, &impossible]),
-        Ok(vec![([None, None], 1.0)])
-    );
+    let mut empty = retry.clone();
+    empty.deck = 0;
+    assert_eq!(empty.chance_outcomes(), Ok(vec![([None, None], 1.0)]));
     let settled = retry.apply(Move::Hands([None, None])).expect("legal");
     assert_eq!(
         (settled.phase, settled.deck),
@@ -388,22 +343,6 @@ fn a_retry_without_resolving_mass_ends_with_no_judgement() {
         ),
         (Phase::Terminal, None, Ok([0.0, 0.0]), 5)
     );
-}
-
-#[test]
-fn invalid_upper_policies_are_rejected() {
-    let state = upper_chance();
-    let good = |_: u64, _: u8, _: Option<u8>| vec![(Some(hand(&HAND_15)), 1.0)];
-    let bad: [&UpperPolicy<'_>; 5] = [
-        &|_, _, _| vec![],
-        &|_, _, _| vec![(Some(hand(&HAND_36)), 0.5)],
-        &|_, _, _| vec![(Some(hand(&HAND_36)), 0.0), (None, 1.0)],
-        &|_, _, _| vec![(Some(hand(&HAND_36)), 0.5), (Some(hand(&HAND_36)), 0.5)],
-        &|_, _, _| vec![(Some(hand(&HAND_15)), 1.0)],
-    ];
-    for policy in bad {
-        assert!(state.chance_outcomes([policy, &good]).is_err());
-    }
 }
 
 #[test]

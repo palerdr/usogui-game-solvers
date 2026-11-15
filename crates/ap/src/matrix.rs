@@ -1,6 +1,7 @@
 //! Exact small zero-sum matrix games by Shapley-Snow kernel enumeration.
 //!
-//! Every matrix game (row player maximizes, here at most 5 x 5) has an optimal pair supported
+//! Every square matrix game (row player maximizes, here at most 5 x 5; both teams hold the same
+//! number of metal cards) has an optimal pair supported
 //! on a square submatrix `S` with `1' adj(S) 1 != 0` (Shapley and Snow 1950):
 //! `x = 1' adj(S) / (1' adj(S) 1)` and `y = adj(S) 1 / (1' adj(S) 1)`. The solver walks the
 //! square submatrices, keeps the first pair that is nonnegative and optimal against every pure
@@ -12,7 +13,7 @@
 pub const MAX_SIZE: usize = 5;
 const TOLERANCE: f64 = 1e-9;
 
-/// A square or rectangular payoff matrix for the row player, padded to 5 x 5.
+/// A square payoff matrix for the row player, padded to 5 x 5.
 pub type Matrix = [[f64; MAX_SIZE]; MAX_SIZE];
 
 /// The solution of one matrix game.
@@ -62,45 +63,33 @@ fn determinant(a: &Matrix, k: usize) -> f64 {
 /// The adjugate (transposed cofactor matrix) of the `k x k` matrix `s`.
 fn adjugate(s: &Matrix, k: usize) -> Matrix {
     let mut out = [[0.0; MAX_SIZE]; MAX_SIZE];
-    if k == 1 {
-        out[0][0] = 1.0;
-        return out;
-    }
     for (i, j) in (0..k).flat_map(|i| (0..k).map(move |j| (i, j))) {
-        {
-            let mut minor = [[0.0; MAX_SIZE]; MAX_SIZE];
-            for (r, a) in (0..k).filter(|&a| a != i).enumerate() {
-                for (c, b) in (0..k).filter(|&b| b != j).enumerate() {
-                    minor[r][c] = s[a][b];
-                }
+        let mut minor = [[0.0; MAX_SIZE]; MAX_SIZE];
+        for (r, a) in (0..k).filter(|&a| a != i).enumerate() {
+            for (c, b) in (0..k).filter(|&b| b != j).enumerate() {
+                minor[r][c] = s[a][b];
             }
-            let sign = if (i + j) % 2 == 1 { -1.0 } else { 1.0 };
-            out[j][i] = sign * determinant(&minor, k - 1);
         }
+        let sign = if (i + j) % 2 == 1 { -1.0 } else { 1.0 };
+        out[j][i] = sign * determinant(&minor, k - 1);
     }
     out
 }
 
 /// `(min_j (x' M)_j, max_i (M y)_i)`.
-fn guarantees(
-    m: &Matrix,
-    n: usize,
-    cols: usize,
-    x: &[f64; MAX_SIZE],
-    y: &[f64; MAX_SIZE],
-) -> (f64, f64) {
-    let low = (0..cols)
+fn guarantees(m: &Matrix, n: usize, x: &[f64; MAX_SIZE], y: &[f64; MAX_SIZE]) -> (f64, f64) {
+    let low = (0..n)
         .map(|j| (0..n).fold(0.0, |t, i| t + x[i] * m[i][j]))
         .fold(1e300, f64::min);
     let high = (0..n)
-        .map(|i| (0..cols).fold(0.0, |t, j| t + m[i][j] * y[j]))
+        .map(|i| (0..n).fold(0.0, |t, j| t + m[i][j] * y[j]))
         .fold(-1e300, f64::max);
     (low, high)
 }
 
-/// Solve the `n x cols` game in the top-left block of `m`.
+/// Solve the `n x n` game in the top-left block of `m`.
 #[must_use]
-pub fn solve(m: &Matrix, n: usize, cols: usize) -> Saddle {
+pub fn solve(m: &Matrix, n: usize) -> Saddle {
     let mut best = Saddle {
         x: [0.0; MAX_SIZE],
         y: [0.0; MAX_SIZE],
@@ -110,17 +99,15 @@ pub fn solve(m: &Matrix, n: usize, cols: usize) -> Saddle {
     let mut best_gap = 1e300;
     let scale = m[..n]
         .iter()
-        .flat_map(|row| &row[..cols])
+        .flat_map(|row| &row[..n])
         .fold(1.0, |s: f64, v| s.max(v.abs()));
-    let members = |mask: usize, len: usize| (0..len).filter(move |i| mask >> i & 1 == 1);
+    let members = |mask: usize| (0..n).filter(move |i| mask >> i & 1 == 1);
     for row_mask in 1..1usize << n {
-        let rows: Vec<usize> = members(row_mask, n).collect();
-        let k = rows.len();
-        for col_mask in (1..1usize << cols).filter(|c: &usize| c.count_ones() as usize == k) {
-            let picked: Vec<usize> = members(col_mask, cols).collect();
+        let k = row_mask.count_ones() as usize;
+        for col_mask in (1..1usize << n).filter(|c: &usize| c.count_ones() as usize == k) {
             let mut sub = [[0.0; MAX_SIZE]; MAX_SIZE];
-            for (a, &i) in rows.iter().enumerate() {
-                for (b, &j) in picked.iter().enumerate() {
+            for (a, i) in members(row_mask).enumerate() {
+                for (b, j) in members(col_mask).enumerate() {
                     sub[a][b] = m[i][j];
                 }
             }
@@ -133,20 +120,24 @@ pub fn solve(m: &Matrix, n: usize, cols: usize) -> Saddle {
                 continue;
             }
             let (mut x, mut y) = ([0.0; MAX_SIZE], [0.0; MAX_SIZE]);
-            let feasible = (0..k).all(|b| {
-                let xv = (0..k).fold(0.0, |t, a| t + adj[a][b]) / denominator;
-                let yv = (0..k).fold(0.0, |t, a| t + adj[b][a]) / denominator;
-                x[rows[b]] = xv.max(0.0);
-                y[picked[b]] = yv.max(0.0);
-                xv >= -TOLERANCE && yv >= -TOLERANCE
-            });
+            let feasible =
+                members(row_mask)
+                    .zip(members(col_mask))
+                    .enumerate()
+                    .all(|(b, (i, j))| {
+                        let xv = (0..k).fold(0.0, |t, a| t + adj[a][b]) / denominator;
+                        let yv = (0..k).fold(0.0, |t, a| t + adj[b][a]) / denominator;
+                        x[i] = xv.max(0.0);
+                        y[j] = yv.max(0.0);
+                        xv >= -TOLERANCE && yv >= -TOLERANCE
+                    });
             if !feasible {
                 continue;
             }
-            let (sx, sy) = (x[..n].iter().sum::<f64>(), y[..cols].iter().sum::<f64>());
+            let (sx, sy) = (x[..n].iter().sum::<f64>(), y[..n].iter().sum::<f64>());
             x[..n].iter_mut().for_each(|v| *v /= sx);
-            y[..cols].iter_mut().for_each(|v| *v /= sy);
-            let (low, high) = guarantees(m, n, cols, &x, &y);
+            y[..n].iter_mut().for_each(|v| *v /= sy);
+            let (low, high) = guarantees(m, n, &x, &y);
             if high - low < best_gap {
                 best_gap = high - low;
                 best = Saddle { x, y, low, high };

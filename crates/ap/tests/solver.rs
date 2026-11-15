@@ -6,11 +6,11 @@
 use std::collections::HashMap;
 
 use ap::allocate::allocation;
-use ap::betting::{BettingDag, CHIPS, End, Settled, reachable_configurations, settle};
+use ap::betting::{BettingDag, CHIPS, End, ROOT_CHIPS, Settled, reachable_configurations, settle};
 use ap::cards::{FULL_DECK, evaluate, legal_hands};
 use ap::engine::{Bet, Betting, GameState, HandPair, Lower, Move, Phase, Record, Round, Team};
 use ap::matrix::{MAX_SIZE, Matrix, solve};
-use ap::robust::{Arena, Chance, Kept, Mixes, Scratch, Solver, Stage, Values, at};
+use ap::robust::{Arena, Chance, Kept, Mixes, Solver, Stage, Values, at};
 use ap::sampler::{Counts, next64, sample_sequence, stream};
 use ap::selfplay::{Policy, play_game, record_digit, slot_action};
 use ap::table::{HIDDEN, KernelCounts};
@@ -59,67 +59,65 @@ fn round_one() -> Vec<((u8, u8), Counts)> {
         .collect()
 }
 
-fn check_game(m: &Matrix, n: usize, cols: usize) {
-    let s = solve(m, n, cols);
+fn check_game(m: &Matrix, n: usize) {
+    let s = solve(m, n);
     let scale = m[..n]
         .iter()
-        .flat_map(|r| &r[..cols])
+        .flat_map(|r| &r[..n])
         .fold(1.0_f64, |a, v| a.max(v.abs()));
     // By weak duality low <= value <= high, so a small gap brackets the value.
     assert!(s.high - s.low <= 1e-9 * scale, "{m:?}");
     assert!(
         (s.x[..n].iter().sum::<f64>() - 1.0).abs() < 1e-12
-            && (s.y[..cols].iter().sum::<f64>() - 1.0).abs() < 1e-12
+            && (s.y[..n].iter().sum::<f64>() - 1.0).abs() < 1e-12
     );
     assert!(s.x.iter().chain(&s.y).all(|&p| p >= 0.0));
-    let low = (0..cols)
+    let low = (0..n)
         .map(|j| (0..n).map(|i| s.x[i] * m[i][j]).sum::<f64>())
         .fold(f64::INFINITY, f64::min);
     let high = (0..n)
-        .map(|i| (0..cols).map(|j| m[i][j] * s.y[j]).sum::<f64>())
+        .map(|i| (0..n).map(|j| m[i][j] * s.y[j]).sum::<f64>())
         .fold(f64::NEG_INFINITY, f64::max);
     assert!((low - s.low).abs() <= 1e-12 * scale && (high - s.high).abs() <= 1e-12 * scale);
 }
 
 #[test]
-fn matrix_games_of_every_shape_close_their_saddle_gap() {
+fn matrix_games_of_every_size_close_their_saddle_gap() {
     let mut rng = Rng::new(1);
     for _ in 0..300 {
-        let (n, cols) = (1 + rng.below(5), 1 + rng.below(5));
+        let n = 1 + rng.below(5);
         let scale = [1.0, 0.01, 100.0][rng.below(3)];
         let mut m = [[0.0; MAX_SIZE]; MAX_SIZE];
         m.iter_mut().take(n).for_each(|row| {
             row.iter_mut()
-                .take(cols)
+                .take(n)
                 .for_each(|v| *v = rng.between(-2.0, 2.0) * scale);
         });
-        check_game(&m, n, cols);
+        check_game(&m, n);
         m.iter_mut().take(n).for_each(|row| {
             row.iter_mut()
-                .take(cols)
+                .take(n)
                 .for_each(|v| *v = rng.below(3) as f64 - 1.0);
         });
-        check_game(&m, n, cols);
+        check_game(&m, n);
     }
     let pad = |rows: &[&[f64]]| -> Matrix {
         std::array::from_fn(|i| {
             std::array::from_fn(|j| rows.get(i).and_then(|r| r.get(j)).copied().unwrap_or(0.0))
         })
     };
-    check_game(&pad(&[]), 5, 5);
-    check_game(&pad(&[&[0.25; 4], &[0.25; 4], &[0.25; 4]]), 3, 4);
+    check_game(&pad(&[]), 5);
+    check_game(&pad(&[&[0.25; 4][..]; 4]), 4);
     check_game(
         &pad(&[&[0.0, 1.0, -1.0], &[-1.0, 0.0, 1.0], &[1.0, -1.0, 0.0]]),
         3,
-        3,
     );
-    check_game(&pad(&[&[0.3, 0.3], &[0.3, 0.3], &[0.1, 0.9]]), 3, 2);
-    let pennies = solve(&pad(&[&[1.0, -1.0], &[-1.0, 1.0]]), 2, 2);
+    let pennies = solve(&pad(&[&[1.0, -1.0], &[-1.0, 1.0]]), 2);
     assert_eq!(
         (&pennies.x[..2], &pennies.y[..2], pennies.low, pennies.high),
         (&[0.5; 2][..], &[0.5; 2][..], 0.0, 0.0)
     );
-    let saddle = solve(&pad(&[&[3.0, 5.0], &[1.0, 2.0]]), 2, 2);
+    let saddle = solve(&pad(&[&[3.0, 5.0], &[1.0, 2.0]]), 2);
     assert_eq!(
         (&saddle.x[..2], &saddle.y[..2], saddle.low, saddle.high),
         (&[1.0, 0.0][..], &[1.0, 0.0][..], 3.0, 3.0)
@@ -543,7 +541,7 @@ fn the_round_value_matches_a_vertex_enumeration_reference() {
                 hi: &box_hi,
                 next: (r < 4).then_some(&next),
             };
-            let (w_lo, w_hi) = arena.round_value(&chance, s0, s1, &mut Scratch::default());
+            let (w_lo, w_hi) = arena.round_value(&chance, s0, s1, &mut Vec::new());
             let (e_lo, e_hi) = w_reference(&chance, s0, s1);
             assert!(
                 (w_lo - e_lo).abs() < 1e-9 && (w_hi - e_hi).abs() < 1e-9,
@@ -574,14 +572,7 @@ fn subtree(solver: &mut Solver, rng: &mut Rng, point: bool) -> Stage {
             }
         }
     }
-    solver.v(
-        &prefix,
-        3,
-        &mut Kept {
-            depth: 0,
-            stages: HashMap::new(),
-        },
-    )
+    solver.v(&prefix, 3, &mut Kept::default())
 }
 
 #[test]
@@ -646,14 +637,7 @@ fn a_sampled_subtree_matches_the_python_solve() {
         table.add(&solver.sequences, s, &counts);
     }
     solver.set_boxes(&table, data["delta"].as_f64().expect("delta"));
-    let stage = solver.v(
-        &pairs(&data["prefix"]),
-        3,
-        &mut Kept {
-            depth: 0,
-            stages: HashMap::new(),
-        },
-    );
+    let stage = solver.v(&pairs(&data["prefix"]), 3, &mut Kept::default());
     // Boxes differ from the reference by lgamma ulps and summation order (below 1e-13).
     let close = |a: f64, b: &Value| (a - b.as_f64().expect("float")).abs() < 1e-9;
     for v in data["v3"].as_array().expect("values") {
@@ -688,14 +672,7 @@ fn a_sampled_subtree_matches_the_python_solve() {
             );
         }
     }
-    let (w, _) = solver.w(
-        &pairs(&data["w4_prefix"]),
-        4,
-        &mut Kept {
-            depth: 0,
-            stages: HashMap::new(),
-        },
-    );
+    let (w, _) = solver.w(&pairs(&data["w4_prefix"]), 4, &mut Kept::default());
     for v in data["w4"].as_array().expect("values") {
         let i = at(
             int(&v[0]) as usize,
@@ -786,7 +763,7 @@ fn self_play_runs_whole_games_through_the_engine_reproducibly() {
         },
         rows: ap::TEAM_0_METAL_CARDS.to_vec(),
         cols: ap::TEAM_1_METAL_CARDS.to_vec(),
-        chips: vec![ap::robust::ROOT_CHIPS],
+        chips: vec![ROOT_CHIPS],
         mixes: vec![all(0.2)],
         gap: 0.0,
     };

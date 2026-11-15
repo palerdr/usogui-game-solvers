@@ -7,7 +7,6 @@
 //! reference while a mixed one draws differently from the `NumPy` generator.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use rayon::prelude::*;
@@ -89,30 +88,14 @@ impl<'a> Policy<'a> {
     /// The round-4 stage after a number prefix of three rounds.
     fn subtree(&self, prefix: &[(u8, u8)]) -> Rc<Stage> {
         cached(&self.subtrees, prefix, || {
-            self.solver.v(
-                prefix,
-                3,
-                &mut Kept {
-                    depth: 0,
-                    stages: HashMap::new(),
-                },
-            )
+            self.solver.v(prefix, 3, &mut Kept::default())
         })
     }
 
     /// The round-5 values after a number prefix of four rounds.
     fn round_five(&self, prefix: &[(u8, u8)]) -> Rc<Values> {
         cached(&self.round_five, prefix, || {
-            self.solver
-                .v(
-                    prefix,
-                    4,
-                    &mut Kept {
-                        depth: 0,
-                        stages: HashMap::new(),
-                    },
-                )
-                .values
+            self.solver.v(prefix, 4, &mut Kept::default()).values
         })
     }
 
@@ -171,9 +154,10 @@ impl<'a> Policy<'a> {
             (state.lower[0].sealed_bios + c0 - ante) as usize,
             (state.lower[1].sealed_bios + c1 - ante) as usize,
         );
-        let [Some(a), Some(b)] = state.round.chosen else {
-            unreachable!("betting follows both choices")
-        };
+        let [a, b] = state
+            .round
+            .chosen
+            .map(|card| card.expect("betting follows both choices"));
         prefix.push((a, b));
         let entry = self.solver.sequences.prefix_index[r][&prefix] * 6usize.pow(r as u32) + code;
         let (holder_stage, holder_values);
@@ -239,9 +223,10 @@ pub fn play_game(policies: [&Policy<'_>; 2], seed: u64, index: u64) -> (f64, Vec
             Phase::NumberChoice0 => Move::Number(policies[0].number(&state, &mut rng)),
             Phase::NumberChoice1 => Move::Number(policies[1].number(&state, &mut rng)),
             Phase::UpperChance => {
-                let [Some(a), Some(b)] = state.round.chosen else {
-                    unreachable!("chance follows both choices")
-                };
+                let [a, b] = state
+                    .round
+                    .chosen
+                    .map(|card| card.expect("chance follows both choices"));
                 let (_, _, hands) =
                     play_round(state.deck, (a, b), &mut stream(seed, 0, index * 16 + draw));
                 draw += 1;
@@ -256,11 +241,7 @@ pub fn play_game(policies: [&Policy<'_>; 2], seed: u64, index: u64) -> (f64, Vec
             .apply(mv)
             .expect("self-play moves are legal engine moves");
     }
-    let played = state
-        .history
-        .iter()
-        .map(|record| (record.chosen[0], record.chosen[1]))
-        .collect();
+    let (_, played, _) = public(&state);
     (
         state.returns().expect("the game ended")[Team::Zero.index()],
         played,

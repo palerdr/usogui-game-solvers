@@ -1,4 +1,4 @@
-//! The Air Poker engine: immutable states, legal moves, upper chance and settlement.
+//! The Air Poker engine: immutable states, legal moves, uniform upper chance and settlement.
 //!
 //! The engine is the oracle. The kernel sampler, the betting DAG and self-play are all checked
 //! against its transitions. A transition returns a new state and never changes the old one.
@@ -9,10 +9,10 @@ use crate::{ANTES, Error, ROUNDS, TEAM_0_METAL_CARDS, TEAM_1_METAL_CARDS};
 /// BIOS each lower player receives.
 pub const STARTING_BIOS: u32 = 25;
 /// Seconds of air in one BIOS.
-pub const BIO_SECONDS: u32 = 300;
+const BIO_SECONDS: u32 = 300;
 
 /// One lower player and its allied upper player.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Team {
     /// Baku's side.
     Zero,
@@ -41,7 +41,7 @@ impl Team {
 }
 
 /// The stage of the game, which fixes who acts.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
     /// Team 0 picks a metal card in secret.
     NumberChoice0,
@@ -56,7 +56,7 @@ pub enum Phase {
 }
 
 /// A betting action of the acting lower player.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Bet {
     /// Pass with nothing to call.
     Check,
@@ -72,7 +72,7 @@ pub enum Bet {
 pub type HandPair = [Option<u64>; 2];
 
 /// Any move: a lower player's metal card or bet, or an upper chance outcome.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Move {
     /// A metal card chosen at a number-choice phase.
     Number(u8),
@@ -83,7 +83,7 @@ pub enum Move {
 }
 
 /// A lower player's resources.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Lower {
     /// BIOS that can still be wagered.
     pub sealed_bios: u32,
@@ -94,7 +94,7 @@ pub struct Lower {
 }
 
 /// The public state of the current betting street.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Betting {
     /// The team that bets first this round.
     pub first: Team,
@@ -109,7 +109,7 @@ pub struct Betting {
 }
 
 /// The current round: choices, hidden hands, retry flag and betting.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Round {
     /// The chosen metal cards, `None` until chosen.
     pub chosen: [Option<u8>; 2],
@@ -122,7 +122,7 @@ pub struct Round {
 }
 
 /// The public facts of a completed round.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Record {
     /// Both metal cards.
     pub chosen: [u8; 2],
@@ -137,7 +137,7 @@ pub struct Record {
 }
 
 /// The complete hidden-truth state.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GameState {
     /// The stage of the game.
     pub phase: Phase,
@@ -151,46 +151,6 @@ pub struct GameState {
     pub history: Vec<Record>,
     /// The winner once terminal; `None` is a tie.
     pub winner: Option<Team>,
-}
-
-/// Exactly what one lower player may know at a decision.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Information {
-    /// The observing team.
-    pub team: Team,
-    /// The stage of the game.
-    pub phase: Phase,
-    /// The observer's own resources.
-    pub own: Lower,
-    /// The opponent's sealed BIOS.
-    pub opponent_sealed_bios: u32,
-    /// The number of metal cards the opponent has left.
-    pub opponent_metal_card_count: usize,
-    /// The observer's own choice, and both choices once both are made.
-    pub visible: [Option<u8>; 2],
-    /// The betting street during the betting phase.
-    pub betting: Option<Betting>,
-    /// Completed rounds.
-    pub history: Vec<Record>,
-}
-
-/// A fixed upper policy: hand probabilities from the deck, its own target and, on a retry only,
-/// the opposing target.
-pub type UpperPolicy<'a> = dyn Fn(u64, u8, Option<u8>) -> Vec<(Option<u64>, f64)> + 'a;
-
-/// The baseline upper policy: uniform over the legal hands of the deck, or no-rank if none.
-#[must_use]
-pub fn uniform_upper_policy(
-    deck: u64,
-    target: u8,
-    _opposing: Option<u8>,
-) -> Vec<(Option<u64>, f64)> {
-    let hands = legal_hands(u32::from(target), deck);
-    if hands.is_empty() {
-        return vec![(None, 1.0)];
-    }
-    let p = 1.0 / hands.len() as f64;
-    hands.into_iter().map(|hand| (Some(hand), p)).collect()
 }
 
 impl GameState {
@@ -285,81 +245,38 @@ impl GameState {
         }
     }
 
-    /// Both upper hands with their probabilities under the two policies.
+    /// Both upper hands with their probabilities: each upper player draws uniformly from the
+    /// legal hands of the deck for its metal card, or holds a no-rank hand when there are none.
     ///
-    /// Before a retry the policies factor independently. On a retry the double no-rank is
-    /// excluded and the rest renormalized; with no resolving mass the only outcome is the double
-    /// no-rank, which settles the round with no judgement.
+    /// A uniform draw gives a double no-rank only when both targets are impossible, so a retry
+    /// has that single outcome again, which settles the round with no judgement.
     ///
     /// # Errors
-    /// [`Error::Illegal`] outside the chance phase; [`Error::Policy`] if a policy returns
-    /// something other than a distribution over legal hands.
-    pub fn chance_outcomes(
-        &self,
-        policies: [&UpperPolicy<'_>; 2],
-    ) -> Result<Vec<(HandPair, f64)>, Error> {
+    /// [`Error::Illegal`] outside the chance phase.
+    pub fn chance_outcomes(&self) -> Result<Vec<(HandPair, f64)>, Error> {
         let (Phase::UpperChance, [Some(m0), Some(m1)]) = (self.phase, self.round.chosen) else {
             return Err(Error::Illegal(
                 "chance outcomes exist only at the upper chance phase",
             ));
         };
-        let retry = self.round.retry;
-        let o0 = self.policy_outcomes(policies[0], m0, retry.then_some(m1))?;
-        let o1 = self.policy_outcomes(policies[1], m1, retry.then_some(m0))?;
-        let none = |o: &[(Option<u64>, f64)]| {
-            o.iter()
-                .filter(|(hand, _)| hand.is_none())
-                .map(|(_, p)| p)
-                .sum::<f64>()
+        let uniform = |target: u8| -> Vec<(Option<u64>, f64)> {
+            let hands = legal_hands(u32::from(target), self.deck);
+            if hands.is_empty() {
+                return vec![(None, 1.0)];
+            }
+            let p = 1.0 / hands.len() as f64;
+            hands.into_iter().map(|hand| (Some(hand), p)).collect()
         };
-        let resolving = if retry {
-            1.0 - none(&o0) * none(&o1)
-        } else {
-            1.0
-        };
-        if resolving <= 1e-12 {
-            return Ok(vec![([None, None], 1.0)]);
-        }
-        Ok(o0
-            .iter()
-            .flat_map(|&(h0, p0)| {
-                o1.iter()
-                    .filter(move |&&(h1, _)| !(retry && h0.is_none() && h1.is_none()))
-                    .map(move |&(h1, p1)| ([h0, h1], p0 * p1 / resolving))
-            })
+        let o1 = uniform(m1);
+        Ok(uniform(m0)
+            .into_iter()
+            .flat_map(|(h0, p0)| o1.iter().map(move |&(h1, p1)| ([h0, h1], p0 * p1)))
             .collect())
-    }
-
-    fn policy_outcomes(
-        &self,
-        policy: &UpperPolicy<'_>,
-        target: u8,
-        opposing: Option<u8>,
-    ) -> Result<Vec<(Option<u64>, f64)>, Error> {
-        let outcomes = policy(self.deck, target, opposing);
-        if outcomes.is_empty() {
-            return Err(Error::Policy("a policy returns at least one outcome"));
-        }
-        for (k, &(hand, p)) in outcomes.iter().enumerate() {
-            validate_hand(hand, self.deck, target)
-                .map_err(|_| Error::Policy("a policy returns legal hands"))?;
-            if outcomes[..k].iter().any(|&(other, _)| other == hand) {
-                return Err(Error::Policy("a policy returns each hand once"));
-            }
-            if !p.is_finite() || p <= 0.0 {
-                return Err(Error::Policy("probabilities are finite and positive"));
-            }
-        }
-        if (outcomes.iter().map(|(_, p)| p).sum::<f64>() - 1.0).abs() > 1e-9 {
-            return Err(Error::Policy("probabilities sum to one"));
-        }
-        Ok(outcomes)
     }
 
     /// The state after one legal move.
     ///
-    /// At the chance phase the hands are checked for card count, sum and availability; policy
-    /// support is the caller's business.
+    /// At the chance phase the hands are checked for card count, sum and availability.
     ///
     /// # Errors
     /// [`Error::Illegal`] for a move the state does not allow.
@@ -399,8 +316,12 @@ impl GameState {
             None if m0 < m1 => Team::Zero,
             None => Team::One,
         };
-        let ante = ANTES[self.history.len()];
         let mut next = self.clone();
+        if hands == [None, None] && !self.round.retry {
+            next.round.retry = true;
+            return Ok(next);
+        }
+        let ante = ANTES[self.history.len()];
         next.round.betting = Some(Betting {
             first,
             actor: first,
@@ -408,18 +329,12 @@ impl GameState {
             checked: false,
             actions: Vec::new(),
         });
+        next.round.hands = Some(hands);
         if hands == [None, None] {
-            if !self.round.retry {
-                next.round.betting = None;
-                next.round.retry = true;
-                return Ok(next);
-            }
-            // A double no-rank on a retry comes only without resolving mass: no judgement.
-            next.round.hands = Some(hands);
+            // A double no-rank on a retry: the round ends with no judgement.
             return Ok(next.settle(None, false));
         }
         next.deck &= !(hands[0].unwrap_or(0) | hands[1].unwrap_or(0));
-        next.round.hands = Some(hands);
         next.phase = Phase::Betting;
         Ok(next)
     }
@@ -528,28 +443,6 @@ impl GameState {
         self.lower.iter_mut().for_each(|p| p.sealed_bios -= ante);
         self.phase = Phase::NumberChoice0;
         self
-    }
-
-    /// Project the hidden truth onto what `team` may know.
-    #[must_use]
-    pub fn information(&self, team: Team) -> Information {
-        let opponent = &self.lower[team.other().index()];
-        let revealed = !matches!(self.phase, Phase::NumberChoice0 | Phase::NumberChoice1);
-        let chosen = self.round.chosen;
-        Information {
-            team,
-            phase: self.phase,
-            own: self.lower[team.index()].clone(),
-            opponent_sealed_bios: opponent.sealed_bios,
-            opponent_metal_card_count: opponent.metal_cards.len(),
-            visible: [0, 1].map(|i| chosen[i].filter(|_| revealed || i == team.index())),
-            betting: self
-                .round
-                .betting
-                .clone()
-                .filter(|_| self.phase == Phase::Betting),
-            history: self.history.clone(),
-        }
     }
 
     /// Zero-sum returns `(1, -1)`, `(-1, 1)` or `(0, 0)` of a terminal state.

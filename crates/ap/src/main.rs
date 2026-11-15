@@ -85,7 +85,7 @@ fn main() -> Outcome {
             Ok(())
         }
         Command::Allocate { config, out } => {
-            let mut result = Ok(());
+            let mut written = Ok(());
             allocate::run(&config, &round_one(), |report| {
                 let it = report
                     .iterations
@@ -103,11 +103,11 @@ fn main() -> Outcome {
                     it.sequences_reached,
                     it.sample_seconds
                 );
-                result = result
-                    .clone()
-                    .and_then(|()| write(&out, report).map_err(|e| e.to_string()));
+                if written.is_ok() {
+                    written = write(&out, report);
+                }
             });
-            Ok(result?)
+            written
         }
     }
 }
