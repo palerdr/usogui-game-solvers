@@ -6,6 +6,13 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+clap.workspace = true
+# `f64::ln_gamma` is unstable in std. libm's fdlibm lgamma stays within 3 ulp of
+# the Apple libm lgamma that the Python reference calls through numba.
+libm = "0.2.16"
+rayon.workspace = true
+serde.workspace = true
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 
 [lints]
 workspace = true
