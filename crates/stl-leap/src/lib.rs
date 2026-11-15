@@ -19,7 +19,7 @@
 //! 17,011 profiles. Each state is a zero-sum 60-by-60 matrix game (61 rows in a leap window)
 //! whose entries are the negated values of the child states one half-round later. Children past
 //! clock 3600 can no longer meet the leap second, so their values come from the leap-free DTH
-//! table, which [`dth`] reads. The table value is from the Dropper's side: +1 for a Dropper win.
+//! table, which [`stl_dth`] reads. The table value is from the Dropper's side: +1 for a Dropper win.
 //!
 //! # The solve
 //!
@@ -27,12 +27,12 @@
 //! keys in decreasing clock order, so every child is already stored. For each state the stage
 //! kernel in [`kernel`] tries, in order: pure-action bounds; the equalizer that the Toeplitz
 //! structure of the matrix gives in closed form; and for the residue, the support of the previous
-//! residue stage moved with its payoff kink ([`support`]), then a packing LP that starts from the
-//! same recurrence ([`packing`]). A candidate counts only when both saddle bounds, checked against
-//! every row and column, lie within `1e-6`. Stages that all rungs miss go to `HiGHS` ([`lp`]). The
+//! residue stage moved with its payoff kink, then a packing LP that starts from the same
+//! recurrence ([`packing`]). A candidate counts only when both saddle bounds, checked against every
+//! row and column, lie within `1e-6`. Stages that all rungs miss go to `HiGHS` ([`lp`]). The
 //! [`store`] packs each finished key into a bitmap of reachable states and their values, and the
 //! audit re-derives sampled stages with an independent LP before the report is written.
-//! [`table`] opens a finished artifact and re-certifies single stages.
+//! [`open_leap`] opens a finished artifact and [`LeapTable::stage`] re-certifies single stages.
 //!
 //! The kernel's certificates assume round-to-nearest binary64 arithmetic with gradual underflow.
 //! Rust code runs in that default floating-point environment (changing it is undefined behavior),
@@ -49,12 +49,12 @@ pub mod packing;
 pub mod reach;
 pub mod rules;
 pub mod store;
-pub mod support;
-pub mod table;
+mod support;
+mod table;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-pub use table::{LeapTable, open_leap};
+pub use table::{LeapTable, Stage, open_leap};
 
 /// A failure to build, audit or read the leap table.
 #[derive(Debug)]
@@ -100,6 +100,12 @@ impl std::error::Error for Error {
             _ => None,
         }
     }
+}
+
+/// Wrap an operating-system error on `path`.
+fn io(path: &Path) -> impl FnOnce(std::io::Error) -> Error {
+    let path = path.to_path_buf();
+    move |source| Error::Io { path, source }
 }
 
 impl From<stl_dth::Error> for Error {

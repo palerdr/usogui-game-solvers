@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use stl_dth::Table as Dth;
 use stl_leap::build::{run_full, sweep_key};
 use stl_leap::kernel::{Children, Residue, Table, kind, sweep};
-use stl_leap::lp::{certify, stage_matrix};
+use stl_leap::lp::certify;
 use stl_leap::reach::Bits;
 use stl_leap::rules::{ACTIONS as A, Key, N, RESETS, WIN, profile_index, profiles};
 use stl_leap::store::{PackedReader, Store};
@@ -191,9 +191,7 @@ fn sweep_stores_kernel_and_highs_values() {
         let row = &dth.values()[dropper * (N + 1)..][..=N];
         let s: [f64; A] = std::array::from_fn(|k| -row[p.succ[0][k] as usize]);
         let f = p.rev[0] * -row[p.fail[0] as usize] + (1.0 - p.rev[0]);
-        let expected = certify(&stage_matrix(&s, f, true), A + 1)
-            .expect("a certificate")
-            .value;
+        let expected = certify(&s, f, true).expect("a certificate").value;
         let stored = reader.get(Key::Rev(3600), 0, col).expect("a stored value");
         assert!(
             (stored - expected).abs() <= 1e-8,

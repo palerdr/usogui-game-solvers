@@ -30,8 +30,7 @@ impl Bits {
     }
 
     /// Read the packed artifact layout: bit `row * cols + col` of `flat`, least significant first.
-    #[must_use]
-    pub fn from_flat(cols: usize, flat: &[u8]) -> Self {
+    pub(crate) fn from_flat(cols: usize, flat: &[u8]) -> Self {
         let mut bits = Self::new(cols);
         for row in 0..N {
             for col in (0..cols)
@@ -44,8 +43,7 @@ impl Bits {
     }
 
     /// Return the packed artifact layout of this bitmap.
-    #[must_use]
-    pub fn to_flat(&self) -> Vec<u8> {
+    pub(crate) fn to_flat(&self) -> Vec<u8> {
         let mut flat = vec![0_u8; (N * self.cols).div_ceil(8)];
         for row in 0..N {
             for col in self.columns(row) {
@@ -56,8 +54,7 @@ impl Bits {
     }
 
     /// Return whether the state `(row, col)` is reachable.
-    #[must_use]
-    pub fn get(&self, row: usize, col: usize) -> bool {
+    pub(crate) fn get(&self, row: usize, col: usize) -> bool {
         self.words[row * self.stride + col / 64] >> (col % 64) & 1 == 1
     }
 
@@ -67,7 +64,7 @@ impl Bits {
     }
 
     /// Return the reachable columns of one checker row, in increasing order.
-    pub fn columns(&self, row: usize) -> impl Iterator<Item = usize> + '_ {
+    pub(crate) fn columns(&self, row: usize) -> impl Iterator<Item = usize> + '_ {
         self.row(row).iter().enumerate().flat_map(|(w, &word)| {
             let mut word = word;
             std::iter::from_fn(move || {
@@ -81,8 +78,7 @@ impl Bits {
     }
 
     /// Return the number of reachable states.
-    #[must_use]
-    pub fn count(&self) -> u64 {
+    pub(crate) fn count(&self) -> u64 {
         self.words.iter().map(|w| u64::from(w.count_ones())).sum()
     }
 
@@ -91,12 +87,14 @@ impl Bits {
     }
 
     fn or_row(&mut self, row: usize, source: &[u64]) {
-        for (word, &x) in self.words[row * self.stride..][..self.stride]
-            .iter_mut()
-            .zip(source)
-        {
-            *word |= x;
-        }
+        or(&mut self.words[row * self.stride..][..self.stride], source);
+    }
+}
+
+/// Set in `target` every bit set in `source`.
+fn or(target: &mut [u64], source: &[u64]) {
+    for (word, &x) in target.iter_mut().zip(source) {
+        *word |= x;
     }
 }
 
@@ -173,15 +171,6 @@ fn successors(parent: &Bits) -> Bits {
     target
 }
 
-/// Return the profile that the parent's dropper column `col` names.
-fn dropper(key: Key, col: usize) -> usize {
-    if matches!(key, Key::Rev(_)) {
-        profiles().resets[col] as usize
-    } else {
-        col
-    }
-}
-
 /// Mark the reachable states of every key whose clock is at most `limit`, by sweeping the keys
 /// forward in clock order.
 ///
@@ -216,7 +205,7 @@ pub fn forward(limit: u32) -> Result<BTreeMap<Key, Bits>, Error> {
                 .entry(child)
                 .or_insert_with(|| Bits::new(child.columns()));
             for col in 0..bits.cols {
-                child_bits.or_row(dropper(key, col), &columns[col * stride..][..stride]);
+                child_bits.or_row(key.dropper(col), &columns[col * stride..][..stride]);
             }
         }
         // Group the revivals by child key; a group's rows are the checkers' reset profiles.
@@ -231,12 +220,10 @@ pub fn forward(limit: u32) -> Result<BTreeMap<Key, Bits>, Error> {
             let reset = p
                 .reset_column(p.fail[pc] as usize)
                 .expect("a revival resets the vial");
-            for (word, &x) in merged[reset * bits.stride..][..bits.stride]
-                .iter_mut()
-                .zip(bits.row(pc))
-            {
-                *word |= x;
-            }
+            or(
+                &mut merged[reset * bits.stride..][..bits.stride],
+                bits.row(pc),
+            );
         }
         for (child, merged) in groups {
             let (columns, stride) = transpose(&merged, bits.stride, RESETS, bits.cols);
@@ -246,10 +233,10 @@ pub fn forward(limit: u32) -> Result<BTreeMap<Key, Bits>, Error> {
             for col in 0..bits.cols {
                 let resets = &columns[col * stride..][..stride];
                 if matches!(child, Key::Rev(_)) {
-                    child_bits.or_row(dropper(key, col), resets);
+                    child_bits.or_row(key.dropper(col), resets);
                 } else {
                     for j in (0..RESETS).filter(|&j| resets[j / 64] >> (j % 64) & 1 == 1) {
-                        child_bits.set(dropper(key, col), p.resets[j] as usize);
+                        child_bits.set(key.dropper(col), p.resets[j] as usize);
                     }
                 }
             }

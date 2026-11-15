@@ -4,7 +4,6 @@ use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 use std::process::ExitCode;
 use stl_dth::Table as Dth;
-use stl_leap::rules::Key;
 use stl_leap::{Error, build, open_leap, reach};
 
 #[derive(Parser)]
@@ -86,13 +85,9 @@ fn run(command: Command) -> Result<String, Error> {
             let tables = inputs.artifact.join("tables");
             let mut lines = Vec::new();
             for key in keys {
-                lines.push(json(&build::resweep(
-                    &tables,
-                    &dth,
-                    &output,
-                    key.parse::<Key>()?,
-                )?));
-                eprintln!("{}", lines[lines.len() - 1]);
+                let line = json(&build::resweep(&tables, &dth, &output, key.parse()?)?);
+                eprintln!("{line}");
+                lines.push(line);
             }
             lines.join("\n")
         }

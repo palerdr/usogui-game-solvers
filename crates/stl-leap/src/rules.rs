@@ -14,7 +14,7 @@ use std::sync::OnceLock;
 /// The literal action seconds of the square stage, `1..=60`.
 pub const ACTIONS: usize = 60;
 /// The profiles that can survive a failed check.
-pub const N_ALIVE: usize = 16_711;
+pub(crate) const N_ALIVE: usize = 16_711;
 /// All profiles: the survivors and one fatal profile per vial content.
 pub const N: usize = 17_011;
 /// The child-table column that means the Checker has died.
@@ -29,20 +29,17 @@ const LEAP_START: u32 = 3540;
 const LEAP_END: u32 = 3600;
 
 /// Return whether a half-round that starts at `clock` spans the leap second.
-#[must_use]
-pub fn is_leap_window(clock: u32) -> bool {
+fn is_leap_window(clock: u32) -> bool {
     (LEAP_START..=LEAP_END).contains(&clock)
 }
 
 /// Return the seconds a half-round lasts when it starts at `clock`.
-#[must_use]
-pub fn turn_duration(clock: u32) -> u32 {
+fn turn_duration(clock: u32) -> u32 {
     if is_leap_window(clock) { 61 } else { 60 }
 }
 
 /// Advance a round's end to the next whole minute; clock 3600 reads 8:59:60 and 3601 9:00:00.
-#[must_use]
-pub fn snap(clock: u32) -> u32 {
+fn snap(clock: u32) -> u32 {
     match clock {
         ..3600 if clock / 60 == 59 => 3601,
         ..3600 => (clock / 60 + 1) * 60,
@@ -56,28 +53,25 @@ pub fn snap(clock: u32) -> u32 {
 /// `dose` is 0 after a successful check and the injected dose `st + 60` after a survived failed
 /// check, which adds the dose and 120 seconds of procedure. The first half is followed by a
 /// 60-second break; the second half ends the round at the next whole minute.
-#[must_use]
-pub fn child_clock(first_half: bool, clock: u32, dose: u32) -> u32 {
+fn child_clock(first_half: bool, clock: u32, dose: u32) -> u32 {
     let end = clock + turn_duration(clock) + if dose > 0 { dose + 120 } else { 0 };
     if first_half { end + 60 } else { snap(end) }
 }
 
 /// Return whether a player with vial `st` and TTD `ttd` survives a failed check with positive
 /// probability.
-#[must_use]
-pub fn eligible(st: u32, ttd: u32) -> bool {
+fn eligible(st: u32, ttd: u32) -> bool {
     st + PENALTY < CAPACITY && st + ttd + PENALTY <= CAPACITY
 }
 
 /// Return the probability that a Checker with vial `st` and TTD `ttd` survives a failed check:
 /// `0.95 (1 - st/240) 0.75^(ttd/60)` when eligible, else 0.
-#[must_use]
-pub fn revival(st: u32, ttd: u32) -> f64 {
+fn revival(st: u32, ttd: u32) -> f64 {
     if !eligible(st, ttd) {
         return 0.0;
     }
     let st_factor = 1.0 - f64::from(st) / 240.0;
-    (0.95 * st_factor * 0.75_f64.powf(f64::from(ttd) / 60.0)).clamp(0.0, 1.0)
+    0.95 * st_factor * 0.75_f64.powf(f64::from(ttd) / 60.0)
 }
 
 /// The profile tables that every key shares.
@@ -85,7 +79,7 @@ pub struct Profiles {
     /// Vial content of each profile.
     pub st: Vec<u16>,
     /// TTD of each profile; 301 marks a fatal profile.
-    pub ttd: Vec<u16>,
+    pub(crate) ttd: Vec<u16>,
     /// The Checker profile after a successful check with squandered time `k + 1`, or `WIN`.
     pub succ: Vec<[u32; ACTIONS]>,
     /// The Checker profile after a survived failed check, a reset profile; `WIN` when fatal.
@@ -101,8 +95,7 @@ pub struct Profiles {
 
 impl Profiles {
     /// Return the `REV` table column of a dropper profile: its reset index, or `RESETS` for `WIN`.
-    #[must_use]
-    pub fn reset_column(&self, profile: usize) -> Option<usize> {
+    pub(crate) fn reset_column(&self, profile: usize) -> Option<usize> {
         let column = self.reset_column[profile];
         (column != u16::MAX).then_some(usize::from(column))
     }
@@ -217,8 +210,7 @@ pub enum Key {
 
 impl Key {
     /// Return the clock, in seconds after 8:00, at which the half-round starts.
-    #[must_use]
-    pub fn clock(self) -> u32 {
+    pub(crate) fn clock(self) -> u32 {
         match self {
             Self::H1(minute) => 60 * minute,
             Self::H2(minute) => 60 * minute + 120,
@@ -228,8 +220,7 @@ impl Key {
 
     /// Return the dropper columns of the table: every profile, or the reset profiles after a
     /// revival.
-    #[must_use]
-    pub fn columns(self) -> usize {
+    pub(crate) fn columns(self) -> usize {
         if matches!(self, Self::Rev(_)) {
             RESETS
         } else {
@@ -250,15 +241,14 @@ impl Key {
         let first = matches!(self, Self::H1(_));
         let clock = child_clock(first, self.clock(), dose);
         (clock <= 3600).then_some(match (first, dose) {
-            (true, 0) => Self::H2(self.minute()),
+            (true, 0) => Self::H2(self.clock() / 60),
             (true, _) => Self::Rev(clock),
             (false, _) => Self::H1(clock / 60),
         })
     }
 
     /// Return the key type: `H1`, `H2` or `REV`.
-    #[must_use]
-    pub fn kind(self) -> &'static str {
+    pub(crate) fn kind(self) -> &'static str {
         match self {
             Self::H1(_) => "H1",
             Self::H2(_) => "H2",
@@ -266,13 +256,17 @@ impl Key {
         }
     }
 
-    fn minute(self) -> u32 {
-        self.clock() / 60
+    /// Return the dropper profile of table column `col`.
+    pub(crate) fn dropper(self, col: usize) -> usize {
+        if matches!(self, Self::Rev(_)) {
+            profiles().resets[col] as usize
+        } else {
+            col
+        }
     }
 
     /// Return every key of the game, ordered by clock.
-    #[must_use]
-    pub fn all() -> Vec<Self> {
+    pub(crate) fn all() -> Vec<Self> {
         let mut keys: Vec<Self> = (12..60)
             .map(Self::H1)
             .chain((12..59).map(Self::H2))

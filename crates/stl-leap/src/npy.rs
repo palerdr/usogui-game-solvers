@@ -3,7 +3,7 @@
 //! The leap artifact stores every table in this format, so the Python reference can read what
 //! this crate writes and the reverse. The header writer matches `numpy.lib.format` byte for byte.
 
-use crate::Error;
+use crate::{Error, io};
 use memmap2::{Mmap, MmapMut};
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
@@ -47,11 +47,6 @@ fn format(path: &Path, reason: impl Into<String>) -> Error {
         path: path.to_path_buf(),
         reason: reason.into(),
     }
-}
-
-fn io(path: &Path) -> impl FnOnce(std::io::Error) -> Error {
-    let path: PathBuf = path.to_path_buf();
-    move |source| Error::Io { path, source }
 }
 
 /// Return the header that numpy writes for a C-order array of this type and shape.

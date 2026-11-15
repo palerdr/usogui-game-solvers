@@ -31,10 +31,18 @@ pub struct Certificate {
     pub check: Vec<f64>,
 }
 
-/// Return the explicit stage matrix, `60 + window` rows of 60 columns: `s[j - i]` where the check
-/// `j` is at or after the drop `i`, and `f` elsewhere. Row 61 is Baku's leap drop.
-#[must_use]
-pub fn stage_matrix(s: &[f64; A], f: f64, window: bool) -> Vec<f64> {
+/// Certify the stage `(s, f)`: `60 + window` Dropper rows of 60 Checker columns, `s[j - i]` where
+/// the check `j` is at or after the drop `i` and `f` elsewhere. Row 61 is Baku's leap drop.
+///
+/// # Errors
+///
+/// [`Error::Invalid`] for a nonfinite payoff and [`Error::Uncertified`] when no attempt meets the
+/// `1e-6` gate.
+pub fn certify(s: &[f64; A], f: f64, window: bool) -> Result<Certificate, Error> {
+    certify_matrix(&stage_matrix(s, f, window), A + usize::from(window))
+}
+
+fn stage_matrix(s: &[f64; A], f: f64, window: bool) -> Vec<f64> {
     let rows = A + usize::from(window);
     (0..rows * A)
         .map(|cell| {
@@ -48,27 +56,21 @@ pub fn stage_matrix(s: &[f64; A], f: f64, window: bool) -> Vec<f64> {
 }
 
 /// Certify the game with `rows` rows whose payoffs `matrix` lists row by row.
-///
-/// # Errors
-///
-/// [`Error::Invalid`] for an empty or nonfinite matrix and [`Error::Uncertified`] when no attempt
-/// meets the `1e-6` gate.
-pub fn certify(matrix: &[f64], rows: usize) -> Result<Certificate, Error> {
-    let cols = matrix.len() / rows.max(1);
-    if rows == 0
-        || cols == 0
-        || rows * cols != matrix.len()
-        || matrix.iter().any(|x| !x.is_finite())
-    {
+fn certify_matrix(matrix: &[f64], rows: usize) -> Result<Certificate, Error> {
+    if matrix.iter().any(|x| !x.is_finite()) {
         return Err(Error::Invalid("matrix must contain finite payoffs".into()));
     }
-    let offsets = [None, None, Some(matrix[(rows - 1) * cols]), Some(matrix[0])];
-    let solvers = ["simplex", "ipm", "ipm", "ipm"];
-    solvers
-        .into_iter()
-        .zip(offsets)
-        .find_map(|(solver, offset)| attempt(matrix, rows, cols, solver, offset.unwrap_or(0.0)))
-        .ok_or_else(|| Error::Uncertified("HiGHS failed the 1e-6 saddle gate".into()))
+    let cols = matrix.len() / rows;
+    let (last, first) = (matrix[(rows - 1) * cols], matrix[0]);
+    [
+        ("simplex", 0.0),
+        ("ipm", 0.0),
+        ("ipm", last),
+        ("ipm", first),
+    ]
+    .into_iter()
+    .find_map(|(solver, offset)| attempt(matrix, rows, cols, solver, offset))
+    .ok_or_else(|| Error::Uncertified("HiGHS failed the 1e-6 saddle gate".into()))
 }
 
 fn attempt(
@@ -148,7 +150,7 @@ mod tests {
 
     #[test]
     fn matching_pennies_has_value_zero() {
-        let result = certify(&[1.0, -1.0, -1.0, 1.0], 2).expect("a certificate");
+        let result = certify_matrix(&[1.0, -1.0, -1.0, 1.0], 2).expect("a certificate");
         assert!(result.value.abs() < 1e-12 && result.gap <= 1e-6);
         assert!(
             result
@@ -157,7 +159,7 @@ mod tests {
                 .chain(&result.check)
                 .all(|x| (x - 0.5).abs() < 1e-9)
         );
-        assert!(certify(&[f64::NAN, 0.0], 1).is_err());
+        assert!(certify_matrix(&[f64::NAN, 0.0], 1).is_err());
     }
 
     #[test]
@@ -212,7 +214,7 @@ mod tests {
             (H2_46, 0.661_963_134_224_360_4, -0.657_410_993_831_167),
         ];
         for (s, f, expected) in cases {
-            let result = certify(&stage_matrix(&s, f, false), A).expect("a certificate");
+            let result = certify(&s, f, false).expect("a certificate");
             assert!(result.gap <= 1e-8, "gap {}", result.gap);
             assert!(
                 (result.value - expected).abs() < 1e-8,
@@ -238,8 +240,7 @@ mod tests {
             0.310_633_129_809_331_2,
             0.297_847_114_549_782_63,
         ]);
-        let result =
-            certify(&stage_matrix(&s, 0.999_999_999_999_999_9, false), A).expect("a certificate");
+        let result = certify(&s, 0.999_999_999_999_999_9, false).expect("a certificate");
         assert!(result.gap <= 1e-8 && (result.value - 0.311_271_128_333_051_04).abs() < 1e-9);
     }
 }

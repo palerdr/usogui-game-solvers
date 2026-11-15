@@ -15,7 +15,7 @@ use std::time::Instant;
 use stl_dth::Table as Dth;
 
 /// The reachable states of each key type in the complete game.
-pub const TOTALS: [(&str, u64); 3] = [
+pub(crate) const TOTALS: [(&str, u64); 3] = [
     ("H1", 4_180_634_990),
     ("H2", 4_188_677_815),
     ("REV", 1_084_020_312),
@@ -48,24 +48,6 @@ pub struct Record {
     pub lp_seconds: f64,
     /// Seconds for the whole key, writes included.
     pub sweep_seconds: f64,
-}
-
-fn residue(key: Key) -> Residue {
-    // REV keys keep the reference's plain packing path; H keys also try kink seeds.
-    if matches!(key, Key::Rev(_)) {
-        Residue::Packing
-    } else {
-        Residue::Kink
-    }
-}
-
-/// Return the dropper profile of a table column of `key`.
-fn dropper(key: Key, col: usize) -> u32 {
-    if matches!(key, Key::Rev(_)) {
-        profiles().resets[col]
-    } else {
-        col as u32
-    }
 }
 
 /// Group the reachable checkers of `key` by the child of a failed check, in order of first
@@ -111,6 +93,12 @@ pub fn sweep_key(key: Key, reach: &Bits, store: &mut Store, dth: &Dth) -> Result
         ..Record::default()
     };
     let (cols, width) = (key.columns(), key.columns() + 1);
+    // REV keys keep the reference's plain packing path; H keys also try kink seeds.
+    let residue = if matches!(key, Key::Rev(_)) {
+        Residue::Packing
+    } else {
+        Residue::Kink
+    };
     for (child, checkers) in &failure_groups(key, reach) {
         let failure_map = child.map(|child| store.load(child)).transpose()?;
         let failure_columns = if matches!(child, Some(Key::Rev(_))) {
@@ -144,9 +132,9 @@ pub fn sweep_key(key: Key, reach: &Bits, store: &mut Store, dth: &Dth) -> Result
             let tick = Instant::now();
             let droppers: Vec<(u32, u32)> = classes
                 .iter()
-                .map(|&(pc, col)| (pc, dropper(key, col as usize)))
+                .map(|&(pc, col)| (pc, key.dropper(col as usize) as u32))
                 .collect();
-            let mut solved = kernel::sweep(&droppers, &children, key.is_window(), residue(key))?;
+            let mut solved = kernel::sweep(&droppers, &children, key.is_window(), residue)?;
             record.kernel_seconds += tick.elapsed().as_secs_f64();
             let tick = Instant::now();
             let misses: Vec<usize> = (0..solved.len())
@@ -156,11 +144,7 @@ pub fn sweep_key(key: Key, reach: &Bits, store: &mut Store, dth: &Dth) -> Result
                 .par_iter()
                 .map(|&i| {
                     let (s, f) = children.stage(droppers[i]);
-                    lp::certify(
-                        &lp::stage_matrix(&s, f, key.is_window()),
-                        A + usize::from(key.is_window()),
-                    )
-                    .map(|c| c.value)
+                    lp::certify(&s, f, key.is_window()).map(|c| c.value)
                 })
                 .collect::<Result<Vec<f64>, Error>>()?;
             for (&i, value) in misses.iter().zip(values) {
@@ -218,11 +202,7 @@ impl Samples {
 /// # Errors
 ///
 /// The reader's errors when a child state is missing.
-///
-/// # Panics
-///
-/// Only on a broken profile invariant: a revival always resets the vial to a reset profile.
-pub fn stage_inputs(
+pub(crate) fn stage_inputs(
     reader: &PackedReader,
     key: Key,
     pc: usize,
@@ -280,11 +260,9 @@ pub fn audit(tables: &Path, reach: &BTreeMap<Key, Bits>, dth: &Dth) -> Result<Va
         let count = if key == Key::H2(57) { 200 } else { 2 };
         for rank in samples.distinct(count, bits.count() as usize) {
             let (pc, col) = table.select(rank);
-            let pd = dropper(key, col) as usize;
+            let pd = key.dropper(col);
             let (s, f) = stage_inputs(&reader, key, pc, pd, dth)?;
-            let window = key.is_window();
-            let certificate =
-                lp::certify(&lp::stage_matrix(&s, f, window), A + usize::from(window))?;
+            let certificate = lp::certify(&s, f, key.is_window())?;
             let residual = (table.get(pc, col)? - certificate.value).abs();
             if residual > kernel::GAP {
                 return Err(Error::Uncertified(format!(
@@ -298,7 +276,7 @@ pub fn audit(tables: &Path, reach: &BTreeMap<Key, Bits>, dth: &Dth) -> Result<Va
     }
     let states_checked: u64 = gains.iter().map(|g| g.states).sum();
     let (s, f) = stage_inputs(&reader, Key::H1(12), 0, 0, dth)?;
-    let opening = lp::certify(&lp::stage_matrix(&s, f, false), A)?;
+    let opening = lp::certify(&s, f, false)?;
     let stored = reader.get(Key::H1(12), 0, 0)?;
     let baseline = dth.values()[0];
     let dth_s: [f64; A] = std::array::from_fn(|k| -dth.values()[p.succ[0][k] as usize]);
@@ -327,7 +305,7 @@ pub fn audit(tables: &Path, reach: &BTreeMap<Key, Bits>, dth: &Dth) -> Result<Va
             "baku_gain_probability_points": 50.0 * (baseline - stored),
             "success_payoffs": s.to_vec(),
             "failure_payoff": f,
-            "dth_policies": lp::certify(&lp::stage_matrix(&dth_s, dth_f, false), A)?,
+            "dth_policies": lp::certify(&dth_s, dth_f, false)?,
         },
     }))
 }
@@ -362,7 +340,7 @@ fn audit_key(reader: &PackedReader, key: Key, reach: &Bits, dth: &Dth) -> Result
             return bad("packed value outside utility range");
         }
         let (row, col) = (position / key.columns(), position % key.columns());
-        let baseline = dth.values()[row * (N + 1) + dropper(key, col) as usize];
+        let baseline = dth.values()[row * (N + 1) + key.dropper(col)];
         // Values are from the Dropper's side; Baku drops in H2 and after a Hal revival.
         let g = if matches!(key, Key::H1(_)) {
             baseline - value
@@ -473,7 +451,7 @@ pub fn run_full(dth: &Path, output: &Path) -> Result<Value, Error> {
     }
     let path = output.join("report.json");
     let text = serde_json::to_string_pretty(&report).expect("a report serializes") + "\n";
-    std::fs::write(&path, text).map_err(|source| Error::Io { path, source })?;
+    std::fs::write(&path, text).map_err(crate::io(&path))?;
     Ok(report)
 }
 
@@ -498,8 +476,7 @@ pub struct Resweep {
 pub fn resweep(tables: &Path, dth: &Dth, output: &Path, key: Key) -> Result<Resweep, Error> {
     let stored = Packed::open(tables, key)?;
     let mut store = Store::new(output, tables)?;
-    let same = |a: &Path, b: &Path| a.canonicalize().ok() == b.canonicalize().ok();
-    if same(tables, output) {
+    if tables.canonicalize().ok() == output.canonicalize().ok() {
         return Err(Error::Invalid(
             "a re-sweep must not write into the artifact it reads".into(),
         ));

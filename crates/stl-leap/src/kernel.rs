@@ -27,7 +27,7 @@ use crate::support;
 use rayon::prelude::*;
 
 /// The saddle gate: both bounds of every certificate lie within this distance.
-pub const GAP: f64 = 1e-6;
+pub(crate) const GAP: f64 = 1e-6;
 const LANES: usize = 16;
 const CHUNK: usize = 1024;
 
@@ -157,7 +157,16 @@ pub fn sweep(
     ];
     out.par_chunks_mut(CHUNK)
         .zip(classes.par_chunks(CHUNK))
-        .try_for_each(|(out, classes)| Chunk::new(children, window, residue).solve(classes, out))?;
+        .try_for_each(|(out, classes)| {
+            Chunk {
+                children,
+                window,
+                residue,
+                packer: Packer::default(),
+                seed: None,
+            }
+            .solve(classes, out)
+        })?;
     Ok(out)
 }
 
@@ -324,17 +333,7 @@ impl Batch {
     }
 }
 
-impl<'a> Chunk<'a> {
-    fn new(children: &'a Children<'a>, window: bool, residue: Residue) -> Self {
-        Self {
-            children,
-            window,
-            residue,
-            packer: Packer::default(),
-            seed: None,
-        }
-    }
-
+impl Chunk<'_> {
     // Kept out of line: inlined into rayon's recursive split helper, its ~100 KB of scratch
     // would sit in every split frame and overflow the 2 MiB worker stacks.
     #[inline(never)]
@@ -390,21 +389,15 @@ impl<'a> Chunk<'a> {
         };
         if let (Residue::Kink, Some((p, q, old))) = (self.residue, self.seed) {
             let (p, q) = support::kink_seed(p, q, old, kink);
-            if p != 0
-                && q != 0
-                && r.iter().all(|x| x.is_finite())
+            if r.iter().all(|x| x.is_finite())
                 && let Some(value) = support::attempt(&s, f, &r, p, q, self.window)
             {
                 self.seed = Some((p, q, kink));
                 return Some((value, kind::KINK, f));
             }
         }
-        let run = self.packer.solve(
-            &std::array::from_fn(|k| if k < A { s[k] } else { f }),
-            Start::Crash,
-        );
-        let (p, q) = self.packer.support()?;
+        let (value, p, q) = self.packer.solve(&s, f, Start::Crash)?;
         self.seed = Some((p, q, kink));
-        Some((run.value, kind::PACKING, f))
+        Some((value, kind::PACKING, f))
     }
 }
