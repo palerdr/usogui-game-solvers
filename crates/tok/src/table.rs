@@ -26,34 +26,22 @@ fn pack(code: u64, len: usize, own_beads: u8) -> u64 {
     (code * 8 + len as u64) * HANDS as u64 + u64::from(own_beads) - 1
 }
 
-/// The key of the information state (own beads, transcript). The format holds at most 7
-/// announcements, which covers K <= 4.
-#[must_use]
-pub fn info_key(own_beads: u8, totals: impl ExactSizeIterator<Item = u8>) -> u64 {
-    let len = totals.len();
-    let code = totals.fold(0, |code, g| code * TOTALS as u64 + u64::from(g - 2));
-    pack(code, len, own_beads)
-}
-
 /// One player's strategy: a bead-pick distribution and one row per announcement information set.
 #[derive(Debug, PartialEq)]
 pub struct StrategyTable {
     /// Bead-pick probabilities, indexed by beads - 1.
-    pub choose: Vec<f64>,
-    /// The [`info_key`] of each row.
-    pub keys: Vec<u64>,
+    pub(crate) choose: Vec<f64>,
+    /// The [`pack`] key of each row. The format holds at most 7 announcements, which covers
+    /// K <= 4.
+    keys: Vec<u64>,
     /// Rows of 10 action probabilities, row-major.
-    pub probs: Vec<f64>,
+    probs: Vec<f64>,
     rows: HashMap<u64, usize>,
 }
 
 impl StrategyTable {
-    /// A table from its parts.
-    ///
-    /// # Errors
-    ///
-    /// [`Error::Artifact`] when the lengths disagree or a key repeats.
-    pub fn new(choose: Vec<f64>, keys: Vec<u64>, probs: Vec<f64>) -> Result<Self, Error> {
+    /// A table from its parts, or [`Error::Artifact`] when the lengths disagree or a key repeats.
+    fn new(choose: Vec<f64>, keys: Vec<u64>, probs: Vec<f64>) -> Result<Self, Error> {
         if choose.len() != HANDS || probs.len() != HANDS * keys.len() {
             return Err(Error::Artifact("table lengths disagree".into()));
         }
@@ -70,8 +58,7 @@ impl StrategyTable {
     }
 
     /// The row of the key, if present.
-    #[must_use]
-    pub fn row_of(&self, key: u64) -> Option<&[f64]> {
+    fn row_of(&self, key: u64) -> Option<&[f64]> {
         self.rows
             .get(&key)
             .map(|&r| &self.probs[HANDS * r..HANDS * (r + 1)])
@@ -80,9 +67,11 @@ impl StrategyTable {
     /// The row the observer of `info` plays, if `info` is an announcement information state in
     /// the table.
     #[must_use]
-    pub fn row(&self, info: &InformationState) -> Option<&[f64]> {
-        let totals = info.history.iter().map(|miss| miss.total);
-        self.row_of(info_key(info.own_beads?, totals))
+    pub(crate) fn row(&self, info: &InformationState) -> Option<&[f64]> {
+        let code = (info.history.iter()).fold(0, |code, miss| {
+            code * TOTALS as u64 + u64::from(miss.total - 2)
+        });
+        self.row_of(pack(code, info.history.len(), info.own_beads?))
     }
 
     /// Write the table in the file format of this module.

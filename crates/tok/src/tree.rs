@@ -6,7 +6,7 @@
 use crate::{Error, HANDS};
 
 /// Marks an action whose announcement hits every alive pair or ends the game.
-pub const NONE: u32 = u32::MAX;
+pub(crate) const NONE: u32 = u32::MAX;
 
 /// One decision layer: the public nodes, alive pairs and slots of one turn of one player.
 #[derive(Debug)]
@@ -18,17 +18,17 @@ pub struct Layer {
     /// Public node -> the announcement that led to it (0 on the root layer).
     pub total: Vec<u8>,
     /// Alive pair -> beads (x0, x1).
-    pub pair_hand: [Vec<u8>; 2],
+    pub(crate) pair_hand: [Vec<u8>; 2],
     /// Alive pair -> slot of each player.
-    pub pair_slot: [Vec<u32>; 2],
+    pub(crate) pair_slot: [Vec<u32>; 2],
     /// Slot -> public node, per player.
     pub slot_node: [Vec<u32>; 2],
     /// Slot -> own beads, per player.
     pub slot_hand: [Vec<u8>; 2],
     /// Slot -> the same player's slot one layer up (empty on the root layer).
-    pub slot_parent: [Vec<u32>; 2],
+    pub(crate) slot_parent: [Vec<u32>; 2],
     /// Actor slot x action -> the actor's slot one layer down, or [`NONE`].
-    pub child_slot: Vec<u32>,
+    pub(crate) child_slot: Vec<u32>,
 }
 
 impl Layer {
@@ -69,13 +69,13 @@ impl Layer {
     /// The action of q's announcement one layer up that led to q's slot s. Valid when q acted
     /// on the layer above.
     #[must_use]
-    pub fn arrival(&self, q: usize, s: usize) -> usize {
+    pub(crate) fn arrival(&self, q: usize, s: usize) -> usize {
         usize::from(self.total[self.slot_node[q][s] as usize] - self.slot_hand[q][s] - 1)
     }
 
     /// Flat (actor slot, action) index of the announcement that hits alive pair k.
     #[must_use]
-    pub fn hit(&self, k: usize) -> usize {
+    pub(crate) fn hit(&self, k: usize) -> usize {
         let p = self.actor;
         HANDS * self.pair_slot[p][k] as usize + usize::from(self.pair_hand[1 - p][k]) - 1
     }

@@ -45,7 +45,7 @@ pub enum Phase {
 
 /// A full game state. Only [`GameState::new`] and [`GameState::apply`] build one, so every state
 /// is reachable.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct GameState {
     phase: Phase,
     horizon: usize,
@@ -57,19 +57,19 @@ pub struct GameState {
 
 /// What one player knows: its own beads and the public history.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct InformationState {
+pub(crate) struct InformationState {
     /// The observing player.
-    pub player: Player,
+    pub(crate) player: Player,
     /// The phase of the observed state.
-    pub phase: Phase,
+    pub(crate) phase: Phase,
     /// The number of turns per player.
-    pub horizon: usize,
+    pub(crate) horizon: usize,
     /// The current turn, 0 before the announcements.
-    pub turn: usize,
+    pub(crate) turn: usize,
     /// The observer's beads, once picked.
-    pub own_beads: Option<u8>,
+    pub(crate) own_beads: Option<u8>,
     /// All misses so far, in order.
-    pub history: Vec<Miss>,
+    pub(crate) history: Vec<Miss>,
 }
 
 impl GameState {
@@ -112,7 +112,7 @@ impl GameState {
 
     /// The player to move, or `None` at the end.
     #[must_use]
-    pub fn actor(&self) -> Option<Player> {
+    pub(crate) fn actor(&self) -> Option<Player> {
         match self.phase {
             Phase::Choose(p) | Phase::Guess(p) => Some(p),
             Phase::Terminal => None,
@@ -183,7 +183,7 @@ impl GameState {
 
     /// What `player` observes in this state.
     #[must_use]
-    pub fn information_state(&self, player: Player) -> InformationState {
+    pub(crate) fn information_state(&self, player: Player) -> InformationState {
         InformationState {
             player,
             phase: self.phase,

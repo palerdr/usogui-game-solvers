@@ -1,13 +1,12 @@
-//! Last-layer keys against keys computed from the rules, and the merged solvers against their
-//! bounds.
+//! Last-layer keys against keys computed from the rules, and the alternation of the merged
+//! solvers. `tests/solvers.rs` checks the merged solvers at the `D_2` equilibrium.
 
 use std::collections::HashSet;
 
-use tok::abstraction::{Key, alternate, guarantee, merged_best_response, slot_keys};
+use tok::HANDS;
+use tok::abstraction::{Key, alternate, guarantee, slot_keys};
 use tok::cfr::CfrPlus;
-use tok::traversal::Profile;
 use tok::tree::{self, Layer, last_layer};
-use tok::{HANDS, lp};
 
 fn reference() -> serde_json::Value {
     serde_json::from_str(include_str!("data/reference.json")).expect("reference.json parses")
@@ -88,33 +87,6 @@ fn key_counts_match_python() {
             }
         }
     }
-}
-
-fn lp_equilibrium(layers: &[Layer]) -> (f64, Profile) {
-    let form = lp::build(layers);
-    let sol = lp::solve(&form, "ipm", 600.0).expect("HiGHS solves D_2");
-    (
-        sol.value,
-        lp::plan_profile(&form, layers, [&sol.plans[0], &sol.plans[1]]),
-    )
-}
-
-#[test]
-fn merged_responses_and_cfr_keep_the_value() {
-    let layers = tree::build(2).expect("positive horizon");
-    let (value, profile) = lp_equilibrium(&layers);
-    for p in 0..2 {
-        let (key, keys) = slot_keys(&layers, p, Key::Full);
-        let got = merged_best_response(&layers, p, &profile, &key, keys);
-        assert!((got - if p == 0 { value } else { -value }).abs() < 1e-6);
-    }
-    let (key, keys) = slot_keys(&layers, 0, Key::Support);
-    let mut cfr = CfrPlus::merged(&layers, 0, &profile, &key, keys);
-    (0..1000).for_each(|_| cfr.iterate());
-    let average = cfr.average();
-    let held = guarantee(&layers, 0, &average);
-    assert!(held <= merged_best_response(&layers, 0, &average, &key, keys) + 1e-12);
-    assert!(held > value - 1e-4);
 }
 
 #[test]

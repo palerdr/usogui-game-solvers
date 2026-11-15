@@ -111,10 +111,12 @@ fn write_json(path: &Path, value: &serde_json::Value) -> Result<(), Error> {
 /// profile `source`, and certify the best lifted strategy.
 fn abstraction(
     dir: &Path,
-    (k, source): (usize, &str),
+    k: usize,
+    source: &str,
     i: usize,
     kind: Key,
-    (rounds, iterations): (usize, usize),
+    rounds: usize,
+    iterations: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
     let layers = tree::build(k)?;
@@ -201,13 +203,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 sol.nonzeros,
                 t.elapsed().as_secs_f64()
             );
-            let plans = [sol.plans[0].as_slice(), sol.plans[1].as_slice()];
-            save(
-                dir,
-                &format!("lp_{k}"),
-                &layers,
-                &lp::plan_profile(&form, &layers, plans),
-            )?;
+            let profile = lp::plan_profile(&form, &layers, &sol.plans);
+            save(dir, &format!("lp_{k}"), &layers, &profile)?;
         }
         Command::SolveCfr {
             k,
@@ -256,7 +253,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             iterations,
             rounds,
         } => {
-            abstraction(dir, (k, &source), player, key, (rounds, iterations))?;
+            abstraction(dir, k, &source, player, key, rounds, iterations)?;
         }
     }
     Ok(())

@@ -18,7 +18,7 @@ use crate::{Error, HANDS};
 #[derive(Debug)]
 pub struct SequenceForm {
     /// `offset[p][d]` is player p's first announcement sequence on layer d, where p acts.
-    pub offset: [Vec<usize>; 2],
+    offset: [Vec<usize>; 2],
     /// The number of sequences of each player.
     pub count: [usize; 2],
     /// (P0 sequence, P1 sequence, P0's payoff) of each hit leaf.
@@ -184,7 +184,7 @@ pub fn solve(form: &SequenceForm, solver: &str, time_limit: f64) -> Result<LpSol
 /// The behavioral profile of the realization plans: each information set normalizes its
 /// sequences. Negative noise is clipped; an unreached information set plays uniformly.
 #[must_use]
-pub fn plan_profile(form: &SequenceForm, layers: &[Layer], plans: [&[f64]; 2]) -> Profile {
+pub fn plan_profile(form: &SequenceForm, layers: &[Layer], plans: &[Vec<f64>; 2]) -> Profile {
     let behavior = (layers.iter().enumerate())
         .map(|(d, layer)| {
             let (p, start) = (layer.actor, form.offset[layer.actor][d]);
@@ -193,6 +193,6 @@ pub fn plan_profile(form: &SequenceForm, layers: &[Layer], plans: [&[f64]; 2]) -
         .collect();
     Profile {
         behavior,
-        choose: plans.map(|plan| normalize(&plan[1..=HANDS])),
+        choose: plans.each_ref().map(|plan| normalize(&plan[1..=HANDS])),
     }
 }
