@@ -41,10 +41,6 @@
 //! [`selfplay`] plays the robust strategies through the engine, and [`allocate`] spends the next
 //! sampling budget where the equilibria go.
 
-// Library panics come only from `expect` on broken internal invariants (CLAUDE.md); bad input
-// returns `Error`. A `# Panics` section on every such function would document impossibilities.
-#![allow(clippy::missing_panics_doc)]
-
 pub mod allocate;
 pub mod betting;
 pub mod cards;

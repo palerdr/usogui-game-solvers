@@ -371,10 +371,6 @@ fn audit_key(reader: &PackedReader, key: Key, reach: &Bits, dth: &Dth) -> Result
 ///
 /// [`Error::Invalid`] for a nonempty output directory or a coverage mismatch, and the errors of
 /// the sweep and the audit.
-///
-/// # Panics
-///
-/// Only if a record or the report fails to serialize; they hold numbers and strings alone.
 pub fn run_full(dth: &Path, output: &Path) -> Result<Value, Error> {
     let started = Instant::now();
     if output

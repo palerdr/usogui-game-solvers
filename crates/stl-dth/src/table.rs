@@ -106,10 +106,6 @@ impl Table {
 
     /// The whole table in row-major order: `values()[pc * (N + 1) + pd]`, with column `N` the
     /// "mover wins" sentinel.
-    ///
-    /// # Panics
-    ///
-    /// Never: a memory map is page-aligned.
     #[must_use]
     pub fn values(&self) -> &[f64] {
         // SAFETY: the map is page-aligned and the body starts at byte 128, so it is f64-aligned;

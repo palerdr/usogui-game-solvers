@@ -46,10 +46,6 @@ pub struct Profiles {
 impl Profiles {
     /// Index the profiles (TTD ascending over 0 then 60..=300, ST ascending inside each TTD, then
     /// the dead sentinels by ST) and tabulate their transitions.
-    ///
-    /// # Panics
-    ///
-    /// When the census fails: the rules are broken.
     #[must_use]
     pub fn build() -> Self {
         let mut alive_id = vec![None; (MAX_ST + 1) * (MAX_TTD + 1)];

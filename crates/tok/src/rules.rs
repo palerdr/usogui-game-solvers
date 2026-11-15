@@ -120,10 +120,6 @@ impl GameState {
     }
 
     /// The legal actions in order: bead counts 1..=10, or own beads + 1..=own beads + 10.
-    ///
-    /// # Panics
-    ///
-    /// Never: [`GameState::apply`] fills both bead counts before the announcements.
     pub fn legal_actions(&self) -> impl Iterator<Item = Action> + use<> {
         let (make, first, count): (fn(u8) -> Action, u8, u8) = match self.phase {
             Phase::Choose(_) => (Action::Choose, 1, 10),

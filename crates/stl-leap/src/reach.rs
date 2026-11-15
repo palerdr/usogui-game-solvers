@@ -177,10 +177,6 @@ fn successors(parent: &Bits) -> Bits {
 /// # Errors
 ///
 /// [`Error::Invalid`] when `limit` exceeds 3600, where the leap game ends.
-///
-/// # Panics
-///
-/// Only on a broken profile invariant: a revival always resets the vial to a reset profile.
 pub fn forward(limit: u32) -> Result<BTreeMap<Key, Bits>, Error> {
     if limit > 3600 {
         return Err(Error::Invalid("reachability ends at 3600".into()));

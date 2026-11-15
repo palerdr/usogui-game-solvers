@@ -33,6 +33,9 @@ cast_sign_loss = "allow"
 many_single_char_names = "allow"
 similar_names = "allow"
 float_cmp = "allow"
+# Library code panics only on a broken internal invariant (CLAUDE.md); a `# Panics` section
+# would document impossibilities.
+missing_panics_doc = "allow"
 unwrap_used = "warn"
 
 [profile.release]
