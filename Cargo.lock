@@ -588,6 +588,13 @@ dependencies = [
 [[package]]
 name = "tok"
 version = "0.1.0"
+dependencies = [
+ "clap",
+ "highs",
+ "rayon",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "typenum"
