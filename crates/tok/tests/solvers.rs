@@ -1,5 +1,9 @@
-//! The LP and CFR+ against the Python reference and against their own best responses.
+//! The LP and CFR+ against the Python reference and against their own best responses, and the
+//! merged solvers of the abstraction study at the `D_2` equilibrium.
 
+use std::sync::OnceLock;
+
+use tok::abstraction::{Key, guarantee, merged_best_response, slot_keys};
 use tok::cfr::CfrPlus;
 use tok::traversal::{Profile, profile_value, saddle_gap};
 use tok::{HANDS, lp, tree};
@@ -15,7 +19,7 @@ fn number(value: &serde_json::Value) -> f64 {
 fn lp_profile(layers: &[tree::Layer], solver: &str) -> (f64, Profile) {
     let form = lp::build(layers);
     let sol = lp::solve(&form, solver, 600.0).expect("HiGHS solves D_K");
-    let profile = lp::plan_profile(&form, layers, [&sol.plans[0], &sol.plans[1]]);
+    let profile = lp::plan_profile(&form, layers, &sol.plans);
     (sol.value, profile)
 }
 
@@ -36,7 +40,7 @@ fn d1_lp_is_zero_and_certified() {
         assert!((residual[0] - 1.0).abs() < 1e-12);
         assert!(residual[1..].iter().all(|r| r.abs() < 1e-9));
     }
-    let profile = lp::plan_profile(&form, &layers, [&sol.plans[0], &sol.plans[1]]);
+    let profile = lp::plan_profile(&form, &layers, &sol.plans);
     let (lower, upper) = saddle_gap(&layers, &profile);
     assert!(upper - lower < 1e-9);
     // P0 announces 11 at every bead count, as in the object-tree test of solve.py.
@@ -49,16 +53,50 @@ fn d1_lp_is_zero_and_certified() {
     }
 }
 
+/// The `D_2` LP solution, solved once: the solve takes most of the time of the two tests that
+/// read it.
+fn d2_lp() -> &'static (Vec<tree::Layer>, f64, Profile) {
+    static D2: OnceLock<(Vec<tree::Layer>, f64, Profile)> = OnceLock::new();
+    D2.get_or_init(|| {
+        let layers = tree::build(2).expect("positive horizon");
+        let (value, profile) = lp_profile(&layers, "ipm");
+        (layers, value, profile)
+    })
+}
+
 #[test]
 fn lp_values_match_python() {
     let reference = reference();
-    for (k, solver) in [(1, "choose"), (2, "ipm")] {
-        let layers = tree::build(k).expect("positive horizon");
-        let (value, profile) = lp_profile(&layers, solver);
+    let d1 = tree::build(1).expect("positive horizon");
+    let (d1_value, d1_profile) = lp_profile(&d1, "choose");
+    let (d2, d2_value, d2_profile) = d2_lp();
+    let solved = [
+        (1, &d1, d1_value, &d1_profile),
+        (2, d2, *d2_value, d2_profile),
+    ];
+    for (k, layers, value, profile) in solved {
         assert!((value - number(&reference["lp_value"][k.to_string()])).abs() < 1e-9);
-        let (lower, upper) = saddle_gap(&layers, &profile);
+        let (lower, upper) = saddle_gap(layers, profile);
         assert!(lower <= value + 1e-9 && value - 1e-9 <= upper && upper - lower < 1e-7);
     }
+}
+
+#[test]
+fn merged_responses_and_cfr_keep_the_value() {
+    let (layers, value, profile) = d2_lp();
+    let value = *value;
+    for p in 0..2 {
+        let (key, keys) = slot_keys(layers, p, Key::Full);
+        let got = merged_best_response(layers, p, profile, &key, keys);
+        assert!((got - if p == 0 { value } else { -value }).abs() < 1e-6);
+    }
+    let (key, keys) = slot_keys(layers, 0, Key::Support);
+    let mut cfr = CfrPlus::merged(layers, 0, profile, &key, keys);
+    (0..1000).for_each(|_| cfr.iterate());
+    let average = cfr.average();
+    let held = guarantee(layers, 0, &average);
+    assert!(held <= merged_best_response(layers, 0, &average, &key, keys) + 1e-12);
+    assert!(held > value - 1e-4);
 }
 
 fn run(k: usize, checkpoints: &[usize]) -> (Vec<(f64, f64)>, Vec<tree::Layer>) {

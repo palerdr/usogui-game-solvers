@@ -9,6 +9,8 @@
 //! - [`alternate`] runs the two steps in rounds. The certificate then proves the guarantee of the
 //!   best lifted strategy on the full game.
 
+use std::borrow::Cow;
+
 use crate::cfr::{CfrPlus, expand, key_sums};
 use crate::traversal::{Profile, best_response_value, reach, row_dots, values};
 use crate::tree::{Layer, last_layer};
@@ -38,9 +40,9 @@ fn transcript(layers: &[Layer], d: usize, node: u32) -> Vec<u8> {
     totals
 }
 
-/// The set of `totals` as a 19-bit mask.
-fn bits<'a>(totals: impl Iterator<Item = &'a u8>) -> u64 {
-    totals.fold(0, |mask, &g| mask | 1 << (g - 2))
+/// The set of `totals[start]`, `totals[start + 2]`, ... as a 19-bit mask.
+fn bits(totals: &[u8], start: usize) -> u64 {
+    (totals.iter().skip(start).step_by(2)).fold(0, |mask, &g| mask | 1 << (g - 2))
 }
 
 /// The dense key of each slot on player i's last layer, and the number of keys.
@@ -64,8 +66,7 @@ pub fn slot_keys(layers: &[Layer], i: usize, kind: Key) -> (Vec<u32>, usize) {
         Key::Hard | Key::OpeningHard => (0..layer.slots(i))
             .map(|s| {
                 let totals = transcript(layers, d, layer.slot_node[i][s]);
-                let own = bits(totals.iter().skip(i).step_by(2));
-                let opp = bits(totals.iter().skip(1 - i).step_by(2));
+                let (own, opp) = (bits(&totals, i), bits(&totals, 1 - i));
                 let opening = if kind == Key::OpeningHard {
                     u64::from(totals[0]) << 45
                 } else {
@@ -119,7 +120,7 @@ pub fn guarantee(layers: &[Layer], i: usize, profile: &Profile) -> f64 {
 }
 
 /// One step of [`alternate`], in player i's payoffs.
-#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
 pub struct Step {
     /// `merge<r>` or `early<r>` for round r.
     pub name: String,
@@ -142,8 +143,8 @@ pub fn alternate(
     mut log: impl FnMut(&Step),
 ) -> (Vec<Step>, Profile) {
     let last = last_layer(layers, i);
-    let (mut plan, mut steps) = (profile.clone(), Vec::new());
-    let mut best = (f64::NEG_INFINITY, profile.clone());
+    let (mut plan, mut steps) = (Cow::Borrowed(profile), Vec::new());
+    let mut best: Option<(f64, Profile)> = None;
     let mut record = |name: String, profile: &Profile, cap: Option<f64>| {
         let guarantee = guarantee(layers, i, profile);
         let step = Step {
@@ -153,20 +154,21 @@ pub fn alternate(
         };
         log(&step);
         steps.push(step);
-        if guarantee > best.0 {
-            best = (guarantee, profile.clone());
+        if best.as_ref().is_none_or(|(top, _)| guarantee > *top) {
+            best = Some((guarantee, profile.clone()));
         }
     };
     for r in 1..=rounds {
         let mut merge = CfrPlus::merged(layers, i, &plan, key, keys);
         (0..iterations).for_each(|_| merge.iterate());
-        let merged = merge.average();
+        let mut merged = merge.average();
         let cap = merged_best_response(layers, i, &merged, key, keys);
         record(format!("merge{r}"), &merged, Some(cap));
-        let mut early = CfrPlus::fixed_last(layers, i, merged.behavior[last].clone());
+        let last_behavior = std::mem::take(&mut merged.behavior[last]);
+        let mut early = CfrPlus::fixed_last(layers, i, last_behavior);
         (0..iterations).for_each(|_| early.iterate());
-        plan = early.average();
+        plan = Cow::Owned(early.average());
         record(format!("early{r}"), &plan, None);
     }
-    (steps, best.1)
+    (steps, best.map_or_else(|| profile.clone(), |(_, top)| top))
 }

@@ -50,7 +50,7 @@ pub(crate) fn row_dots(a: &[f64], b: &[f64]) -> Vec<f64> {
 
 /// Probability of player q's own actions to each of q's slots, layer by layer.
 #[must_use]
-pub fn reach(layers: &[Layer], profile: &Profile, q: usize) -> Vec<Vec<f64>> {
+pub(crate) fn reach(layers: &[Layer], profile: &Profile, q: usize) -> Vec<Vec<f64>> {
     let root = layers[0].slot_hand[q]
         .iter()
         .map(|&h| profile.choose[q][usize::from(h) - 1]);
@@ -77,7 +77,7 @@ pub fn reach(layers: &[Layer], profile: &Profile, q: usize) -> Vec<Vec<f64>> {
 /// The value of slot (h, x) sums the opponent's reach times i's payoff over the opponent hands
 /// alive at h. On i's layers, `own_layer(d, cfv)` receives the action values (slots x 10) and
 /// returns the slot values; it may update regrets. The opponent plays `behavior` on its layers.
-pub fn values(
+pub(crate) fn values(
     layers: &[Layer],
     i: usize,
     opp_reach: &[Vec<f64>],
@@ -123,7 +123,7 @@ pub fn values(
 
 /// Player i's best-response value against the opponent's part of `profile`.
 #[must_use]
-pub fn best_response_value(layers: &[Layer], i: usize, profile: &Profile) -> f64 {
+pub(crate) fn best_response_value(layers: &[Layer], i: usize, profile: &Profile) -> f64 {
     let opp = reach(layers, profile, 1 - i);
     let root = values(layers, i, &opp, &profile.behavior, |_, cfv| {
         cfv.chunks(HANDS)

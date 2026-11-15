@@ -14,7 +14,7 @@ use crate::tree::{Layer, last_layer};
 /// Each 10-action row of `weights`, clipped at zero and normalized; a row without positive
 /// weight becomes uniform.
 #[must_use]
-pub fn normalize(weights: &[f64]) -> Vec<f64> {
+pub(crate) fn normalize(weights: &[f64]) -> Vec<f64> {
     let mut out = vec![0.0; weights.len()];
     out.par_chunks_mut(HANDS)
         .zip(weights.par_chunks(HANDS))
