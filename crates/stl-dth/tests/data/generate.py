@@ -1,6 +1,6 @@
 """Write the stl-dth golden fixtures from the Python reference (stl at 55e342e).
 
-cd games/stl && uv run python <this file> <output directory>
+cd games/surpassing-the-leader && uv run python <this file> <output directory>
 """
 
 import hashlib

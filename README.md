@@ -10,9 +10,9 @@ history.
 | Path | Languages | Content |
 | --- | --- | --- |
 | `crates/` | Rust | The solvers (next table) |
-| `games/stl/` | Python, TypeScript, Lean, OCaml, C++, C | The referee, Hal and the game server; the browser game; the Lean proofs; the OCaml, C++ and C ports of the DTH solver; the papers |
-| `games/tok/` | Python | The Tower of Karma reference solver |
-| `games/ap/` | Python | The Air Poker engine and reference solver |
+| `games/surpassing-the-leader/` | Python, TypeScript, Lean, OCaml, C++, C | The referee, Hal and the game server; the browser game; the Lean proofs; the OCaml, C++ and C ports of the DTH solver; the papers |
+| `games/tower-of-karma/` | Python | The Tower of Karma reference solver |
+| `games/air-poker/` | Python | The Air Poker engine and reference solver |
 
 Each directory in `games/` has its own README, environment and tests.
 
@@ -70,9 +70,9 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo test --workspace --release -- --ignored
-(cd games/stl && uv run pytest -n 8)
-(cd games/tok && uv run pytest)
-(cd games/ap && uv run python -B -m unittest discover -s src/test)
+(cd games/surpassing-the-leader && uv run pytest -n 8)
+(cd games/tower-of-karma && uv run pytest)
+(cd games/air-poker && uv run python -B -m unittest discover -s src/test)
 ```
 
 The ignored tests read large artifacts: `artifacts/dth/V.npy` from `stl-dth build`,

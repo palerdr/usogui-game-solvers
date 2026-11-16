@@ -1,12 +1,12 @@
 # Golden fixtures for `ap`
 
-Source: the Python Air Poker reference in `games/ap`, commit `cadd581`
+Source: the Python Air Poker reference in `games/air-poker`, commit `cadd581`
 ("Add the robust public-state solver, engine self-play and the allocation loop").
 
-Generator: `generate.py` in this directory. Run it from `games/ap`:
+Generator: `generate.py` in this directory. Run it from `games/air-poker`:
 
 ```sh
-cd games/ap
+cd games/air-poker
 PYTHONPATH=. uv run python -B <this directory>/generate.py            # every fixture
 PYTHONPATH=. uv run python -B <this directory>/generate.py robust     # one fixture
 ```

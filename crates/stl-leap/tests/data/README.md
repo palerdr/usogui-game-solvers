@@ -3,7 +3,7 @@
 ## `leap_kernel_golden.json` and `leap_kernel_golden.bin`
 
 The golden fixture of the leap stage kernel. Commit `13aa898` of the stl history
-(`games/stl`) captured it from the retired Rust kernel as
+(`games/surpassing-the-leader`) captured it from the retired Rust kernel as
 `tests/leap_kernel_golden.npz`; the numba kernel at `55e342e` still reproduces it bit for bit.
 It holds seeded stage families and child tables with the values, kinds, failure counts and basis
 masks of the square and window sweeps (rungs only, and the production residue options), of the
@@ -13,7 +13,7 @@ stay so the converted fixture remains a byte copy of the npz.
 
 The `.bin` file concatenates the arrays as raw little-endian bytes, each padded to 8 bytes. The
 `.json` file holds the fixture's `meta` record and, per array, its numpy dtype, shape and byte
-offset. Command, run in `games/stl` at `55e342e` (npz SHA-256
+offset. Command, run in `games/surpassing-the-leader` at `55e342e` (npz SHA-256
 `29ff0c4d48ace51d7a364f48e26f3f84a0fba10de2364fa683cdb6c26c6a843c`):
 
 ```sh

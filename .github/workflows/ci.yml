@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: games/tok
+        working-directory: games/tower-of-karma
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v10.0.1
@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: games/ap
+        working-directory: games/air-poker
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v10.0.1
@@ -58,7 +58,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: games/stl
+        working-directory: games/surpassing-the-leader
     strategy:
       fail-fast: false
       matrix:
@@ -100,14 +100,14 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: games/stl/web
+        working-directory: games/surpassing-the-leader/web
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: games/stl/web/package-lock.json
+          cache-dependency-path: games/surpassing-the-leader/web/package-lock.json
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -124,7 +124,7 @@ jobs:
           - release
     defaults:
       run:
-        working-directory: games/stl/src/cpp
+        working-directory: games/surpassing-the-leader/src/cpp
     steps:
       - uses: actions/checkout@v6
       - run: cmake --preset ${{ matrix.preset }}
@@ -136,7 +136,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: games/stl/src/ocaml
+        working-directory: games/surpassing-the-leader/src/ocaml
     steps:
       - uses: actions/checkout@v6
       - name: Install GLPK
@@ -155,7 +155,7 @@ jobs:
         with:
           ocaml-compiler: "5.3"
           dune-cache: true
-          opam-local-packages: games/stl/src/ocaml/*.opam
+          opam-local-packages: games/surpassing-the-leader/src/ocaml/*.opam
       - run: opam install . --deps-only --with-test --yes
       - run: opam exec -- dune build
       - run: opam exec -- dune runtest
@@ -169,7 +169,7 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
-        working-directory: games/stl/src/lean
+        working-directory: games/surpassing-the-leader/src/lean
     steps:
       - uses: actions/checkout@v6
       - name: Install elan

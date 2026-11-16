@@ -1,10 +1,10 @@
 # Golden fixtures
 
-Source: the Python reference in `games/stl` at commit `55e342e`,
+Source: the Python reference in `games/surpassing-the-leader` at commit `55e342e`,
 modules `stl.dth` and `stl.dth_kernel`. `generate.py` in this directory writes every fixture:
 
 ```sh
-cd games/stl && uv run python <this directory>/generate.py <this directory>
+cd games/surpassing-the-leader && uv run python <this directory>/generate.py <this directory>
 ```
 
 It reads the reference table `artifacts/dth/V.npy` (SHA-256 `e43977b7...29b2`) for the real-class

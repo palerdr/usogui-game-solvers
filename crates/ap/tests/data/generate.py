@@ -1,6 +1,6 @@
 """Write the golden fixtures of crates/ap/tests/data from the Python reference.
 
-Run from `games/ap` (see README.md in this directory).
+Run from `games/air-poker` (see README.md in this directory).
 """
 
 import json
