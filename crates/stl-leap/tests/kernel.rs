@@ -57,7 +57,6 @@ fn lp(s: &[f64; A], f: f64, window: bool) -> f64 {
 }
 
 /// The asymmetric-support stage of the reference tests; its value is VALUE.
-#[allow(clippy::unreadable_literal)] // the reference stage, copied digit for digit
 #[rustfmt::skip]
 const S: [f64; A] = [
     -0.1284722791674977, -0.12311238213031911, -0.11783938104329245, -0.11229663346467983,

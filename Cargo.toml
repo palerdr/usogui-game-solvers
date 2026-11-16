@@ -19,24 +19,10 @@ sha2 = "0.11"
 stl-dth = { path = "crates/stl-dth" }
 
 [workspace.lints.rust]
-missing_docs = "warn"
-unreachable_pub = "warn"
 unsafe_code = "deny"
 
 [workspace.lints.clippy]
-all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-cast_possible_truncation = "allow"
-cast_possible_wrap = "allow"
-cast_precision_loss = "allow"
-cast_sign_loss = "allow"
-many_single_char_names = "allow"
-similar_names = "allow"
-float_cmp = "allow"
-# Library code panics only on a broken internal invariant (CLAUDE.md); a `# Panics` section
-# would document impossibilities.
-missing_panics_doc = "allow"
-unwrap_used = "warn"
+all = "warn"
 
 [profile.release]
 codegen-units = 1

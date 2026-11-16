@@ -241,7 +241,6 @@ pub(crate) fn kink_seed(p: u64, q: u64, old: Option<usize>, new: Option<usize>) 
 }
 
 #[cfg(test)]
-#[allow(clippy::unreadable_literal)] // reference stages, copied digit for digit
 mod tests {
     use super::*;
 

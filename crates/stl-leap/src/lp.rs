@@ -144,7 +144,6 @@ fn normalized(weights: impl Iterator<Item = f64>) -> Option<Vec<f64>> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unreadable_literal)] // reference stages, copied digit for digit
 mod tests {
     use super::*;
 

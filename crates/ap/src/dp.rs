@@ -33,10 +33,6 @@ pub struct HandTable {
 impl HandTable {
     /// Build the table of `deck`.
     #[must_use]
-    #[expect(
-        clippy::large_stack_arrays,
-        reason = "one 23 KB table per round on the sampler's hot path"
-    )]
     pub fn new(deck: u64) -> Self {
         let deck = deck & FULL_DECK;
         let mut a = [0; 15];

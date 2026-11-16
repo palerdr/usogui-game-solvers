@@ -81,7 +81,7 @@ The ignored tests read large artifacts: `artifacts/dth/V.npy` from `stl-dth buil
 
 ## Design decisions
 
-One Cargo workspace owns the lints (clippy pedantic, `missing_docs`, `unsafe_code = "deny"`),
+One Cargo workspace owns the lints (`clippy::all` and `unsafe_code = "deny"`),
 the dependency versions and the toolchain. `CLAUDE.md` states the coding rules.
 
 Each crate proves parity with its Python reference through golden fixtures in
