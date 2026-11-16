@@ -28,7 +28,7 @@ UI follows David Kaloper Meršinjak's `notty` (ISC).
 
 ## How to run
 
-From the repository root, use Python 3.12 and uv:
+From `games/stl`, use Python 3.12 and uv:
 
 ```sh
 uv sync --locked

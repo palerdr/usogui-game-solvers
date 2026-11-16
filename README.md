@@ -2,9 +2,19 @@
 
 ## What it does
 
-Rust solvers for three games from Toshio Sako's *Usogui*. Each crate holds one solver and its
-certificate, ported from the Python reference and checked against it. The repository holds no
-game server, user interface or opponent model.
+Solvers for three games from Toshio Sako's *Usogui*: Surpassing the Leader, Tower of Karma and
+Air Poker. Each Rust crate in `crates/` holds one solver and its certificate, ported from the
+Python reference and checked against it. `games/` holds the earlier work on each game with its
+history.
+
+| Path | Languages | Content |
+| --- | --- | --- |
+| `crates/` | Rust | The solvers (next table) |
+| `games/stl/` | Python, TypeScript, Lean, OCaml, C++, C | The referee, Hal and the game server; the browser game; the Lean proofs; the OCaml, C++ and C ports of the DTH solver; the papers |
+| `games/tok/` | Python | The Tower of Karma reference solver |
+| `games/ap/` | Python | The Air Poker engine and reference solver |
+
+Each directory in `games/` has its own README, environment and tests.
 
 | Crate | Game | What it solves |
 | --- | --- | --- |
@@ -60,6 +70,9 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo test --workspace --release -- --ignored
+(cd games/stl && uv run pytest -n 8)
+(cd games/tok && uv run pytest)
+(cd games/ap && uv run python -B -m unittest discover -s src/test)
 ```
 
 The ignored tests read large artifacts: `artifacts/dth/V.npy` from `stl-dth build`,
@@ -73,7 +86,8 @@ the dependency versions and the toolchain. `CLAUDE.md` states the coding rules.
 
 Each crate proves parity with its Python reference through golden fixtures in
 `crates/<crate>/tests/data/`, whose `README.md` names the source commit and the generator
-command. The references are stl `55e342e`, TOK `f185b24` and AP `0fd65b7`.
+command. The references are stl `55e342e`, TOK `f185b24` and AP `0fd65b7`. Each commit is in
+this repository's history, imported under `games/`.
 
 - `stl-dth` writes a table byte-identical to the numba build. It follows the numba kernel's
   operation order and its `min`/`max` tie rule, so signed zeros match.
@@ -90,6 +104,7 @@ command. The references are stl `55e342e`, TOK `f185b24` and AP `0fd65b7`.
 The port dropped code that the solvers do not need: the stl referee, Hal and server; the leap
 warm-start, edge-move and support-seed paths that the full build never enables; TOK's object
 tree, which duplicated the array path; and AP's sensitivity study and tiny exact test game.
+Those parts stay in `games/`.
 
 Dependencies: `clap`, `highs`, `memmap2`, `rayon`, `serde`, `serde_json`, `libm` (ap), and
 `sha2` for tests.

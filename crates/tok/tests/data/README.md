@@ -1,11 +1,11 @@
 # Golden fixtures
 
-Source: the Python TOK solver, repository `~/Desktop/projects/TOK`, commit `f185b24`
+Source: the Python TOK solver in `games/tok`, commit `f185b24`
 ("Solve and certify D_3 with array CFR+; test coarse last-layer keys at K=3").
 
 ## `reference.json`
 
-Generator: `make_reference.py` in this directory. Command, from the TOK repository root:
+Generator: `make_reference.py` in this directory. Command, from `games/tok`:
 
 ```sh
 PYTHONPATH=. uv run python <this directory>/make_reference.py > <this directory>/reference.json
@@ -27,7 +27,7 @@ Contents:
 
 `stored_d3_profile_matches_its_certificate` is `#[ignore]`: it reads the stored CFR+ profile
 (31,500 iterations, 21 MB and 258 MB) from `artifacts/tok/` at the workspace root. Convert the
-Python strategy tables with `npz_to_table.py`, from the TOK repository root:
+Python strategy tables with `npz_to_table.py`, from `games/tok`:
 
 ```sh
 A=src/artifacts; T=<workspace>/artifacts/tok; mkdir -p $T

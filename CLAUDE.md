@@ -1,4 +1,6 @@
-Read README.md first. This repository holds Rust solvers only: no game server, UI or opponent model.
+Read README.md first. `crates/` holds the Rust solvers: no game server, UI or opponent model.
+`games/<game>/` holds each game's earlier work; read its README before you change it. The
+commands and rules below apply to `crates/`.
 
 ## Commands
 
@@ -23,7 +25,7 @@ cargo test --workspace -- --ignored   # needs the real artifacts named in each t
   with a `// SAFETY:` comment.
 - Every public item has a doc comment that says what it computes, in the game's terms.
 - Each numerical port proves parity with the Python reference through a golden fixture in
-  `crates/<crate>/tests/data/`. `tests/data/README.md` names the source repository, commit and
+  `crates/<crate>/tests/data/`. `tests/data/README.md` names the source directory, commit and
   command that produced each fixture. A test that needs a large local artifact is `#[ignore]` and
   names the path in its message.
 - Bit-identical output where the reference is deterministic. Otherwise the test states the

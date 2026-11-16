@@ -1,6 +1,6 @@
 """Write the stl-dth golden fixtures from the Python reference (stl at 55e342e).
 
-cd ~/Desktop/projects/stl && uv run python <this file> <output directory>
+cd games/stl && uv run python <this file> <output directory>
 """
 
 import hashlib

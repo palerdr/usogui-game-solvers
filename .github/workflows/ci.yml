@@ -14,13 +14,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The Rust solvers. The highs crate builds HiGHS with cmake, which the
+  # runner image provides. rust-toolchain.toml pins the toolchain.
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  tok:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: games/tok
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v10.0.1
+      - run: uv sync --locked
+      - run: uv run pytest -q
+
+  ap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: games/ap
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v10.0.1
+      - run: uv sync --locked
+      - run: uv run python -B -m unittest discover -s src/test
+
   # Two shards partition the suite: slow and not slow. The slow shard runs
   # alone because test_forward_counts_full takes about 210 s on one core. CI
   # sets the xdist width to the runner's logical cores.
-  python:
-    name: python (${{ matrix.shard }})
+  stl-python:
+    name: stl python (${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: games/stl
     strategy:
       fail-fast: false
       matrix:
@@ -57,25 +95,25 @@ jobs:
         if: matrix.shard == 'fast'
         run: uv run --locked --python 3.13 python -m pytest tests/server -q -n 0
 
-  web:
+  stl-web:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: web
+        working-directory: games/stl/web
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: games/stl/web/package-lock.json
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
-  cpp:
+  stl-cpp:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -86,19 +124,19 @@ jobs:
           - release
     defaults:
       run:
-        working-directory: src/cpp
+        working-directory: games/stl/src/cpp
     steps:
       - uses: actions/checkout@v6
       - run: cmake --preset ${{ matrix.preset }}
       - run: cmake --build --preset ${{ matrix.preset }} --parallel 2
       - run: ctest --preset ${{ matrix.preset }}
 
-  ocaml:
+  stl-ocaml:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: src/ocaml
+        working-directory: games/stl/src/ocaml
     steps:
       - uses: actions/checkout@v6
       - name: Install GLPK
@@ -117,7 +155,7 @@ jobs:
         with:
           ocaml-compiler: "5.3"
           dune-cache: true
-          opam-local-packages: src/ocaml/*.opam
+          opam-local-packages: games/stl/src/ocaml/*.opam
       - run: opam install . --deps-only --with-test --yes
       - run: opam exec -- dune build
       - run: opam exec -- dune runtest
@@ -126,12 +164,12 @@ jobs:
   # lean-toolchain pins Lean, and lake-manifest.json pins Mathlib. The cache
   # step downloads Mathlib's compiled files, and FormalAudit's #audit_axioms
   # fails the build if a declaration uses sorry or a nonstandard axiom.
-  lean:
+  stl-lean:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     defaults:
       run:
-        working-directory: src/lean
+        working-directory: games/stl/src/lean
     steps:
       - uses: actions/checkout@v6
       - name: Install elan
