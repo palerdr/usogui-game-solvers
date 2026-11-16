@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Drop the Handkerchief</title>
+    <style>
+      /* Benne, by Reset Type, under the SIL Open Font License; see public/fonts. */
+      @font-face {
+        font-family: "Benne";
+        src: url("/fonts/benne.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      :root {
+        --ink: #f2f2f2;
+        --dim: #8a8a8a;
+        --rule: #2b2b2b;
+        --field: #0c0c0c;
+        --warn: #d8b24a;
+        --bad: #c4544a;
+        --good: #2f9e4f;
+        --gain: #ff2a1a;
+        --edge: clamp(18px, 3vw, 36px);
+        color-scheme: dark;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: #000;
+        color: var(--ink);
+        font: 17px/1.55 Benne, Georgia, "Times New Roman", serif;
+        overflow: hidden;
+      }
+      /* One stage, the whole viewport. The canvas is the floor; every screen
+         is a layer over it. */
+      #stage { position: fixed; inset: 0; background: #000; }
+      #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      #hud {
+        position: absolute; top: 24px; left: var(--edge); width: min(300px, 44vw);
+        display: flex; flex-direction: column; gap: 10px; z-index: 2;
+      }
+      #hud .player h2 {
+        font-size: 14px; margin: 0 0 4px; font-weight: 600; letter-spacing: 0.08em;
+        overflow-wrap: anywhere;
+      }
+      #hud .you { color: var(--dim); font-weight: 400; }
+      .stat { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; line-height: 1.3; }
+      .stat span:first-child { width: 38px; color: var(--dim); font-size: 13px; }
+      .bar { flex: 1; height: 7px; background: #141414; border: 1px solid var(--rule); display: flex; }
+      .bar > i { display: block; height: 100%; background: var(--ink); }
+      .bar.hot > i { background: var(--bad); }
+      /* What the half-round just added, red until the result is acknowledged. */
+      .bar > i.gain, .bar.hot > i.gain { background: var(--gain); }
+      .value { width: 66px; text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--dim); }
+      /* The state of the game, set large enough to read from across the room:
+         the clock, the round and half, and the series once one exists. */
+      #corner {
+        position: absolute; top: 24px; right: var(--edge); text-align: right; z-index: 2;
+        color: var(--dim); font-variant-numeric: tabular-nums;
+        font-size: 22px; line-height: 1.35;
+      }
+      #corner strong { color: var(--ink); font-weight: 600; }
+      #corner .clock { font-size: 34px; line-height: 1.2; color: var(--ink); }
+      #corner .leap { color: var(--warn); }
+      #screen {
+        position: absolute; inset: 176px 0 0; z-index: 1;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0 var(--edge) 40px; overflow-y: auto;
+      }
+      #screen.floor { pointer-events: none; }
+      #screen .card { width: min(880px, 100%); flex-shrink: 0; margin-block: auto; }
+      #screen h2 { font-size: 15px; margin: 0 0 var(--step); letter-spacing: 0.14em; font-weight: 400; }
+      #screen p { margin: 0 0 var(--step); }
+      #screen.opening { inset: 0; padding: 32px var(--edge); }
+      .title-slide { width: 100%; text-align: center; }
+      .title-slide h1 {
+        margin: 0 0 48px; font-weight: 400; line-height: 1.1;
+        font-size: clamp(2.3rem, 7vw, 6.5rem); letter-spacing: 0.12em;
+      }
+      .title-slide form { justify-content: center; }
+      .opening button {
+        background: transparent; color: var(--ink); border: 1px solid var(--rule);
+        min-width: 120px;
+      }
+      .opening button:hover { border-color: var(--ink); }
+      .opening button:focus-visible { outline: 2px solid var(--ink); outline-offset: 5px; }
+      .opening .error:empty { display: none; }
+      .rules-slide {
+        width: min(760px, 100%); max-height: 100%; overflow-y: auto;
+        display: flex; flex-direction: column; gap: 28px; align-items: center;
+      }
+      .rules-slide h1 {
+        margin: 0; font-weight: 400; font-size: 22px; letter-spacing: 0.3em;
+      }
+      .rules-slide dl {
+        margin: 0; width: 100%; display: grid; grid-template-columns: 11em 1fr;
+        border-top: 1px solid var(--rule);
+      }
+      .rules-slide dt, .rules-slide dd {
+        margin: 0; padding: 14px 0; border-bottom: 1px solid var(--rule);
+      }
+      .rules-slide dt {
+        padding-right: 20px; color: var(--dim); font-size: 14px;
+        letter-spacing: 0.1em; line-height: 1.9; text-transform: uppercase;
+      }
+      .rules-slide dd { font-size: 19px; line-height: 1.45; }
+      .rules-slide form { flex: 0 0 auto; justify-content: center; margin: 0; }
+      .caption {
+        position: absolute; left: var(--edge); right: var(--edge); bottom: 8vh; text-align: center;
+        letter-spacing: 0.18em; color: var(--ink); font-size: 17px;
+      }
+      .caption small { display: block; color: var(--dim); letter-spacing: 0.08em; margin-top: 12px; font-size: 14px; }
+      /* A gesture made before the server answered: the clock opens on arrival. */
+      .caption.waiting button { opacity: 0.45; cursor: progress; }
+      .caption.waiting::after {
+        content: "One moment"; display: block; margin-top: 10px;
+        color: var(--dim); letter-spacing: 0.08em; font-size: 14px;
+      }
+      .caption button {
+        margin-top: 28px; color: var(--ink); background: transparent;
+        border: 1px solid var(--rule);
+      }
+      #screen .action { width: min(1040px, 100%); }
+      .action {
+        display: grid; grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: clamp(48px, 5vw, 80px); align-items: center;
+      }
+      /* One vertical rhythm for every block of text: each line of a card sits
+         the same distance from its neighbours, and a button or heading sits
+         one double step away. */
+      #screen { --step: 20px; }
+      /* Keep the instructions inside their column and align the form with them. */
+      .action .ask {
+        min-width: 0; display: grid; gap: var(--step);
+        grid-template-columns: minmax(0, 1fr);
+      }
+      #screen .action .ask > * { margin: 0; }
+      .action .ask p { max-width: 48ch; }
+      #screen .action .ask .pick { justify-self: start; flex-wrap: nowrap; margin-top: var(--step); }
+      .action .ask [data-second] { width: 4.2em; text-align: center; font-variant-numeric: lining-nums tabular-nums; }
+      .action .ask .error { min-height: 0; }
+      .action .ask .error:empty { display: none; }
+
+      .plate-and-count { display: grid; justify-items: center; gap: 0.6rem; flex: 0 0 auto; }
+      .count {
+        font-family: "Times New Roman", Times, "Liberation Serif", serif;
+        font-size: clamp(2rem, 5vh, 3.2rem); line-height: 1; color: var(--dim);
+        font-variant-numeric: lining-nums tabular-nums; letter-spacing: 0.04em;
+      }
+      /* ---- The dial plate, from palerdr.github.io ---- */
+      .dialplate {
+        --paper: #ffffff;
+        --paper-lift: #ffffff;
+        --ink: #0a0a0a;
+        --ink-dim: #383838;
+        --ink-faint: #6d6d6d;
+        --line: #e3e3e0;
+        --line-strong: #c9c9c4;
+        --leap: #c0142a;
+        position: relative;
+        width: min(62vh, 44vw, 32rem, max(160px, calc(100vh - 280px)));
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: var(--paper);
+        border: 1px solid var(--line-strong);
+      }
+      .dialplate .engraving,
+      .dialplate .hands {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        pointer-events: none; overflow: visible;
+      }
+      .dialplate .rim { fill: none; stroke: var(--line-strong); stroke-width: 2; }
+      .dialplate .rim.thin { stroke: var(--line); stroke-width: 1; }
+      .dialplate .tick { stroke: var(--line-strong); stroke-width: 1.5; }
+      .dialplate .tick.major { stroke: var(--ink-faint); stroke-width: 3; }
+      .dialplate .leap-tick { stroke: var(--leap); stroke-width: 4; }
+      /* Hands are filled triangles, not strokes: a stroke cannot come to a point. */
+      .dialplate .hands polygon { stroke: none; }
+      .dialplate [data-hand] { transform-box: view-box; transform-origin: 500px 500px; }
+      .dialplate [data-hand="hour"] polygon { fill: var(--ink-dim); }
+      .dialplate [data-hand="minute"] polygon { fill: var(--ink-faint); }
+      .dialplate [data-hand="pointer"] polygon { fill: var(--leap); }
+      .dialplate [data-hand="pointer"][data-live] { transition: none; }
+      .dialplate .hub { fill: var(--paper-lift); stroke: var(--line-strong); stroke-width: 3; }
+      .dialplate .core {
+        position: absolute; left: 50%; top: 42%; translate: -50% -50%; width: 62%;
+        text-align: center;
+      }
+      /* The only words on the dial, set like a name engraved on one. */
+      .dialplate .who {
+        margin: 0; color: var(--ink);
+        font-size: clamp(0.8125rem, 1.8vw, 1.0625rem); letter-spacing: 0.22em;
+        font-variant-numeric: tabular-nums;
+      }
+      .win { color: var(--good); }
+      .lose { color: var(--bad); }
+      .big { font-size: 28px; letter-spacing: 0.12em; font-weight: 400; margin: 0 0 12px; }
+      .hint { color: var(--dim); }
+      .leap { color: var(--warn); }
+      .summary { color: var(--dim); overflow-wrap: anywhere; border-top: 1px solid var(--rule); padding-top: 8px; margin-top: 14px; }
+      form { display: flex; gap: 12px; align-items: center; margin-top: calc(var(--step) * 2); flex-wrap: wrap; }
+      form label { color: var(--dim); }
+      input[type="number"], input[type="text"] {
+        width: 96px; background: var(--field); color: var(--ink);
+        border: 1px solid var(--rule); padding: 8px 10px; font: inherit; font-size: 18px;
+      }
+      input[type="text"] { width: min(240px, 100%); }
+      button {
+        background: var(--ink); color: #000; border: 0; padding: 8px 20px;
+        font: inherit; letter-spacing: 0.06em; cursor: pointer; min-height: 44px;
+      }
+      button:disabled { opacity: 0.45; cursor: default; }
+      .error { color: var(--bad); margin-top: 8px; min-height: 1.4em; }
+      #screen .outcome { width: min(1120px, 100%); text-align: center; color: #fff; }
+      #screen .verdict {
+        font-size: clamp(2.3rem, 6.5vw, 5.8rem); line-height: 1.15;
+        letter-spacing: 0.13em; margin: 0 0 calc(var(--step) * 2); text-wrap: balance;
+        font-weight: 400;
+      }
+      #screen .verdict .aftermath {
+        display: block; margin-top: var(--step); font-size: clamp(1.1rem, 2.3vw, 1.65rem);
+        letter-spacing: 0.08em;
+      }
+      .outcome-details { display: grid; gap: var(--step); }
+      #screen .outcome-details p { margin: 0; line-height: 1.3; }
+      .outcome form { justify-content: center; margin: calc(var(--step) * 2) 0 0; }
+      .outcome .error { margin-top: var(--step); min-height: 0; }
+      .outcome .error:empty { display: none; }
+      .victory { text-align: center; font-size: 1.2em; }
+      #screen .victory { margin-block-end: 0; }
+      .victory .big { font-size: 36px; }
+      .victory button { font-size: 1em; padding: 10px 26px; }
+      .victory form { justify-content: center; margin-bottom: 12px; }
+      .board { text-align: center; }
+      .board form { justify-content: center; }
+      .standings {
+        list-style: none; padding: 0; margin: 12px auto; width: min(520px, 100%);
+        font-variant-numeric: tabular-nums;
+      }
+      .standings li {
+        display: grid; grid-template-columns: 2.5em minmax(0, 1fr) auto 3.5em; gap: 12px;
+        padding: 12px 0; border-bottom: 1px solid var(--rule); text-align: left;
+      }
+      .standings .name { overflow-wrap: anywhere; unicode-bidi: isolate; }
+      .standings .score { text-align: right; }
+      .standings .you { font-weight: 600; }
+      .board input[type="text"], .board input[type="text"]::placeholder { text-align: center; }
+      .outcome button { color: #fff; background: transparent; border: 1px solid #fff; }
+      .outcome .error { color: #fff; }
+      .result-stage #hud, .result-stage #corner { color: #fff; }
+      .result-stage #hud .you, .result-stage .stat span:first-child,
+      .result-stage .value, .result-stage #corner .clock,
+      .result-stage #corner .leap, .result-stage #corner strong { color: #fff; }
+      .revealing #screen, .revealing #hud, .revealing #corner {
+        animation: result-reveal var(--reveal-ms) cubic-bezier(0.22, 0.05, 0.36, 1) both;
+      }
+      @keyframes result-reveal { from { opacity: 0; } to { opacity: 1; } }
+      @media (max-width: 820px) {
+        .action {
+          display: flex; flex-direction: column; align-items: center;
+          gap: var(--step); text-align: center;
+        }
+        .action .ask { display: contents; }
+        .action .ask h2 { order: 1; }
+        .action .ask p { order: 2; max-width: 38ch; }
+        .action .plate-and-count { order: 3; margin-top: var(--step); }
+        .action .ask .pick { order: 4; align-self: center; }
+        .action .ask .error { order: 5; }
+        .dialplate { width: min(52vw, 32vh); }
+        .plate-and-count { gap: 16px; }
+        .dialplate .who { font-size: 12px; letter-spacing: 0.06em; white-space: nowrap; }
+      }
+      @media (max-width: 640px) {
+        .title-slide h1 { font-size: clamp(1.7rem, 9vw, 3rem); }
+        .rules-slide { gap: 16px; }
+        .rules-slide h1 { font-size: 18px; }
+        .rules-slide dl { grid-template-columns: 1fr; }
+        .rules-slide dt { padding: 10px 0 0; border-bottom: 0; line-height: 1.4; font-size: 12px; }
+        .rules-slide dd { padding: 2px 0 10px; font-size: 16px; line-height: 1.35; }
+        #hud { top: 18px; width: 44vw; }
+        #hud .player h2 { font-size: 12px; }
+        #corner { top: 18px; font-size: 15px; }
+        #corner .clock { font-size: 22px; }
+        .stat { gap: 4px; }
+        .stat span:first-child { width: 28px; }
+        .value { width: 52px; font-size: 12px; }
+        .dialplate .core { width: 66%; }
+        #screen { padding: 0 var(--edge) 28px; --step: 16px; }
+        .dialplate { width: min(48vw, 29vh); }
+        .dialplate .who { font-size: 10px; letter-spacing: 0.06em; }
+        .standings li { grid-template-columns: 2em minmax(0, 1fr) auto; row-gap: 4px; }
+        .standings li > span:first-child { grid-column: 1; grid-row: 1; }
+        .standings .name { grid-column: 2; grid-row: 1; }
+        .standings .hint { grid-column: 2; grid-row: 2; }
+        .standings .score { grid-column: 3; grid-row: 1; }
+      }
+      @media (max-width: 820px) and (max-height: 720px) {
+        #screen { --step: 12px; padding-block-end: 24px; }
+        .action .ask p { font-size: 16px; line-height: 1.5; }
+        .dialplate { width: min(44vw, 23vh); }
+        .plate-and-count { gap: 12px; }
+      }
+      @media (max-width: 820px) and (max-height: 600px) {
+        #screen { inset-block-start: 156px; padding-block-end: 16px; }
+        #screen.opening { inset-block-start: 0; }
+        #hud { top: 12px; gap: 6px; }
+        #corner { top: 12px; }
+        .stat { line-height: 1.2; }
+        .dialplate { width: min(44vw, 20vh); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <canvas id="scene"></canvas>
+      <div id="hud"></div>
+      <div id="corner"></div>
+      <div id="screen" class="opening">
+        <div class="title-slide">
+          <h1>DROP THE<br />HANDKERCHIEF</h1>
+          <form><button type="submit">Start</button></form>
+          <div class="error" role="alert"></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

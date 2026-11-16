@@ -1,0 +1,6 @@
+(executable
+ (public_name dth-solve-tablebase)
+ (name solve_tablebase)
+ (package dth)
+ (modules solve_tablebase)
+ (libraries dth_solver unix))

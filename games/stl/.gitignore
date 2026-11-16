@@ -1,0 +1,70 @@
+# Python caches / build artifacts
+__pycache__/
+*.py[cod]
+*.so
+target/
+/build/
+
+# Virtualenvs / local tooling
+.venv/
+.python-version
+.tools/
+.vscode/
+
+# Test / tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Generated reports and experiment outputs
+outputs/
+graphify-out/
+multirun/
+logs/
+demos/
+tmp/
+docs/paper/build/
+docs/paper/*.log
+docs/paper/*.synctex.gz
+docs/paper/*.aux
+docs/paper/*.fdb_latexmk
+docs/paper/*.fls
+docs/paper/*.out
+# Built tables and the deploy bundle: artifacts/dth/V.npy from python -m stl dth,
+# artifacts/leap from python -m stl leap, and artifacts/vercel from python -m stl deploy.
+artifacts/
+
+# Training artifacts
+models/
+checkpoints/
+src/stl/checkpoints/
+
+# Native build products. Lake keeps Mathlib under src/lean/build/packages.
+src/lean/.lake/
+src/lean/build/
+src/ocaml/_build/
+src/cpp/build/
+src/cpp/outputs/
+
+# Generated media
+*.png
+# The character frames the web client draws are committed source art. Without
+# them a fresh clone draws labelled placeholders and no test fails.
+!web/public/art/**/*.png
+
+# Browser client: dependencies and build. The .vercel pattern below covers
+# the Vercel project link in .vercel/.
+web/node_modules/
+web/dist/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Local AI/tooling metadata
+/.codex
+/.agents
+.vercel
+.env*

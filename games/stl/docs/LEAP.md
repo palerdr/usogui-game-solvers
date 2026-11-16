@@ -1,0 +1,324 @@
+# Public leap game and certificate
+
+The production sweep and reader live in `src/stl/leap.py`. The independent
+scalar stage and fused-multiply-add reference live in `tests/conftest.py`;
+the golden tests compare the frozen kernel against them and the Rust fixture.
+
+`stl.leap` builds, audits, and reads the public leap-aware game (L2).
+`stl.leap_kernel` is the frozen numba kernel. [RULES.md](RULES.md) owns the
+physical rules; [DTH.md](DTH.md) owns the exact post-leap continuation.
+
+## Formulation
+
+The public Markov state is `(baku_load, baku_ttd, hal_load, hal_ttd, half, clock)`.
+The opening is clock 720 (8:12), empty loads and TTD, Hal dropping in half 1.
+Both players know the leap rule. Each stage has simultaneous private choices
+and public revealed outcomes. There is no hidden awareness variable in L2.
+
+In half 1, DTH sees `(baku_load, baku_ttd, hal_load, hal_ttd)`; in half 2 it
+sees `(hal_load, hal_ttd, baku_load, baku_ttd)`. DTH values are from the
+current Dropper's perspective, so Hal's utility negates them in half 2.
+Only children with `clock > 3600` use DTH as an exact tail. Before that,
+future action 61 can alter incentives even in an ordinary 60-by-60 stage.
+The browser's DTH fallback is therefore not an exact full-STL policy.
+
+The round-start route is `1 + ((minute - 12) mod 4)`. Route 2 is active: a
+round starting at 8:57 gives Baku the leap-window drop in half 2. Routes
+are derived from the clock, never advanced as independent state.
+
+## Build and read
+
+Run `uv run python -m stl leap` after building DTH. The default output is
+ignored `artifacts/leap/` (about 82 GB); `--dth` and `--output` override the
+paths. The full build reaches clock 720. `open_leap()` is the one completed
+artifact reader. The builder requires an empty output directory and writes
+`report.json` after its coverage and numerical audits pass. An interrupted
+build must restart in a new empty directory. The reader checks the report's
+coverage and residual, then validates the DTH shape and six reference values.
+`LeapTable.stage` reconstructs a stage and checks its numerical certificate.
+
+`tests/leap_kernel_golden.npz` pins the retired Rust kernel's outputs exactly.
+The frozen kernel bytes, support APIs, and packing-runs entry stay intact
+because that fixture cannot be regenerated. Its old doc paths refer to
+`938fb25`; this guide replaces `src/stl/docs/LEAP_CERTIFICATE.md`.
+`tests/test_leap.py` independently recertifies the 16 Figure 3 records for
+minutes 44 through 59 against the real artifact.
+
+## Claim boundary
+
+The stored L2 result is a certified numerical solution of the declared public
+game, not a model of Hal's counterfactual memory. The source analyses describe
+awareness on the realized trace but give no off-path awareness kernel. Those
+interpretations and the retired L3 research remain in `938fb25`; no surviving
+provider claims to solve that hidden-memory game. Translated Hal is an
+empirical opponent model described in [HAL.md](HAL.md).
+
+## Certificate from nonnegative weights
+
+We use this bound in `src/stl/leap_kernel.py` to avoid a second triangular matrix product.
+We retain the full matrix check after clipping a negative weight.
+
+We treat the gathered binary64 payoffs as the exact entries of the stage
+matrix. You must account for child-value error through the accumulated bound
+in `docs/paper/dth_exact_solution.tex`.
+
+We require 60 actions, round-to-nearest binary64 arithmetic with gradual
+underflow, and compilation without fast-math. We check the rounding mode and
+underflow behavior at entry to the kernel. We use the shortcut for finite,
+nonnegative computed weights with a finite positive sum, payoffs in
+`[-2, 2]`, and `abs(D0) >= 1e-6`.
+
+We store the center `v` of an interval with radius `CERT_RADIUS = 1e-10`.
+We prove that this interval encloses both saddle bounds. Its width is
+`2e-10`, within the required `1e-6` gate.
+
+## Recurrence residual
+
+We index actions from zero. Let
+
+\[
+d=S_0-F,\quad \Delta_m=S_m-S_{m-1},\quad
+\widehat d=\operatorname{fl}(d),\quad
+\widehat b_m=\operatorname{fl}
+ \left(\operatorname{fl}(-\Delta_m)/\widehat d\right).
+\]
+
+We compute `r[0] = 1` and
+
+\[
+r_k=\operatorname{fl}\left(\sum_{j=0}^{k-1}
+                  \widehat b_{k-j}r_j\right).
+\]
+
+We use the standard floating-point model with unit roundoff
+\(u=2^{-53}\) and \(\gamma_n=nu/(1-nu)\). We bound dot-product error
+by \(\gamma_{2k}\sum|a_jb_j|\); this bound permits separate multiply
+and add operations or fused multiply-add operations. You can find the
+summation analysis in [Higham, The Accuracy of Floating Point Summation](https://nhigham.com/wp-content/uploads/2023/10/high93s.pdf)
+and dot-product analysis in [Castaldo, Whaley, and Chronopoulos, Reducing Floating Point Error in Dot Product Using the Superblock Family of Algorithms](https://www.cs.utsa.edu/~atc/pub/J42.pdf).
+
+We apply the dot-product bound to the computed weights as fixed inputs.
+We do not need a forward-error bound on the whole triangular solve.
+Define the exact sum of those weights as \(W=\sum_{j=0}^{59}r_j\).
+We require \(r_j\ge0\), which gives \(W\ge1\) because \(r_0=1\).
+
+For each row difference, we expand its residual as
+
+\[
+\begin{aligned}
+d r_k+\sum_{j<k}\Delta_{k-j}r_j
+={}&\widehat d\left(r_k-\sum_{j<k}\widehat b_{k-j}r_j\right)\\
+ &+(d-\widehat d)r_k
+   +\sum_{j<k}(\widehat d\widehat b_{k-j}+\Delta_{k-j})r_j.
+\end{aligned}
+\]
+
+We divide by \(W\). Since \(|d|,|\Delta_m|\le4\), and any subset
+of the nonnegative weights sums to at most \(W\), we obtain
+
+\[
+\frac{\left|d r_k+\sum_{j<k}\Delta_{k-j}r_j\right|}{W}
+\le4\gamma_{118}(1+\gamma_2)+4u+4\gamma_2+500\eta
+<6\times10^{-14},
+\]
+
+where \(\eta=2^{-1075}\) bounds the absolute rounding error of an
+underflowing operation. We include the absolute underflow terms from
+coefficient formation and the dot product. We use \(W\ge1\) to bound
+those terms after division. We exclude intermediate overflow under
+round-to-nearest by checking the recurrence results: we cannot obtain a
+finite result from an infinity through these multiply-add operations.
+
+## Saddle bounds and stored value
+
+We choose the exact strategies
+\(p_j=r_j/W\) and \(q_j=r_{59-j}/W\).
+We identify the residual above with an adjacent-row difference of \(Mq\).
+Across 59 differences, we get
+
+\[
+\max_i(Mq)_i-\min_i(Mq)_i < 59(6\times10^{-14})=3.54\times10^{-12}.
+\]
+
+We use the reversal symmetry of the Toeplitz stage matrix to obtain
+\((p^TM)_j=(Mq)_{59-j}\). Thus we can use the minimum and maximum of
+\(Mq\) as the lower and upper saddle bounds.
+
+We calculate the last row's exact payoff as
+
+\[
+(Mq)_{59}=F+(S_0-F)/W,
+\]
+
+because \(q_{59}=r_0/W=1/W\). In the kernel, we evaluate
+
+\[
+\widehat W=\operatorname{fl}\left(\sum_{j=59}^{0}r_j\right),\qquad
+v=\operatorname{fl}\left(F+\operatorname{fl}(\widehat d/\widehat W)\right).
+\]
+
+We bound the positive sum's relative error by \(\gamma_{60}\), plus
+its absolute underflow terms. With \(|F|\le2\), \(|d|\le4\), and
+\(W\ge1\), the subtraction, division, and final addition give
+\(|v-(Mq)_{59}|<4\times10^{-14}\).
+We enclose both saddle bounds within \(4\times10^{-12}\)
+of `v`. We use the larger radius `1e-10` in the code.
+
+We retain the existing pure-saddle check. We use the full matrix certificate
+for clipped weights or inputs outside the shortcut's bounds. We reject
+nonfinite weights and overflowed sums before either equalizer path can pass.
+
+We test the shortcut against 90-digit Decimal solutions, including signed
+coefficients and a subnormal result. We test clipped mixtures against the
+full matrix so that clipping cannot trigger the shortcut.
+
+## Public leap row
+
+The STL kernel uses this proof with separate row-local success and failure
+child tables. Python supplies the frozen revival probabilities. We use a
+fused multiply-add for the recurrence and require round-to-nearest with
+gradual underflow on the calling thread and on each kernel worker.
+
+In a window stage, row 61 has payoff `f` in each of the 60 columns. A row
+strategy with mass `a` on this row has minimum payoff
+
+\[
+ a f + (1-a)\min_c (p' M)_c.
+\]
+
+The row player maximizes this expression by choosing an endpoint in `a`.
+Thus the window value is `max(f, v60)`. Given a certified enclosure `[MN, MX]`
+for the square stage, we obtain `[max(MN, f), max(MX, f)]` for the window.
+The function `max(., f)` is 1-Lipschitz, so it preserves the enclosure radius.
+We store `max(v60, f)` and use kind 2 if `f >= v60`.
+
+We reserve kind 255 and NaN for classes that fail both kernel rungs. Python
+constructs the explicit 60-column matrix and uses HiGHS, then checks both
+saddle bounds against the same `1e-6` gate. Python aborts if that check fails.
+The complete artifact contains values through the clock-720 opening. A
+clock-3420 partial segment by itself would not establish a complete L2 solve.
+
+## Reduced support candidate (rung 2b)
+
+We use the recurrence as an inverse for adjacent row-payoff differences.
+Write `d = s[0] - f`. For a Checker mixture `q`, define
+
+\[
+g_i=q_i-\sum_{j>i}b_{j-i}q_j,
+\qquad q_j=\sum_{t\ge j}r_{t-j}g_t.
+\]
+
+For `i < 59`, we obtain `(Mq)[i] - (Mq)[i+1] = d*g[i]`.
+Given guessed row and column supports `P` and `Q`, we set `g[i] = 0`
+between adjacent supported rows. We retain unknowns at
+`G = {59} union {t: t not in P or t+1 not in P}`. We impose `q[j] = 0`
+outside `Q`, `sum(g[a:c]) = 0` between consecutive supported rows `a,c`
+with a hole, and `sum(q) = 1`.
+
+We solve the same equations with supports `59-Q` and `59-P`, then reverse
+the result to obtain the Dropper mixture `p`. We reject incompatible equation
+counts, singular systems, nonfinite weights, and negative weights. We normalize
+both candidate mixtures and check all 60 row and column payoffs:
+
+\[
+L=\min_j(p^T M)_j,\qquad U=\max_i(Mq)_i.
+\]
+
+For feasible mixtures, the minimax inequalities give `L <= v60 <= U`.
+We accept the midpoint only when the computed gap is at most `1e-6`, using
+the same full-matrix gate as the clipped equalizer and HiGHS paths. We use
+the public leap-row bounds above for window stages. We do not use the
+nonnegative-recurrence shortcut certificate for reduced supports.
+
+We guess a support from the preceding accepted class in the Checker row.
+After a miss, we try at most 64 paired boundary moves. The guesses and the
+linear solve propose mixtures; the full payoff check controls acceptance.
+Python sends remaining misses to HiGHS and refreshes the row's support.
+Python batches rows with reduced dimension above 16 through HiGHS by default.
+This size limit controls work and does not change the certificate.
+
+The frozen kernel exposes this path through support masks to `sweep_batch`.
+The retired Python `SupportFallback` controller is available only in history. The full-sweep command leaves
+support reuse disabled: measured support-search and refresh costs exceeded the saved LP
+work on the sampled H2 batches. We retain kinds 4 and 5 for direct and moved
+support certificates, and kind 254 for deferred classes after a row miss.
+
+## Packing fallback
+
+For `d = f-s[0] > 0`, define the upper-triangular Toeplitz matrix
+`A[i,j] = (f-s[j-i])/d` when `j >= i`, and zero otherwise. Then
+`M = f*11^T-d*A`. We solve the dual pair
+
+\[
+\max_{y\ge0}\{\mathbf1^T y:A^T y\le\mathbf1\}
+=\min_{x\ge0}\{\mathbf1^T x:Ax\ge\mathbf1\}=z.
+\]
+
+The unit diagonal permits a finite feasible covering vector by back
+substitution with nonnegative variables. Zero is feasible for the packing
+problem. At an optimum, `p=y/z` and `q=x/z` give value `f-d/z`.
+
+The native fallback uses a fresh slack basis and at most 512 simplex pivots.
+It rejects `d <= 1e-12` and sends unsupported or uncertified stages to HiGHS.
+It clips negative roundoff in candidate weights, normalizes both mixtures,
+and checks all original matrix row and column payoffs at the same `1e-6`
+gap gate. The formula proposes the candidate; the full matrix certificate
+controls acceptance. We retain the constant-row proof for window games.
+`solve_packing` checks finite inputs and the floating-point environment on
+the calling thread and on each kernel worker. Python records kernel
+certificates and HiGHS solves as separate counts.
+
+## Recurrence crash basis
+
+The packing constraints are `A^T y <= 1`. The matrix `A^T` is lower
+triangular Toeplitz with first column `a[k] = (f-s[k])/d`, and `a[0] = 1`.
+Lower triangular Toeplitz matrices multiply as truncated power series, so the
+inverse of `A^T` is lower triangular Toeplitz with first column `c`:
+
+\[
+c_0=1,\qquad c_k=-\sum_{m=1}^{k}a_m c_{k-m}.
+\]
+
+In the basis where every packing variable is basic, the basic values are
+`(A^T)^{-1} 1`, so `y[i] = c[0] + ... + c[i]`. The reduced cost of slack `j`
+is `-(c[0] + ... + c[59-j])`. The kernel coefficients satisfy
+`b[m] = a[m-1] - a[m]`, so its recurrence weights are the same prefix sums:
+`r[k] = c[0] + ... + c[k]`. We therefore write this basis from one series
+recurrence, without a factorization.
+
+A residue stage has a negative `r[k]`, so this start is neither primal nor
+dual feasible. We set each positive reduced cost to zero. The start is then
+dual feasible for the changed costs, and the dual simplex reaches primal
+feasibility. We rebuild the objective row for the true costs and finish with
+the primal simplex. If either phase fails, we restart from the slack basis.
+The start can change the pivot count, the final basis, and the stored value
+within its certified interval. The full-matrix certificate of the packing
+fallback controls acceptance on every path, so two starts can store values
+that differ by at most the 1e-6 gate.
+
+## Kink-relative support seeds
+
+A residue stage needs a negative step `s[k] - s[k-1]`. With `f > s[0]` and a
+nondecreasing `s`, every `b[m]` is nonnegative, so every `r[k]` is
+nonnegative and the equalizer certifies. We call the index of the most
+negative step the kink `k*` (`kink_index`). In the measured residue, Dropper
+holes end at `k*` and `59-k*`, and Checker holes end at `k*-1` and `59-k*`.
+A one-second increase in Checker ST shifts the success payoffs by one index
+and moves the kink by -1. The hole at the first anchor then moves with the
+kink, and the hole at `59-k*` moves the other way.
+
+In native mode each 1024-class chunk of the kernel keeps the certified
+support of its preceding residue class and that class's kink. The first
+residue class of a chunk has no seed and goes to the packing LP. For the next class, `kink_seed` moves
+each hole with its nearer anchor. It keeps a hole that starts at action 0 and
+clips moved holes to actions 0..59. We try the moved support with the
+reduced solve of rung 2b, then at most `kink_attempts - 1` edge moves. We
+send a miss to the packing LP. Its final basis supplies the next seed: the
+basic Dropper variables and the nonbasic Checker slacks, which have equal
+counts. The seed proposes mixtures; the full payoff check controls
+acceptance, as for rung 2b. The scalar reference for
+`kink_index` and `kink_seed` lives beside its tests in `tests/test_leap_kernel.py`.
+
+Window stages with `f > s[0]` never reach the residue. There `v60 <= f`, so
+the lifted pure bounds meet at `f`. A window residue stage therefore has
+`f <= s[0]`, which the packing LP rejects, and goes to HiGHS.

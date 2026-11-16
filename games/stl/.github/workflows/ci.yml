@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Two shards partition the suite: slow and not slow. The slow shard runs
+  # alone because test_forward_counts_full takes about 210 s on one core. CI
+  # sets the xdist width to the runner's logical cores.
+  python:
+    name: python (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: fast
+            select: -m "not slow"
+          - shard: slow
+            select: -m slow
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv sync --locked
+      - if: matrix.shard == 'fast'
+        run: uv run ruff check
+      - if: matrix.shard == 'fast'
+        run: uv run ruff format --check
+      - if: matrix.shard == 'fast'
+        run: uv run python -m pytest --collect-only -q
+      # The numba leap kernel must reproduce the retired Rust kernel's golden
+      # fixture. This step also compiles the kernel into its cache. The kernel
+      # passes its inputs read-only, so writable and memmapped tables share
+      # that compile, and the workers of the shard below load it.
+      - name: Check the numba leap kernel against the Rust golden fixture
+        if: matrix.shard == 'fast'
+        run: uv run python -m pytest tests/test_leap_kernel.py -q -n 0
+      # worksteal lets an idle worker take a test that waits behind a long one.
+      - run: uv run pytest -q ${{ matrix.select }} -n logical --dist worksteal
+      # The hosted runtime runs on Python 3.13, so the server tests run there
+      # too. uv rebuilds the environment on 3.13 for this step.
+      - name: Run the server tests on the hosted interpreter
+        if: matrix.shard == 'fast'
+        run: uv run --locked --python 3.13 python -m pytest tests/server -q -n 0
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  cpp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        preset:
+          - debug
+          - release
+    defaults:
+      run:
+        working-directory: src/cpp
+    steps:
+      - uses: actions/checkout@v6
+      - run: cmake --preset ${{ matrix.preset }}
+      - run: cmake --build --preset ${{ matrix.preset }} --parallel 2
+      - run: ctest --preset ${{ matrix.preset }}
+
+  ocaml:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: src/ocaml
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install GLPK
+        run: |
+          sudo apt-get \
+            -o Acquire::Retries=5 \
+            -o Acquire::http::Timeout=30 \
+            -o Acquire::https::Timeout=30 \
+            update
+          sudo apt-get \
+            -o Acquire::Retries=5 \
+            -o Acquire::http::Timeout=30 \
+            -o Acquire::https::Timeout=30 \
+            install --yes libglpk-dev
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.3"
+          dune-cache: true
+          opam-local-packages: src/ocaml/*.opam
+      - run: opam install . --deps-only --with-test --yes
+      - run: opam exec -- dune build
+      - run: opam exec -- dune runtest
+      - run: opam exec -- dune build @fmt
+
+  # lean-toolchain pins Lean, and lake-manifest.json pins Mathlib. The cache
+  # step downloads Mathlib's compiled files, and FormalAudit's #audit_axioms
+  # fails the build if a declaration uses sorry or a nonstandard axiom.
+  lean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: src/lean
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - run: lake exe cache get
+      - run: lake build
