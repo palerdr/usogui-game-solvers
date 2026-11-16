@@ -1,7 +1,8 @@
 # Hand Chopper rules
 
 **Status:** settled with the owner on 2026-11-16. No engine exists yet.
-**Source:** [`hand-chopper-rules.jpg`](hand-chopper-rules.jpg), the rules page of *Usogui* chapter 391.
+**Source:** the rules page of *Usogui* chapter 391. The page is not in this repository; a local
+copy is `hand-chopper-rules.jpg`, which Git ignores.
 
 Hand Chopper is the manga's version of the hand game chopsticks. This file fixes the game that
 the Python engine implements: the rules page as written, plus the finger cut that the referee
