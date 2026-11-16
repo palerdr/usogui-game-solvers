@@ -86,7 +86,7 @@ the dependency versions and the toolchain. `CLAUDE.md` states the coding rules.
 
 Each crate proves parity with its Python reference through golden fixtures in
 `crates/<crate>/tests/data/`, whose `README.md` names the source commit and the generator
-command. The references are stl `55e342e`, TOK `f185b24` and AP `0fd65b7`. Each commit is in
+command. The references are stl `55e342e`, TOK `f185b24` and AP `cadd581`. Each commit is in
 this repository's history, imported under `games/`.
 
 - `stl-dth` writes a table byte-identical to the numba build. It follows the numba kernel's

@@ -317,11 +317,14 @@ Canonical reports include:
 ## Mathematical references
 
 - Zinkevich et al., *Regret Minimization in Games with Incomplete Information*,
-  `papers/NIPS-2007-regret-minimization-in-games-with-incomplete-information-Paper.pdf`.
+  NeurIPS 2007.
 - Tammelin, *Solving Large Imperfect Information Games Using CFR+*,
-  `papers/sswp947.pdf`.
+  arXiv:1407.5042.
 - Lanctot et al., *Monte Carlo Sampling for Regret Minimization in Extensive
-  Games*, `papers/NIPS-2009-monte-carlo-sampling-for-regret-minimization-in-extensive-games-Paper.pdf`.
+  Games*, NeurIPS 2009.
+
+The repository does not hold the paper PDFs. Git ignores local copies in
+`papers/`.
 
 The papers justify algorithmic claims under their assumptions. They do not
 justify Air Poker rules or the upper behavioral model.

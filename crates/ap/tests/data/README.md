@@ -1,6 +1,6 @@
 # Golden fixtures for `ap`
 
-Source: the Python Air Poker reference in `games/ap`, commit `0fd65b7`
+Source: the Python Air Poker reference in `games/ap`, commit `cadd581`
 ("Add the robust public-state solver, engine self-play and the allocation loop").
 
 Generator: `generate.py` in this directory. Run it from `games/ap`:

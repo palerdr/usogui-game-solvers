@@ -12,3 +12,6 @@ wheels/
 
 #agents
 /.agents
+
+# Local copies of third-party papers
+/docs/papers/*.pdf
