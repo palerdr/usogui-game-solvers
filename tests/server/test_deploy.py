@@ -115,7 +115,7 @@ def production_run(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object
     environment = dict(os.environ)
     for name in ("SUPABASE_URL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"):
         environment.pop(name, None)
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, "-I", "-c", _RUN_PRODUCTION, str(runtime)],
         capture_output=True,
         text=True,

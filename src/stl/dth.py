@@ -212,7 +212,7 @@ def decode_class(c: int | np.integer) -> tuple[int, int]:
 def class_values(
     pc: int | np.integer,
     pd: int,
-    V: np.ndarray,  # noqa: N803
+    V: np.ndarray,
     table: ProfileTable,
 ) -> tuple[np.ndarray, float]:
     """The 60 successful-check values and the failed-check value of one class (DTH.md
@@ -234,10 +234,10 @@ def class_values(
 
 
 # solver ladder, scalar (the oracle: tests, the finalize recheck, and Table.stage)
-def _M_dot(s: np.ndarray, f: float, q: np.ndarray) -> np.ndarray:  # noqa: N802
+def _M_dot(s: np.ndarray, f: float, q: np.ndarray) -> np.ndarray:
     # (M q)[i] = f * sum_{j<i} q[j] + sum_{k>=i} s[k-i] q[k]
     n = len(q)
-    Mq = np.zeros(n)  # noqa: N806
+    Mq = np.zeros(n)
     Mq[1:] = f * np.cumsum(q)[:-1]
     for j in range(n):
         Mq[: n - j] += s[j] * q[j:]
@@ -292,8 +292,8 @@ def try_rung2(s: np.ndarray, f: float) -> SolveResult | None:
     """
     n = len(s)
     d0 = s[0] - f
-    dS = np.diff(s)  # noqa: N806
-    if abs(d0) < 1e-12:  # noqa: PLR2004
+    dS = np.diff(s)
+    if abs(d0) < 1e-12:
         return None
     r = np.zeros(n)
     r[0] = 1.0
@@ -306,7 +306,7 @@ def try_rung2(s: np.ndarray, f: float) -> SolveResult | None:
     if q.sum() <= 0:
         return None
     q /= q.sum()
-    Mq = _M_dot(s, f, q)  # noqa: N806
+    Mq = _M_dot(s, f, q)
     return SolveResult(
         maximin=Mq.min(), minimax=Mq.max(), kind=SUPPORT, drop=q[::-1].copy(), check=q
     )
@@ -319,13 +319,13 @@ def try_rung3(s: np.ndarray, f: float) -> SolveResult:
     overhead."""
     s, f = np.asarray(s, dtype=float), float(f)
     n = len(s)
-    M = full_matrix(s, f)  # noqa: N806
+    M = full_matrix(s, f)
     # maximize v  s.t.  M^T p >= v * 1,  sum(p) = 1,  p >= 0   (the Dropper's mix p; q
     # from the duals)
     c = np.zeros(n + 1)
     c[n] = -1.0
-    A_ub = np.hstack([-M.T, np.ones((n, 1))])  # noqa: N806
-    A_eq = np.zeros((1, n + 1))  # noqa: N806
+    A_ub = np.hstack([-M.T, np.ones((n, 1))])
+    A_eq = np.zeros((1, n + 1))
     A_eq[0, :n] = 1.0
     bnds = [(0, None)] * n + [(None, None)]
 
@@ -378,7 +378,7 @@ def solve_class(s: np.ndarray, f: float) -> SolveResult:
 
 
 # checks on a finished table
-def recheck(c: int | np.integer, V: np.ndarray, table: ProfileTable) -> SolveResult:  # noqa: N803
+def recheck(c: int | np.integer, V: np.ndarray, table: ProfileTable) -> SolveResult:
     """Re-derive one class from its stored children with the scalar ladder (DTH.md
     4.10)."""
     pc, pd = decode_class(c)
@@ -387,7 +387,7 @@ def recheck(c: int | np.integer, V: np.ndarray, table: ProfileTable) -> SolveRes
 
 
 def verify_anchors(
-    V: np.ndarray,  # noqa: N803
+    V: np.ndarray,
     table: ProfileTable,
 ) -> list[tuple[tuple, float, float, bool]]:
     """(state, expected, got, ok) for the six reference values of DTH.md section 6."""
@@ -459,7 +459,7 @@ class Table:
 
     def classes(self, state: tuple | list | np.ndarray) -> tuple[int, int]:
         """The (Checker, Dropper) profile ids of a state (s_c, t_c, s_d, t_d)."""
-        if len(state) != 4 or any(  # noqa: PLR2004
+        if len(state) != 4 or any(
             isinstance(x, bool) or not isinstance(x, (int, np.integer)) for x in state
         ):
             message = f"a DTH state is four integers, not {state!r}"

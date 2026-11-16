@@ -240,7 +240,7 @@ def make_session(
         player1=hal,
         player2=human,
         referee=Referee(),
-        rng=random.Random(seed),  # noqa: S311
+        rng=random.Random(seed),
     )
     game.game_clock = start_clock
     return PlaySession(
@@ -320,7 +320,7 @@ class MemoryStore:
 def begin(client: TestClient) -> dict:
     state = client.get("/api/session").json()
     response = client.post("/api/session/begin", json={"sequence": state["sequence"]})
-    assert response.status_code == 200  # noqa: PLR2004
+    assert response.status_code == 200
     return response.json()
 
 
@@ -369,7 +369,7 @@ CERT_RADIUS = 1e-10
 def solve_stage(
     s: np.ndarray | list[float],
     f: float,
-    window: bool,  # noqa: FBT001 - scalar oracle mirrors the frozen kernel interface
+    window: bool,
     *,
     allow_lp: bool = True,
 ) -> StageResult:
@@ -390,7 +390,7 @@ def solve_stage(
             kind = 2
         return StageResult(value, kind, lower, upper)
     d = s[0] - f
-    if abs(d) >= 1e-12:  # noqa: PLR2004 Mathematical notation and fixed model thresholds.
+    if abs(d) >= 1e-12:
         b = [0.0] + [(s[k - 1] - s[k]) / d for k in range(1, 60)]
         r = [1.0]
         for k in range(1, 60):
@@ -406,12 +406,12 @@ def solve_stage(
         q = [max(x, 0.0) if math.isfinite(x) else math.nan for x in reversed(r)]
         total = sum(q)
         if math.isfinite(total) and total > 0:
-            if min(r) >= 0 and lo >= -2 and hi <= 2 and abs(f) <= 2 and abs(d) >= GAP:  # noqa: PLR2004 Mathematical notation and fixed model thresholds.
+            if min(r) >= 0 and lo >= -2 and hi <= 2 and abs(f) <= 2 and abs(d) >= GAP:
                 value = f + d / total
                 lower, upper = value - CERT_RADIUS, value + CERT_RADIUS
             else:
                 q = np.array(q) / total
-                payoffs = stage_matrix(s, f, False) @ q  # noqa: FBT003 The stage API carries its leap-window and solver-mode flags.
+                payoffs = stage_matrix(s, f, False) @ q
                 lower, upper = float(payoffs.min()), float(payoffs.max())
                 value = (lower + upper) / 2
             if window:

@@ -46,7 +46,7 @@ from stl.dth import (
 # values and layers
 def values_array() -> np.ndarray:
     """V[pc, pd] = value; NaN until solved; the extra column WIN holds -1.0."""
-    V = np.full((N, N + 1), np.nan, dtype=np.float64)  # noqa: N806
+    V = np.full((N, N + 1), np.nan, dtype=np.float64)
     V[:, WIN] = -1.0
     return V
 
@@ -55,7 +55,7 @@ def kinds_array() -> np.ndarray:
     return np.full((N, N), UNSOLVED, dtype=np.uint8)
 
 
-def layer_pairs(P: int, table: ProfileTable) -> tuple[np.ndarray, np.ndarray]:  # noqa: N803
+def layer_pairs(P: int, table: ProfileTable) -> tuple[np.ndarray, np.ndarray]:
     """All classes (pc, pd) with phi[pc] + phi[pd] == P, pd-major so neighbours read the
     same row of V."""
     pcs, pds = [], []
@@ -88,7 +88,7 @@ def _ladder(s: np.ndarray, f: float, r: np.ndarray, q: np.ndarray) -> tuple[floa
         return 0.5 * (maximin + minimax), PURE
 
     d0 = s0 - f
-    if abs(d0) < 1e-12:  # noqa: PLR2004
+    if abs(d0) < 1e-12:
         return 0.0, LP
     # r[k] = -sum_{m<k} (s[m+1] - s[m]) r[k-1-m] / d0
     r[0] = 1.0
@@ -130,8 +130,8 @@ def _ladder(s: np.ndarray, f: float, r: np.ndarray, q: np.ndarray) -> tuple[floa
 def _solve_layer_kernel(
     pcs: np.ndarray,
     pds: np.ndarray,
-    V: np.ndarray,  # noqa: N803
-    K: np.ndarray,  # noqa: N803
+    V: np.ndarray,
+    K: np.ndarray,
     succ: np.ndarray,
     fail: np.ndarray,
     rev: np.ndarray,
@@ -165,9 +165,9 @@ def _solve_layer_kernel(
 
 
 def solve_layer(
-    P: int,  # noqa: N803
-    V: np.ndarray,  # noqa: N803
-    K: np.ndarray,  # noqa: N803
+    P: int,
+    V: np.ndarray,
+    K: np.ndarray,
     table: ProfileTable,
     scratch: np.ndarray,
 ) -> tuple[int, np.ndarray]:
@@ -201,8 +201,8 @@ def solve_layer(
 
 # sweep
 def finalize(
-    V: np.ndarray,  # noqa: N803
-    K: np.ndarray,  # noqa: N803
+    V: np.ndarray,
+    K: np.ndarray,
     table: ProfileTable,
     log: Callable[[str], object] = print,
 ) -> None:
@@ -235,11 +235,11 @@ def build(
     """The whole sweep (DTH.md 4.8): layers MAX_LAYER down to stop_at, N^2 = 289,374,121
     classes
     times the constant per-class ladder. Returns V, K, counts by rung."""
-    V, K = values_array(), kinds_array()  # noqa: N806
+    V, K = values_array(), kinds_array()
     scratch = np.empty((nb.get_num_threads(), 3, LAGS), dtype=np.float64)
     counts = np.zeros(3, dtype=np.int64)
     t0 = time.perf_counter()
-    for P in range(MAX_LAYER, stop_at - 1, -1):  # noqa: N806
+    for P in range(MAX_LAYER, stop_at - 1, -1):
         n, c = solve_layer(P, V, K, table, scratch)
         counts += c
         if n and P % 25 == 0:
@@ -249,7 +249,7 @@ def build(
     return V, K, counts
 
 
-def write(V: np.ndarray, path: str | Path = DEFAULT_PATH) -> None:  # noqa: N803
+def write(V: np.ndarray, path: str | Path = DEFAULT_PATH) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, V)

@@ -80,10 +80,10 @@ WIN = N
 
 
 def snap(clock: int) -> int:
-    if clock < 3600:  # noqa: PLR2004
+    if clock < 3600:
         next_minute = (clock // 60 + 1) * 60
-        return 3601 if next_minute == 3600 else next_minute  # noqa: PLR2004
-    return 3601 if clock == 3600 else 3601 + ((clock - 3601) // 60 + 1) * 60  # noqa: PLR2004
+        return 3601 if next_minute == 3600 else next_minute
+    return 3601 if clock == 3600 else 3601 + ((clock - 3601) // 60 + 1) * 60
 
 
 def child_clock(half: int, clock: int, q: int = 0) -> int:
@@ -95,7 +95,7 @@ def child_clock(half: int, clock: int, q: int = 0) -> int:
 
 
 def eligible(s: int, t: int) -> bool:
-    return s + 60 < 300 and s + t + 60 <= 300  # noqa: PLR2004
+    return s + 60 < 300 and s + t + 60 <= 300
 
 
 @dataclass(frozen=True)
@@ -141,7 +141,7 @@ def profiles() -> Profiles:
         for lag in range(1, 61):
             grown = s + lag
             succ[pc, lag - 1] = (
-                WIN if grown >= 300 else ids.get((grown, t), N_ALIVE + grown)  # noqa: PLR2004
+                WIN if grown >= 300 else ids.get((grown, t), N_ALIVE + grown)
             )
         if pc < N_ALIVE:
             fail[pc] = ids.get((0, s + t + 60), N_ALIVE)
@@ -149,7 +149,7 @@ def profiles() -> Profiles:
                 Player("Checker", ttd=t), s + 60
             )
     s0 = np.array([ids[0, t] for t in [0, *range(60, 241)]] + [N_ALIVE], np.int32)
-    if len(s0) != 183:  # noqa: PLR2004
+    if len(s0) != 183:
         message = "numerical invariant failed"
         raise AssertionError(message)
     idx0 = np.full(N + 1, -1, np.int32)
@@ -187,7 +187,7 @@ class StageResult:
         return self.upper - self.lower
 
 
-def stage_matrix(s: np.ndarray | list[float], f: float, window: bool) -> np.ndarray:  # noqa: FBT001
+def stage_matrix(s: np.ndarray | list[float], f: float, window: bool) -> np.ndarray:
     matrix = np.full((60 + int(window), 60), f, dtype=np.float64)
     for row in range(60):
         matrix[row, row:] = s[: 60 - row]
@@ -209,7 +209,7 @@ def policy_masks(p: np.ndarray, q: np.ndarray) -> tuple[int, int]:
 def solve_lp(
     s: np.ndarray | list[float],
     f: float,
-    window: bool,  # noqa: FBT001
+    window: bool,
     *,
     support: bool = False,
 ) -> StageResult:
@@ -301,7 +301,7 @@ def all_keys() -> list[Key]:
 def child_key(key: Key, q: int = 0) -> Key | None:
     half = 1 if key[0] == "H1" else 2
     clock = child_clock(half, key_clock(key), q)
-    if clock > 3600:  # noqa: PLR2004
+    if clock > 3600:
         return None
     if half == 1:
         return ("REV", clock) if q else ("H2", key[1])
@@ -309,7 +309,7 @@ def child_key(key: Key, q: int = 0) -> Key | None:
 
 
 def is_window(key: Key) -> bool:
-    return key[0] != "H1" and 3540 <= key_clock(key) <= 3600  # noqa: PLR2004
+    return key[0] != "H1" and 3540 <= key_clock(key) <= 3600
 
 
 def _transpose(bits: np.ndarray, columns: int) -> np.ndarray:
@@ -363,7 +363,7 @@ def forward_reachability(
     limit: int = 3600, directory: PathLike | None = None
 ) -> Reachability:
     """Union successor sets before counting each quotient state once."""
-    if limit > 3600:  # noqa: PLR2004
+    if limit > 3600:
         message = "reachability ends at 3600"
         raise ValueError(message)
     directory = Path(directory) if directory is not None else None
@@ -416,7 +416,7 @@ def forward_reachability(
                 for j, col in enumerate(p.s0):
                     dest_bits[rows, col // 8] |= dense[:, j] << int(col % 8)
         if directory is not None and key[0] == "H1":
-            print(f"reach {key_name(key)}: {count:,}", flush=True)  # noqa: T201
+            print(f"reach {key_name(key)}: {count:,}", flush=True)
     return Reachability(counts, directory)
 
 
@@ -598,15 +598,15 @@ def sweep_key(
             kernel_seconds += time.perf_counter() - tick
             if options:
                 # Kinds 3, 4, and 5 are residue that the kernel certified itself.
-                solved = int(np.count_nonzero(kind == 3))  # noqa: PLR2004
-                guessed = int(np.count_nonzero((kind == 4) | (kind == 5)))  # noqa: PLR2004
+                solved = int(np.count_nonzero(kind == 3))
+                guessed = int(np.count_nonzero((kind == 4) | (kind == 5)))
                 kernel_native += solved
                 support_solves += guessed
                 failures += solved + guessed
             failures += failed
             if failed:
                 tick = time.perf_counter()
-                indices = np.flatnonzero(kind == 255)  # noqa: PLR2004
+                indices = np.flatnonzero(kind == 255)
                 if fallback is None:
                     for i in indices:
                         checker, dropper = int(pcs[i]), int(pds[i])
@@ -630,9 +630,9 @@ def sweep_key(
                     )
                     lp_solves += solved
                     cached_failures += cached
-                    if failed > 1000:  # noqa: PLR2004
+                    if failed > 1000:
                         native = failed - solved - cached
-                        print(  # noqa: T201
+                        print(
                             f"fallback {key_name(key)}: {native:,} native, {solved:,} HiGHS, {cached:,} cached",  # noqa: E501 -- Preserve the diagnostic text.
                             flush=True,
                         )
@@ -690,7 +690,7 @@ def run_full(dth_path: PathLike, directory: PathLike) -> dict:
     store = TableStore(directory / "tables")
     records = []
     reach = forward_reachability(directory=directory / "reachability")
-    if reach.by_type != TOTALS or reach.window_count != 470336555:  # noqa: PLR2004
+    if reach.by_type != TOTALS or reach.window_count != 470336555:
         message = "full reachability count mismatch"
         raise RuntimeError(message)
     with NativeFallback(**RESIDUE) as fallback:
@@ -708,14 +708,14 @@ def run_full(dth_path: PathLike, directory: PathLike) -> dict:
             record["sweep_seconds"] = time.perf_counter() - tick
             records.append(record)
             store.pack_after(key_clock(key) + 540)
-            print(json.dumps(record), flush=True)  # noqa: T201
+            print(json.dumps(record), flush=True)
     store.pack_after(0)
     if sum(r["states"] for r in records) != sum(TOTALS.values()) or len(records) != len(
         reach.counts
     ):
         message = "full sweep coverage mismatch"
         raise RuntimeError(message)
-    print(  # noqa: T201
+    print(
         "Sweep reached the opening; starting packed coverage and Bellman audit.",
         flush=True,
     )
@@ -762,7 +762,7 @@ def run_full(dth_path: PathLike, directory: PathLike) -> dict:
         "min_baku_gain": audit["min_baku_gain"],
     }
     write_json(directory / "report.json", report)
-    print(json.dumps(report, indent=2), flush=True)  # noqa: T201
+    print(json.dumps(report, indent=2), flush=True)
     return report
 
 
@@ -774,7 +774,7 @@ def run_full(dth_path: PathLike, directory: PathLike) -> dict:
 class WarmLP:
     """We solve each explicit matrix with HiGHS, then check both saddle bounds."""
 
-    def __init__(self, window: bool) -> None:  # noqa: FBT001
+    def __init__(self, window: bool) -> None:
         self.window = window
         self.basis = None
         self.highs = highspy.Highs()
@@ -837,7 +837,7 @@ class WarmLP:
         q /= q.sum()
         lower = float(np.min(p @ matrix))
         upper = float(np.max(matrix @ q))
-        if not np.isfinite(upper - lower) or upper - lower > 1e-8:  # noqa: PLR2004
+        if not np.isfinite(upper - lower) or upper - lower > 1e-8:
             # We discard an inaccurate warm basis and use the scalar LP authority.
             self.basis = None
             return solve_lp(s, f, self.window, support=support)
@@ -865,7 +865,7 @@ class RevivalCache:
         self,
         success: Key | None,
         fail: Key | None,
-        window: bool,  # noqa: FBT001
+        window: bool,
         pcs: np.ndarray,
         pds: np.ndarray,
     ) -> np.ndarray:
@@ -876,7 +876,7 @@ class RevivalCache:
         self.groups.move_to_end(key)
         values, tokens = self.groups[key]
         cols = profiles().idx0[pds]
-        eligible = (cols >= 0) & (cols < 183)  # noqa: PLR2004
+        eligible = (cols >= 0) & (cols < 183)
         indices = np.flatnonzero(eligible)
         indices = indices[tokens[pcs[indices], cols[indices]] == self._token(fail)]
         output[indices] = values[pcs[indices], cols[indices]]
@@ -886,13 +886,13 @@ class RevivalCache:
         self,
         success: Key | None,
         fail: Key | None,
-        window: bool,  # noqa: FBT001
+        window: bool,
         pcs: np.ndarray,
         pds: np.ndarray,
         output: np.ndarray,
     ) -> None:
         cols = profiles().idx0[pds]
-        eligible = (cols >= 0) & (cols < 183)  # noqa: PLR2004
+        eligible = (cols >= 0) & (cols < 183)
         if not eligible.any():
             return
         if not np.isfinite(output).all():
@@ -900,7 +900,7 @@ class RevivalCache:
             raise ValueError(message)
         key = (success, window)
         if key not in self.groups:
-            if len(self.groups) == 2:  # noqa: PLR2004
+            if len(self.groups) == 2:
                 self.groups.popitem(last=False)
             self.groups[key] = (
                 np.full((N, 183), np.nan),
@@ -917,7 +917,7 @@ def _table(path: PathLike) -> np.memmap:
 
 
 @lru_cache(maxsize=2)
-def _solver(window: bool) -> WarmLP:  # noqa: FBT001
+def _solver(window: bool) -> WarmLP:
     return WarmLP(window)
 
 
@@ -962,8 +962,8 @@ class FallbackPool:
         fail_path: PathLike,
         pcs: np.ndarray,
         pds: np.ndarray,
-        window: bool,  # noqa: FBT001
-        compressed: bool,  # noqa: FBT001
+        window: bool,
+        compressed: bool,
         *,
         support: bool = False,
     ) -> np.ndarray | tuple[np.ndarray, np.ndarray | None]:
@@ -1019,7 +1019,7 @@ class Fallback:
         fail_table: np.memmap,
         pcs: np.ndarray,
         pds: np.ndarray,
-        window: bool,  # noqa: FBT001
+        window: bool,
     ) -> tuple[np.ndarray, int, int]:
         output = self.cache.get(success, failure, window, pcs, pds)
         missing = np.flatnonzero(np.isnan(output))
@@ -1091,7 +1091,7 @@ class NativeFallback(Fallback):
         fail_table: np.memmap,
         pcs: np.ndarray,
         pds: np.ndarray,
-        window: bool,  # noqa: FBT001
+        window: bool,
     ) -> tuple[np.ndarray, int, int]:
         output = self.cache.get(success, failure, window, pcs, pds)
         missing = np.flatnonzero(np.isnan(output))
@@ -1111,7 +1111,7 @@ class NativeFallback(Fallback):
         failed = solve_packing(s, f, window, values, kind, crash=self.crash)
         self.native_seconds += time.perf_counter() - tick
         self.native_solves += len(missing) - failed
-        residual = np.flatnonzero(kind == 255)  # noqa: PLR2004
+        residual = np.flatnonzero(kind == 255)
         if len(residual):
             tick = time.perf_counter()
             values[residual] = self.pool.solve(
@@ -1270,7 +1270,7 @@ def audit_packed_key(
             )
             gain = baseline[mask] - data if key[0] == "H1" else data - baseline[mask]
             gain_sum += float(gain.sum())
-            changed += int((gain > 1e-8).sum())  # noqa: PLR2004
+            changed += int((gain > 1e-8).sum())
             min_gain = min(min_gain, float(gain.min()))
             if float(gain.max()) > max_gain:
                 max_gain = float(gain.max())
@@ -1284,7 +1284,7 @@ def audit_packed_key(
         message = f"packed reachability count mismatch: {key}"
         raise ValueError(message)
     # We allow the accumulated prefix error here; each stage still uses 1e-6.
-    if dth is not None and min_gain < -1.3e-5:  # noqa: PLR2004
+    if dth is not None and min_gain < -1.3e-5:
         message = f"Baku action-set monotonicity failed: {key}: {min_gain}"
         raise ValueError(message)
     return {
@@ -1299,7 +1299,7 @@ def audit_packed_key(
 
 def certify_matrix(matrix: np.ndarray | list) -> dict:
     matrix = np.asarray(matrix, dtype=np.float64)
-    if matrix.ndim != 2 or not np.isfinite(matrix).all():  # noqa: PLR2004
+    if matrix.ndim != 2 or not np.isfinite(matrix).all():
         message = "matrix must contain finite payoffs"
         raise ValueError(message)
     rows, cols = matrix.shape
@@ -1334,7 +1334,7 @@ def certify_matrix(matrix: np.ndarray | list) -> dict:
         check /= check.sum()
         lower = float(np.min(drop @ matrix))
         upper = float(np.max(matrix @ check))
-        if not np.isfinite(upper - lower) or upper - lower > 1e-6:  # noqa: PLR2004
+        if not np.isfinite(upper - lower) or upper - lower > 1e-6:
             failure = "opening/audit LP failed the 1e-6 gate"
             continue
         return {
@@ -1348,7 +1348,7 @@ def certify_matrix(matrix: np.ndarray | list) -> dict:
     raise RuntimeError(failure)
 
 
-def explicit_matrix(s: np.ndarray | list[float], f: float, window: bool) -> np.ndarray:  # noqa: FBT001
+def explicit_matrix(s: np.ndarray | list[float], f: float, window: bool) -> np.ndarray:
     # We assemble cells from the action comparison for an independent LP audit.
     drop, check = np.indices((60 + int(window), 60))
     matrix = np.full(drop.shape, f, dtype=np.float64)
@@ -1407,20 +1407,20 @@ def audit_full(
             certificate = certify_matrix(explicit_matrix(s, f, is_window(key)))
             stored = float(reader.get(key, pc, col))
             residual = abs(stored - certificate["value"])
-            if residual > 1e-6:  # noqa: PLR2004
+            if residual > 1e-6:
                 message = f"Bellman audit failed: {key} {pc} {pd}: {residual}"
                 raise RuntimeError(message)
             worst_residual = max(worst_residual, residual)
             worst_gap = max(worst_gap, certificate["gap"])
             samples += 1
         if key[0] == "H1":
-            print(f"audit {key_name(key)}: {info['states']:,} states", flush=True)  # noqa: T201
+            print(f"audit {key_name(key)}: {info['states']:,} states", flush=True)
     if checked != sum(TOTALS.values()) or checked != sum(r["states"] for r in records):
         message = "full audit state count mismatch"
         raise RuntimeError(message)
     p = profiles()
     s, f = stage_inputs(reader, ("H1", 12), 0, 0, dth)
-    root = certify_matrix(explicit_matrix(s, f, False))  # noqa: FBT003
+    root = certify_matrix(explicit_matrix(s, f, False))
     root["stored_value"] = float(reader.get(("H1", 12), 0, 0))
     root["hal_win_probability"] = (1 + root["stored_value"]) / 2
     root["baku_win_probability"] = (1 - root["stored_value"]) / 2
@@ -1434,7 +1434,7 @@ def audit_full(
         explicit_matrix(
             -dth[0, p.succ[0]],
             p.rev[0] * -dth[0, p.fail[0]] + (1 - p.rev[0]),
-            False,  # noqa: FBT003
+            False,
         )
     )
     return {

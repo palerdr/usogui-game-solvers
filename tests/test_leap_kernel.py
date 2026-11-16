@@ -61,12 +61,12 @@ def holes(mask: int) -> list[tuple[int, int]]:
     """We list the maximal runs of absent actions as inclusive (start, end) pairs."""
     runs = []
     i = 0
-    while i < 60:  # noqa: PLR2004
+    while i < 60:
         if mask >> i & 1:
             i += 1
             continue
         start = i
-        while i + 1 < 60 and not mask >> (i + 1) & 1:  # noqa: PLR2004
+        while i + 1 < 60 and not mask >> (i + 1) & 1:
             i += 1
         runs.append((start, i))
         i += 1
@@ -110,7 +110,7 @@ def kink_seed(
 
 def recurrence(s: np.ndarray, f: float) -> np.ndarray | None:
     d = s[0] - f
-    if abs(d) < 1e-12:  # noqa: PLR2004
+    if abs(d) < 1e-12:
         return None
     b = np.r_[0.0, (s[:-1] - s[1:]) / d]
     r = np.zeros(60)
@@ -163,16 +163,16 @@ def shifted_isolated_holes(mask: int, mode: int) -> int:
         if mask >> i & 1:
             continue
         if (i > 0 and not (mask >> (i - 1) & 1)) or (
-            i < 59 and not (mask >> (i + 1) & 1)  # noqa: PLR2004
+            i < 59 and not (mask >> (i + 1) & 1)
         ):
             continue
         direction = (
-            (-1 if i < 30 else 1)  # noqa: PLR2004
+            (-1 if i < 30 else 1)
             if mode == 0
-            else ((1 if i < 30 else -1) if mode == 1 else (-1 if mode == 2 else 1))  # noqa: PLR2004
+            else ((1 if i < 30 else -1) if mode == 1 else (-1 if mode == 2 else 1))
         )
         target = i + direction
-        if 0 <= target < 60 and mask >> target & 1:  # noqa: PLR2004
+        if 0 <= target < 60 and mask >> target & 1:
             result = (result | (1 << i)) & ~(1 << target)
     return result
 
@@ -205,27 +205,27 @@ def edge_candidates(p_mask: int, q_mask: int) -> Iterator[tuple[int, int]]:
     def neighbors(mask: int) -> list[int]:
         output = [mask]
         i = 0
-        while i < 60:  # noqa: PLR2004
+        while i < 60:
             if mask >> i & 1:
                 i += 1
                 continue
             start = i
-            while i + 1 < 60 and not (mask >> (i + 1) & 1):  # noqa: PLR2004
+            while i + 1 < 60 and not (mask >> (i + 1) & 1):
                 i += 1
             end = i
             if start > 0:
                 output.append(mask ^ (1 << (start - 1)) ^ (1 << end))
-            if end < 59:  # noqa: PLR2004
+            if end < 59:
                 output.append(mask ^ (1 << start) ^ (1 << (end + 1)))
             i += 1
         for i in range(60):
             bit = (mask >> i) & 1
             boundary = (i > 0 and ((mask >> (i - 1)) & 1) != bit) or (
-                i < 59 and ((mask >> (i + 1)) & 1) != bit  # noqa: PLR2004
+                i < 59 and ((mask >> (i + 1)) & 1) != bit
             )
             if boundary:
                 output.append(mask ^ (1 << i))
-            if i < 59 and ((mask >> (i + 1)) & 1) != bit:  # noqa: PLR2004
+            if i < 59 and ((mask >> (i + 1)) & 1) != bit:
                 output.append(mask ^ (3 << i))
         return output
 
@@ -243,7 +243,7 @@ def edge_candidates(p_mask: int, q_mask: int) -> Iterator[tuple[int, int]]:
 def solve_supported(
     s: np.ndarray,
     f: float,
-    window: bool,  # noqa: FBT001
+    window: bool,
     p_mask: int,
     q_mask: int,
     *,
@@ -272,7 +272,7 @@ def solve_supported(
     candidates = [(p_mask, q_mask)]
     if edges:
         candidates.extend(edge_candidates(p_mask, q_mask))
-    matrix = stage_matrix(s, f, False)  # noqa: FBT003
+    matrix = stage_matrix(s, f, False)
     for attempt, (pp, qq) in enumerate(candidates, 1):
         if max_attempts is not None and attempt > max_attempts:
             return None
@@ -295,7 +295,7 @@ def solve_supported(
                 p = np.r_[np.zeros(60), 1.0]
             else:
                 p = np.r_[p, 0.0]
-        if math.isfinite(upper - lower) and -1e-12 <= upper - lower <= GAP:  # noqa: PLR2004
+        if math.isfinite(upper - lower) and -1e-12 <= upper - lower <= GAP:
             return SupportResult(
                 StageResult(
                     max(square_value, f) if window else square_value, kind, lower, upper
@@ -384,7 +384,7 @@ VALUE = 0.1504047730058836
 
 
 def test_support_oracle_certifies_known_asymmetric_support() -> None:
-    from stl.leap import stage_matrix  # noqa: PLC0415
+    from stl.leap import stage_matrix
 
     for window in (False, True):
         result = solve_supported(S, F, window, P, Q, edges=False)
@@ -392,24 +392,24 @@ def test_support_oracle_certifies_known_asymmetric_support() -> None:
         matrix = stage_matrix(S, F, window)
         assert np.min(result.p) >= 0
         assert np.min(result.q) >= 0
-        assert abs(result.p.sum() - 1) < 1e-12  # noqa: PLR2004
-        assert abs(result.q.sum() - 1) < 1e-12  # noqa: PLR2004
-        assert abs(result.stage.lower - np.min(result.p @ matrix)) < 1e-12  # noqa: PLR2004
-        assert abs(result.stage.upper - np.max(matrix @ result.q)) < 1e-12  # noqa: PLR2004
-        assert result.stage.gap <= 1e-6  # noqa: PLR2004
-        assert abs(result.stage.value - (max(VALUE, F) if window else VALUE)) < 1e-9  # noqa: PLR2004
+        assert abs(result.p.sum() - 1) < 1e-12
+        assert abs(result.q.sum() - 1) < 1e-12
+        assert abs(result.stage.lower - np.min(result.p @ matrix)) < 1e-12
+        assert abs(result.stage.upper - np.max(matrix @ result.q)) < 1e-12
+        assert result.stage.gap <= 1e-6
+        assert abs(result.stage.value - (max(VALUE, F) if window else VALUE)) < 1e-9
 
 
 def test_support_oracle_rejects_invalid_candidates() -> None:
     assert (
-        solve_supported(S, F, False, (1 << 60) - 1, (1 << 60) - 1, edges=False) is None  # noqa: FBT003
+        solve_supported(S, F, False, (1 << 60) - 1, (1 << 60) - 1, edges=False) is None
     )
-    assert solve_supported(S, F, False, 0, Q) is None  # noqa: FBT003
-    assert solve_supported(np.ones(60), 1.0, False, P, Q) is None  # noqa: FBT003
+    assert solve_supported(S, F, False, 0, Q) is None
+    assert solve_supported(np.ones(60), 1.0, False, P, Q) is None
     with pytest.raises(ValueError, match="support"):
-        solve_supported(S, F, False, 1 << 60, Q)  # noqa: FBT003
+        solve_supported(S, F, False, 1 << 60, Q)
     with pytest.raises(ValueError, match="finite"):
-        solve_supported(np.full(60, np.nan), F, False, P, Q)  # noqa: FBT003
+        solve_supported(np.full(60, np.nan), F, False, P, Q)
 
 
 def test_support_oracle_recovers_paired_edge_move() -> None:
@@ -417,20 +417,20 @@ def test_support_oracle_recovers_paired_edge_move() -> None:
         if ((P >> i) ^ (P >> (i + 1))) & 1 and ((Q >> (58 - i)) ^ (Q >> (59 - i))) & 1:
             wrong_p = P ^ (3 << i)
             wrong_q = Q ^ (3 << (58 - i))
-            if solve_supported(S, F, False, wrong_p, wrong_q, edges=False) is None:  # noqa: FBT003
+            if solve_supported(S, F, False, wrong_p, wrong_q, edges=False) is None:
                 break
     else:
         pytest.fail("fixture must contain a support boundary")
-    result = solve_supported(S, F, False, wrong_p, wrong_q, edges=True)  # noqa: FBT003
+    result = solve_supported(S, F, False, wrong_p, wrong_q, edges=True)
     assert result is not None
-    assert result.stage.kind == 5  # noqa: PLR2004
-    assert abs(result.stage.value - VALUE) < 1e-9  # noqa: PLR2004
+    assert result.stage.kind == 5
+    assert abs(result.stage.value - VALUE) < 1e-9
 
 
 @pytest.mark.parametrize("n", [1, 15, 16, 17, 1000])
 @pytest.mark.parametrize("window", [False, True])
-def test_support_kernel_parity_and_spare_lanes(n: int, window: bool) -> None:  # noqa: FBT001
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+def test_support_kernel_parity_and_spare_lanes(n: int, window: bool) -> None:
+    from stl.leap_kernel import sweep_batch
 
     scale = np.linspace(0.7, 0.9, n)
     offset = 0.03 * np.sin(np.arange(n))
@@ -463,16 +463,16 @@ def test_support_kernel_parity_and_spare_lanes(n: int, window: bool) -> None:  #
             successes[i], failures[i], window, P, Q, edges=False
         )
         assert reference is not None
-        assert abs(out[i] - reference.stage.value) < 1e-9  # noqa: PLR2004
+        assert abs(out[i] - reference.stage.value) < 1e-9
     if not window:
-        assert np.all(kind == 4)  # noqa: PLR2004
+        assert np.all(kind == 4)
         assert np.all(support_out == supports[pc])
     else:
-        assert np.all(kind == 2)  # noqa: PLR2004
+        assert np.all(kind == 2)
 
 
 def test_kernel_defers_row_after_support_miss() -> None:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     n = 3
     pc = np.zeros(n, np.int32)
@@ -496,17 +496,17 @@ def test_kernel_defers_row_after_support_miss() -> None:
         seeds,
         policies,
     )
-    assert sweep_batch(*args, stop_on_support_miss=True) == 3  # noqa: PLR2004
+    assert sweep_batch(*args, stop_on_support_miss=True) == 3
     assert np.array_equal(kind, [255, 254, 254])
     assert np.isnan(out).all()
     seeds[0] = [P, Q]
     assert sweep_batch(*args, stop_on_support_miss=True) == 0
-    assert np.all(kind == 4)  # noqa: PLR2004
-    assert np.max(np.abs(out - VALUE)) < 1e-9  # noqa: PLR2004
+    assert np.all(kind == 4)
+    assert np.max(np.abs(out - VALUE)) < 1e-9
 
 
 def test_paired_isolated_edges_move_in_opposite_directions() -> None:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     s = np.array(
         [
@@ -575,10 +575,10 @@ def test_paired_isolated_edges_move_in_opposite_directions() -> None:
     f = 0.25825181643253137
     seeds = np.array([[1152850863123914751, 1152850863128080383]], np.uint64)
     expected = -0.17866045816637277
-    result = solve_supported(s, f, False, *map(int, seeds[0]))  # noqa: FBT003
+    result = solve_supported(s, f, False, *map(int, seeds[0]))
     assert result is not None
-    assert result.stage.kind == 5  # noqa: PLR2004
-    assert abs(result.stage.value - expected) < 1e-8  # noqa: PLR2004
+    assert result.stage.kind == 5
+    assert abs(result.stage.value - expected) < 1e-8
     out = np.empty(1)
     kind = np.empty(1, np.uint8)
     masks = np.zeros((1, 2), np.uint64)
@@ -590,7 +590,7 @@ def test_paired_isolated_edges_move_in_opposite_directions() -> None:
         np.arange(60, dtype=np.int32)[None, :],
         np.zeros(1, np.int32),
         np.ones(1),
-        False,  # noqa: FBT003
+        False,
         1e-6,
         out,
         kind,
@@ -598,12 +598,12 @@ def test_paired_isolated_edges_move_in_opposite_directions() -> None:
         masks,
     )
     assert failed == 0
-    assert kind[0] == 5  # noqa: PLR2004
-    assert abs(out[0] - expected) < 1e-8  # noqa: PLR2004
+    assert kind[0] == 5
+    assert abs(out[0] - expected) < 1e-8
 
 
 def test_paired_hole_intervals_shift_one_action() -> None:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     s = np.array(
         [
@@ -672,10 +672,10 @@ def test_paired_hole_intervals_shift_one_action() -> None:
     f = 0.2693233637785153
     seeds = np.array([[1152921230785970175, 1152921230794326015]], np.uint64)
     expected = -0.1321459733379427
-    result = solve_supported(s, f, False, *map(int, seeds[0]))  # noqa: FBT003
+    result = solve_supported(s, f, False, *map(int, seeds[0]))
     assert result is not None
-    assert result.stage.kind == 5  # noqa: PLR2004
-    assert abs(result.stage.value - expected) < 1e-8  # noqa: PLR2004
+    assert result.stage.kind == 5
+    assert abs(result.stage.value - expected) < 1e-8
     out = np.empty(1)
     kind = np.empty(1, np.uint8)
     masks = np.zeros((1, 2), np.uint64)
@@ -687,7 +687,7 @@ def test_paired_hole_intervals_shift_one_action() -> None:
         np.arange(60, dtype=np.int32)[None, :],
         np.zeros(1, np.int32),
         np.ones(1),
-        False,  # noqa: FBT003
+        False,
         1e-6,
         out,
         kind,
@@ -695,12 +695,12 @@ def test_paired_hole_intervals_shift_one_action() -> None:
         masks,
     )
     assert failed == 0
-    assert kind[0] == 5  # noqa: PLR2004
-    assert abs(out[0] - expected) < 1e-8  # noqa: PLR2004
+    assert kind[0] == 5
+    assert abs(out[0] - expected) < 1e-8
 
 
 def test_support_kernel_keeps_checker_seeds_separate() -> None:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     n = 1000
     pc = np.arange(n, dtype=np.int32) % 2
@@ -717,7 +717,7 @@ def test_support_kernel_keeps_checker_seeds_separate() -> None:
         np.tile(np.arange(60, dtype=np.int32), (2, 1)),
         np.zeros(2, np.int32),
         np.ones(2),
-        False,  # noqa: FBT003
+        False,
         1e-6,
         out,
         kind,
@@ -725,14 +725,14 @@ def test_support_kernel_keeps_checker_seeds_separate() -> None:
         masks,
     )
     assert failures == n // 2
-    assert np.all(kind[::2] == 4)  # noqa: PLR2004
-    assert np.max(np.abs(out[::2] - VALUE)) < 1e-9  # noqa: PLR2004
-    assert np.all(kind[1::2] == 255)  # noqa: PLR2004
+    assert np.all(kind[::2] == 4)
+    assert np.max(np.abs(out[::2] - VALUE)) < 1e-9
+    assert np.all(kind[1::2] == 255)
     assert np.isnan(out[1::2]).all()
 
 
 def test_support_kernel_rejects_invalid_masks_and_deferral_order() -> None:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     pc = np.array([1, 0], np.int32)
     pd = np.array([0, 1], np.int32)
@@ -764,15 +764,15 @@ def test_support_kernel_rejects_invalid_masks_and_deferral_order() -> None:
 
 
 def test_warm_highs_returns_support_on_request() -> None:
-    from stl.leap import WarmLP  # noqa: PLC0415
+    from stl.leap import WarmLP
 
     s = np.linspace(0.7, -0.4, 60)
     f = -0.8
-    result = WarmLP(False).solve(s, f, support=True)  # noqa: FBT003
+    result = WarmLP(False).solve(s, f, support=True)
     assert result.support is not None
-    recovered = solve_supported(s, f, False, *result.support, edges=False)  # noqa: FBT003
+    recovered = solve_supported(s, f, False, *result.support, edges=False)
     assert recovered is not None
-    assert abs(recovered.stage.value - result.value) < 1e-9  # noqa: PLR2004
+    assert abs(recovered.stage.value - result.value) < 1e-9
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -804,10 +804,10 @@ def kinked_stages(n: int, seed: int) -> tuple[np.ndarray, np.ndarray]:
 def kernel(
     s: np.ndarray,
     f: np.ndarray,
-    window: bool,  # noqa: FBT001
-    **options: Any,  # noqa: ANN401
+    window: bool,
+    **options: Any,
 ) -> tuple[np.ndarray, np.ndarray, int]:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     n = len(f)
     out = np.empty(n)
@@ -830,8 +830,8 @@ def kernel(
 
 
 @pytest.mark.parametrize("window", [False, True])
-def test_crash_packing_matches_cold_and_lp(window: bool) -> None:  # noqa: FBT001
-    from stl.leap_kernel import solve_packing  # noqa: PLC0415
+def test_crash_packing_matches_cold_and_lp(window: bool) -> None:
+    from stl.leap_kernel import solve_packing
 
     s, f = kinked_stages(300, 17)
     s = np.vstack([S, *shifted_stages()[0], s])
@@ -844,29 +844,29 @@ def test_crash_packing_matches_cold_and_lp(window: bool) -> None:  # noqa: FBT00
             solve_packing(np.ascontiguousarray(s), f, window, out, kind, crash=crash)
             == 0
         )
-        assert np.all(kind == 3)  # noqa: PLR2004
+        assert np.all(kind == 3)
         results[crash] = out
-    assert np.max(np.abs(results[True] - results[False])) <= 1e-6  # noqa: PLR2004
-    assert abs(results[True][0] - (max(VALUE, F) if window else VALUE)) < 1e-9  # noqa: PLR2004
+    assert np.max(np.abs(results[True] - results[False])) <= 1e-6
+    assert abs(results[True][0] - (max(VALUE, F) if window else VALUE)) < 1e-9
     for i in range(0, len(f), 7):
-        assert abs(results[True][i] - solve_lp(s[i], f[i], window).value) <= 1e-8  # noqa: PLR2004
+        assert abs(results[True][i] - solve_lp(s[i], f[i], window).value) <= 1e-8
 
 
 def test_crash_packing_keeps_unsupported_and_nonfinite_contract() -> None:
-    from stl.leap_kernel import solve_packing  # noqa: PLC0415
+    from stl.leap_kernel import solve_packing
 
     out = np.empty(2)
     kind = np.empty(2, np.uint8)
     s = np.ones((2, 60))
     f = np.array([0.0, 1.0 + 1e-13])
-    assert solve_packing(s, f, False, out, kind, crash=True) == 2  # noqa: FBT003, PLR2004
-    assert np.all(kind == 255)  # noqa: PLR2004
+    assert solve_packing(s, f, False, out, kind, crash=True) == 2
+    assert np.all(kind == 255)
     assert np.isnan(out).all()
     with pytest.raises(ValueError, match="finite"):
         solve_packing(
             np.full((1, 60), np.nan),
             np.ones(1),
-            False,  # noqa: FBT003
+            False,
             out[:1],
             kind[:1],
             crash=True,
@@ -874,7 +874,7 @@ def test_crash_packing_keeps_unsupported_and_nonfinite_contract() -> None:
 
 
 def test_kink_index_matches_python_authority() -> None:
-    from stl import leap_kernel  # noqa: PLC0415
+    from stl import leap_kernel
 
     rng = np.random.default_rng(5)
     cases = [np.linspace(-0.5, 0.5, 60), np.zeros(60), S, *shifted_stages()[0]]
@@ -885,7 +885,7 @@ def test_kink_index_matches_python_authority() -> None:
     cases += [rng.normal(size=60).cumsum() * 0.01 for _ in range(300)]
     for s in cases:
         assert leap_kernel.kink_index(np.ascontiguousarray(s)) == kink_index(s)
-    assert kink_index(tie) == 10  # noqa: PLR2004
+    assert kink_index(tie) == 10
     assert kink_index(np.zeros(60)) is None
     with pytest.raises(ValueError, match="60"):
         leap_kernel.kink_index(np.zeros(59))
@@ -902,14 +902,13 @@ def random_mask(rng: np.random.Generator) -> int:
 
 
 def test_kink_seed_matches_python_authority() -> None:
-    from stl import leap_kernel  # noqa: PLC0415
+    from stl import leap_kernel
 
     rng = np.random.default_rng(8)
     for _ in range(3000):
         p, q = random_mask(rng), random_mask(rng)
         old, new = (
-            None if rng.random() < 0.1 else int(rng.integers(1, 60))  # noqa: PLR2004
-            for _ in range(2)
+            None if rng.random() < 0.1 else int(rng.integers(1, 60)) for _ in range(2)
         )
         assert leap_kernel.kink_seed(p, q, old, new) == kink_seed(p, q, old, new)
     # A Dropper hole at k*=45 moves right; the mirrored hole at 59-k* moves left.
@@ -936,7 +935,7 @@ def unsupported_residue(count: int, seed: int) -> tuple[np.ndarray, np.ndarray]:
         failure = float(rng.uniform(-1, 1))
         if (
             failure < success[0]
-            and solve_stage(success, failure, False, allow_lp=False).kind == 255  # noqa: FBT003, PLR2004
+            and solve_stage(success, failure, False, allow_lp=False).kind == 255
         ):
             s.append(success)
             f.append(failure)
@@ -947,9 +946,9 @@ def unsupported_residue(count: int, seed: int) -> tuple[np.ndarray, np.ndarray]:
 @pytest.mark.parametrize("attempts", [0, 1, 4])
 @pytest.mark.parametrize("window", [False, True])
 def test_kernel_native_residue_matches_lp(
-    crash: bool,  # noqa: FBT001
+    crash: bool,
     attempts: int,
-    window: bool,  # noqa: FBT001
+    window: bool,
 ) -> None:
     s, f = kinked_stages(200, 23)
     sequence = shifted_stages()
@@ -960,7 +959,7 @@ def test_kernel_native_residue_matches_lp(
     out, kind, failed = kernel(
         s, f, window, native=True, crash=crash, kink_attempts=attempts
     )
-    residue = plain_kind == 255  # noqa: PLR2004
+    residue = plain_kind == 255
     unsupported = f < s[:, 0]
     assert plain_failed == np.count_nonzero(residue)
     # With f > s[0], v60 <= f, so the lifted pure bounds settle every window stage.
@@ -968,7 +967,7 @@ def test_kernel_native_residue_matches_lp(
         0 if window else plain_failed - 3
     )
     assert failed == np.count_nonzero(residue & unsupported)
-    assert np.all(kind[residue & unsupported] == 255)  # noqa: PLR2004
+    assert np.all(kind[residue & unsupported] == 255)
     assert np.isnan(out[residue & unsupported]).all()
     solved = residue & ~unsupported
     assert set(np.unique(kind[solved])) <= {3, 4, 5}
@@ -977,53 +976,53 @@ def test_kernel_native_residue_matches_lp(
     if attempts == 0:
         assert not np.isin(kind, [4, 5]).any()
     elif not window:
-        assert np.count_nonzero(kind == 4) >= 10  # noqa: PLR2004
+        assert np.count_nonzero(kind == 4) >= 10
     for i in np.flatnonzero(solved):
-        assert abs(out[i] - solve_lp(s[i], f[i], window).value) <= 1e-8  # noqa: PLR2004
+        assert abs(out[i] - solve_lp(s[i], f[i], window).value) <= 1e-8
 
 
 def test_kernel_native_seeds_follow_the_shifted_kink() -> None:
     s, f = shifted_stages()
-    out, kind, failed = kernel(s, f, False, native=True, crash=True, kink_attempts=1)  # noqa: FBT003
+    out, kind, failed = kernel(s, f, False, native=True, crash=True, kink_attempts=1)
     assert failed == 0
-    assert kind[0] == 3  # noqa: PLR2004
-    assert np.count_nonzero(kind == 4) >= 20  # noqa: PLR2004
+    assert kind[0] == 3
+    assert np.count_nonzero(kind == 4) >= 20
     for i in range(len(f)):
-        assert abs(out[i] - solve_stage(s[i], f[i], False).value) <= 1e-8  # noqa: FBT003, PLR2004
+        assert abs(out[i] - solve_stage(s[i], f[i], False).value) <= 1e-8
 
 
 def test_kernel_native_seeds_restart_in_each_worker_chunk() -> None:
     s, f = shifted_stages()
     s = np.tile(s, (80, 1))
     f = np.tile(f, 80)
-    out, kind, failed = kernel(s, f, False, native=True, crash=True, kink_attempts=1)  # noqa: FBT003
+    out, kind, failed = kernel(s, f, False, native=True, crash=True, kink_attempts=1)
     assert failed == 0
     assert np.all(np.isin(kind, [3, 4]))
     # Each 1024-class chunk starts without a seed, so its first residue class uses
     # the LP.
-    assert np.all(kind[[0, 1024, 2048]] == 3)  # noqa: PLR2004
-    assert np.max(np.abs(out - np.tile(out[:30], 80))) <= 1e-6  # noqa: PLR2004
+    assert np.all(kind[[0, 1024, 2048]] == 3)
+    assert np.max(np.abs(out - np.tile(out[:30], 80))) <= 1e-6
 
 
 def test_packing_reports_certified_basis_masks() -> None:
-    from stl.leap_kernel import solve_packing  # noqa: PLC0415
+    from stl.leap_kernel import solve_packing
 
     s = np.vstack([S, np.ones(60)])
     f = np.array([F, 0.0])
     out = np.empty(2)
     kind = np.empty(2, np.uint8)
     basis = np.full((2, 2), 7, np.uint64)
-    assert solve_packing(s, f, False, out, kind, crash=True, support_out=basis) == 1  # noqa: FBT003
+    assert solve_packing(s, f, False, out, kind, crash=True, support_out=basis) == 1
     p, q = map(int, basis[0])
     assert p
     assert p.bit_count() == q.bit_count()
     assert np.all(basis[1] == 0)
     with pytest.raises(ValueError, match="support shape"):
-        solve_packing(s, f, False, out, kind, support_out=np.zeros((1, 2), np.uint64))  # noqa: FBT003
+        solve_packing(s, f, False, out, kind, support_out=np.zeros((1, 2), np.uint64))
 
 
 def test_kernel_edge_move_limit_matches_python_authority() -> None:
-    from stl.leap_kernel import solve_packing  # noqa: PLC0415
+    from stl.leap_kernel import solve_packing
 
     rng = np.random.default_rng(250)
     t = S + rng.normal(0, 3e-3, 60)
@@ -1035,7 +1034,7 @@ def test_kernel_edge_move_limit_matches_python_authority() -> None:
         solve_packing(
             np.ascontiguousarray(S[None]),
             np.array([F]),
-            False,  # noqa: FBT003
+            False,
             out,
             kind,
             crash=True,
@@ -1045,46 +1044,46 @@ def test_kernel_edge_move_limit_matches_python_authority() -> None:
     )
     # The kernel seeds the second stage with the first stage's crash basis.
     guess = kink_seed(int(basis[0, 0]), int(basis[0, 1]), kink_index(S), kink_index(t))
-    reference = solve_supported(t, ft, False, *guess)  # noqa: FBT003
+    reference = solve_supported(t, ft, False, *guess)
     assert reference is not None
-    assert reference.stage.kind == 5  # noqa: PLR2004
+    assert reference.stage.kind == 5
     assert reference.attempts > 1
     stages = np.vstack([S, t])
     fs = np.array([F, ft])
     out, kind, failed = kernel(
         stages,
         fs,
-        False,  # noqa: FBT003
+        False,
         native=True,
         crash=True,
         kink_attempts=reference.attempts,
     )
     assert failed == 0
     assert kind.tolist() == [3, 5]
-    assert abs(out[1] - reference.stage.value) < 1e-12  # noqa: PLR2004
+    assert abs(out[1] - reference.stage.value) < 1e-12
     out, kind, failed = kernel(
         stages,
         fs,
-        False,  # noqa: FBT003
+        False,
         native=True,
         crash=True,
         kink_attempts=reference.attempts - 1,
     )
     assert failed == 0
     assert kind.tolist() == [3, 3]
-    assert abs(out[1] - solve_lp(t, ft, False).value) <= 1e-8  # noqa: FBT003, PLR2004
+    assert abs(out[1] - solve_lp(t, ft, False).value) <= 1e-8
 
 
 def test_kernel_native_options_are_validated() -> None:
     s, f = shifted_stages(n=2)
     with pytest.raises(ValueError, match="native residue mode"):
-        kernel(s, f, False, crash=True)  # noqa: FBT003
+        kernel(s, f, False, crash=True)
     with pytest.raises(ValueError, match="native residue mode"):
-        kernel(s, f, False, kink_attempts=1)  # noqa: FBT003
+        kernel(s, f, False, kink_attempts=1)
     seeds = np.zeros((1, 2), np.uint64)
     masks = np.zeros((2, 2), np.uint64)
     with pytest.raises(ValueError, match="excludes support seeds"):
-        kernel(s, f, False, native=True, supports=seeds, support_out=masks)  # noqa: FBT003
+        kernel(s, f, False, native=True, supports=seeds, support_out=masks)
 
 
 def test_support_oracle_caps_attempts() -> None:
@@ -1092,23 +1091,23 @@ def test_support_oracle_caps_attempts() -> None:
     for i in range(59):
         if ((P >> i) ^ (P >> (i + 1))) & 1 and ((Q >> (58 - i)) ^ (Q >> (59 - i))) & 1:
             wrong = (P ^ (3 << i), Q ^ (3 << (58 - i)))
-            if solve_supported(S, F, False, *wrong, edges=False) is None:  # noqa: FBT003
+            if solve_supported(S, F, False, *wrong, edges=False) is None:
                 break
     assert wrong is not None
-    result = solve_supported(S, F, False, *wrong)  # noqa: FBT003
+    result = solve_supported(S, F, False, *wrong)
     assert result is not None
     assert result.attempts > 1
     assert (
-        solve_supported(S, F, False, *wrong, max_attempts=result.attempts - 1) is None  # noqa: FBT003
+        solve_supported(S, F, False, *wrong, max_attempts=result.attempts - 1) is None
     )
-    capped = solve_supported(S, F, False, *wrong, max_attempts=result.attempts)  # noqa: FBT003
+    capped = solve_supported(S, F, False, *wrong, max_attempts=result.attempts)
     assert capped is not None
-    assert capped.stage.kind == 5  # noqa: PLR2004
-    assert solve_supported(S, F, False, P, Q, max_attempts=0) is None  # noqa: FBT003
+    assert capped.stage.kind == 5
+    assert solve_supported(S, F, False, P, Q, max_attempts=0) is None
 
 
 def test_native_fallback_routes_only_h_keys_to_the_kernel() -> None:
-    from stl.leap import NativeFallback  # noqa: PLC0415
+    from stl.leap import NativeFallback
 
     fallback = NativeFallback(1, crash=True, kernel_native=True, kink_attempts=1)
     assert fallback.kernel_options(("H2", 40)) == {
@@ -1125,7 +1124,7 @@ def test_native_fallback_routes_only_h_keys_to_the_kernel() -> None:
 def test_sweep_counts_kernel_residue_kinds(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap as b  # noqa: PLC0415
+    from stl import leap as b
 
     b.profiles()  # profiles() reads b.N, so we fill its cache before N shrinks.
     monkeypatch.setattr(b, "N", 8)
@@ -1133,7 +1132,7 @@ def test_sweep_counts_kernel_residue_kinds(
     bits[0, 0] = 0b1111
     options = {"native": True, "crash": True, "kink_attempts": 1}
 
-    def kernel_stub(*args: Any, **kwargs: Any) -> int:  # noqa: ANN401
+    def kernel_stub(*args: Any, **kwargs: Any) -> int:
         assert kwargs == options
         out, kind = args[-2:]
         out[:] = [0.1, 0.2, 0.3, np.nan]
@@ -1147,16 +1146,16 @@ def test_sweep_counts_kernel_residue_kinds(
         native_seconds = 0.0
         highs_seconds = 0.0
 
-        def kernel_options(self, key: tuple[str, int]) -> dict:  # noqa: ARG002
+        def kernel_options(self, key: tuple[str, int]) -> dict:
             return options
 
-        def solve(self, *args: Any) -> tuple[np.ndarray, int, int]:  # noqa: ANN401
+        def solve(self, *args: Any) -> tuple[np.ndarray, int, int]:
             n = len(args[-3])
             self.native_solves += n
             return np.full(n, 0.4), 0, 0
 
     store = b.TableStore(tmp_path)
-    monkeypatch.setattr(store, "load", lambda key: np.zeros((8, 17012)))  # noqa: ARG005
+    monkeypatch.setattr(store, "load", lambda key: np.zeros((8, 17012)))
     record = b.sweep_key(
         ("H1", 40),
         bits,
@@ -1166,10 +1165,10 @@ def test_sweep_counts_kernel_residue_kinds(
         full=True,
         fallback=cast("Fallback", Native()),
     )
-    assert record["failures"] == 4  # noqa: PLR2004
-    assert record["states"] == 4  # noqa: PLR2004
+    assert record["failures"] == 4
+    assert record["states"] == 4
     assert record["kernel_native_solves"] == 1
-    assert record["support_solves"] == 2  # noqa: PLR2004
+    assert record["support_solves"] == 2
     assert record["native_solves"] == 1
     assert record["lp_solves"] == 0
 
@@ -1177,8 +1176,8 @@ def test_sweep_counts_kernel_residue_kinds(
 def test_sweep_kernel_residue_matches_python_fallback(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap as b  # noqa: PLC0415
-    from stl.leap import N, NativeFallback, profiles  # noqa: PLC0415
+    from stl import leap as b
+    from stl.leap import N, NativeFallback, profiles
 
     p = profiles()
     key = ("H1", 40)
@@ -1199,7 +1198,7 @@ def test_sweep_kernel_residue_matches_python_fallback(
     monkeypatch.setattr(store, "load", lambda child: children[child])
     tables = {}
 
-    def create(k: tuple[str, int]) -> np.ndarray:  # noqa: ARG001
+    def create(k: tuple[str, int]) -> np.ndarray:
         tables[len(tables)] = np.lib.format.open_memmap(
             tmp_path / f"out{len(tables)}.npy", mode="w+", shape=(N, N + 1)
         )
@@ -1223,14 +1222,14 @@ def test_sweep_kernel_residue_matches_python_fallback(
             )
     first, second = (tables[i][0, :m] for i in range(2))
     assert np.isfinite(first).all()
-    assert np.max(np.abs(first - second)) <= 1e-6  # noqa: PLR2004
+    assert np.max(np.abs(first - second)) <= 1e-6
     assert records[0]["failures"] == records[1]["failures"] > 0
     assert (
         records[1]["kernel_native_solves"] + records[1]["support_solves"]
         == records[1]["failures"]
     )
     for pd in range(0, m, 5):
-        assert abs(second[pd] - solve_lp(s[pd], f[pd], False).value) <= 1e-8  # noqa: FBT003, PLR2004
+        assert abs(second[pd] - solve_lp(s[pd], f[pd], False).value) <= 1e-8
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1240,8 +1239,8 @@ def test_sweep_kernel_residue_matches_python_fallback(
 
 @pytest.mark.parametrize("n", [1, 17, 2049])
 @pytest.mark.parametrize("window", [False, True])
-def test_native_binding_matches_lp(n: int, window: bool) -> None:  # noqa: FBT001
-    from stl.leap_kernel import solve_packing  # noqa: PLC0415
+def test_native_binding_matches_lp(n: int, window: bool) -> None:
+    from stl.leap_kernel import solve_packing
 
     scales = np.linspace(0.7, 1.0, n)
     s = np.ascontiguousarray(scales[:, None] * S)
@@ -1249,27 +1248,27 @@ def test_native_binding_matches_lp(n: int, window: bool) -> None:  # noqa: FBT00
     out = np.empty(n)
     kind = np.empty(n, np.uint8)
     assert solve_packing(s, f, window, out, kind) == 0
-    assert np.all(kind == 3)  # noqa: PLR2004
+    assert np.all(kind == 3)
     expected = scales * (F if window else VALUE)
-    assert np.max(np.abs(out - expected)) < 1e-9  # noqa: PLR2004
+    assert np.max(np.abs(out - expected)) < 1e-9
 
 
 def test_native_binding_rejects_bad_inputs_and_reports_unsupported() -> None:
-    from stl.leap_kernel import solve_packing  # noqa: PLC0415
+    from stl.leap_kernel import solve_packing
 
     out = np.empty(1)
     kind = np.empty(1, np.uint8)
     with pytest.raises(ValueError, match="finite"):
-        solve_packing(np.full((1, 60), np.nan), np.ones(1), False, out, kind)  # noqa: FBT003
+        solve_packing(np.full((1, 60), np.nan), np.ones(1), False, out, kind)
     with pytest.raises(ValueError, match="shape"):
-        solve_packing(np.zeros((1, 59)), np.ones(1), False, out, kind)  # noqa: FBT003
-    assert solve_packing(np.ones((1, 60)), np.zeros(1), False, out, kind) == 1  # noqa: FBT003
-    assert kind[0] == 255  # noqa: PLR2004
+        solve_packing(np.zeros((1, 59)), np.ones(1), False, out, kind)
+    assert solve_packing(np.ones((1, 60)), np.zeros(1), False, out, kind) == 1
+    assert kind[0] == 255
     assert np.isnan(out[0])
 
 
 def test_native_fallback_sends_only_misses_to_highs(tmp_path: Path) -> None:
-    from stl.leap import N, NativeFallback, profiles  # noqa: PLC0415
+    from stl.leap import N, NativeFallback, profiles
 
     p = profiles()
     n = 2
@@ -1295,17 +1294,17 @@ def test_native_fallback_sends_only_misses_to_highs(tmp_path: Path) -> None:
             fail,
             np.zeros(n, np.int32),
             np.arange(n, dtype=np.int32),
-            False,  # noqa: FBT003
+            False,
         )
         assert lps == 1
         assert cached == 0
         assert fallback.native_solves == 1
-        assert abs(out[0] - VALUE) < 1e-9  # noqa: PLR2004
-        assert abs(out[1] - solve_lp(np.full(60, 0.2), -0.1, False).value) < 1e-9  # noqa: FBT003, PLR2004
+        assert abs(out[0] - VALUE) < 1e-9
+        assert abs(out[1] - solve_lp(np.full(60, 0.2), -0.1, False).value) < 1e-9
 
 
 def test_native_fallback_reuses_certified_rev_values(tmp_path: Path) -> None:
-    from stl.leap import N, NativeFallback, profiles  # noqa: PLC0415
+    from stl.leap import N, NativeFallback, profiles
 
     p = profiles()
     succ = np.lib.format.open_memmap(
@@ -1341,14 +1340,14 @@ def test_native_fallback_reuses_certified_rev_values(tmp_path: Path) -> None:
 def test_sweep_records_native_and_highs_work_apart(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap as b  # noqa: PLC0415
+    from stl import leap as b
 
     b.profiles()  # profiles() reads b.N, so we fill its cache before N shrinks.
     monkeypatch.setattr(b, "N", 8)
     bits = np.zeros((8, 23), np.uint8)
     bits[0, 0] = 7
 
-    def reject(*args: Any) -> int:  # noqa: ANN401
+    def reject(*args: Any) -> int:
         args[-2][:] = np.nan
         args[-1][:] = 255
         return len(args[0])
@@ -1360,7 +1359,7 @@ def test_sweep_records_native_and_highs_work_apart(
         native_seconds = 0.0
         highs_seconds = 0.0
 
-        def solve(self, *args: Any) -> tuple[np.ndarray, int, int]:  # noqa: ANN401
+        def solve(self, *args: Any) -> tuple[np.ndarray, int, int]:
             n = len(args[-3])
             self.native_solves += n
             self.native_seconds += 0.1
@@ -1375,10 +1374,10 @@ def test_sweep_records_native_and_highs_work_apart(
         full=True,
         fallback=cast("Fallback", Native()),
     )
-    assert record["native_solves"] == record["failures"] == 3  # noqa: PLR2004
+    assert record["native_solves"] == record["failures"] == 3
     assert record["lp_solves"] == 0
     assert record["lp_seconds"] == 0.0
-    assert record["native_seconds"] == 0.1  # noqa: PLR2004
+    assert record["native_seconds"] == 0.1
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1450,11 +1449,11 @@ def test_fixture_covers_every_kind(golden: dict) -> None:
         if name.startswith("sweep_"):
             kinds |= {int(k) for k in counts}
     assert kinds == {0, 1, 2, 3, 4, 255}
-    assert FIXTURE.stat().st_size < 500_000  # noqa: PLR2004
+    assert FIXTURE.stat().st_size < 500_000
 
 
 def test_fixture_holds_the_live_production_options(golden: dict) -> None:
-    from stl.leap import RESIDUE, NativeFallback  # noqa: PLC0415
+    from stl.leap import RESIDUE, NativeFallback
 
     if NativeFallback(**RESIDUE).kernel_options(("H1", 44)) != production(golden):
         pytest.skip(
@@ -1469,10 +1468,10 @@ def test_fixture_holds_the_live_production_options(golden: dict) -> None:
 def test_sweep_matches_golden(
     golden: dict,
     label: str,
-    window: bool,  # noqa: FBT001
+    window: bool,
     mode: str,
 ) -> None:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     name = f"sweep_{label}_{'window' if window else 'square'}_{mode}"
     args = inputs(golden, label)
@@ -1502,7 +1501,7 @@ def test_sweep_matches_golden(
 def test_memmapped_tables_share_the_compiled_kernel(
     golden: dict, tmp_path: Path, mapped: tuple[bool, bool]
 ) -> None:
-    from stl import leap_kernel  # noqa: PLC0415
+    from stl import leap_kernel
 
     name = "sweep_tables_square_production"
     args = inputs(golden, "tables")
@@ -1521,7 +1520,7 @@ def test_memmapped_tables_share_the_compiled_kernel(
             args["succ_col"],
             args["fail_col"],
             args["rev"],
-            False,  # noqa: FBT003
+            False,
             1e-6,
             out,
             kind,
@@ -1530,7 +1529,7 @@ def test_memmapped_tables_share_the_compiled_kernel(
         return failed, out, kind
 
     sweep(args["succ_table"], args["fail_table"])
-    compiled = set(leap_kernel._sweep_parallel.signatures)  # noqa: SLF001
+    compiled = set(leap_kernel._sweep_parallel.signatures)
     tables = []
     for table, memmap in zip(("succ_table", "fail_table"), mapped, strict=False):
         if memmap:
@@ -1539,7 +1538,7 @@ def test_memmapped_tables_share_the_compiled_kernel(
         else:
             tables.append(args[table])
     failed, out, kind = sweep(*tables)
-    assert set(leap_kernel._sweep_parallel.signatures) == compiled  # noqa: SLF001
+    assert set(leap_kernel._sweep_parallel.signatures) == compiled
     assert failed == int(golden[f"{name}_failed"])
     assert np.array_equal(kind, golden[f"{name}_kind"])
     assert np.array_equal(out, golden[f"{name}_value"], equal_nan=True)
@@ -1547,8 +1546,8 @@ def test_memmapped_tables_share_the_compiled_kernel(
 
 @pytest.mark.parametrize("crash", [False, True])
 @pytest.mark.parametrize("window", [False, True])
-def test_packing_matches_golden(golden: dict, crash: bool, window: bool) -> None:  # noqa: FBT001
-    from stl.leap_kernel import solve_packing  # noqa: PLC0415
+def test_packing_matches_golden(golden: dict, crash: bool, window: bool) -> None:
+    from stl.leap_kernel import solve_packing
 
     name = f"packing_{'crash' if crash else 'slack'}_{'window' if window else 'square'}"
     s = golden["stage_s"]
@@ -1565,8 +1564,8 @@ def test_packing_matches_golden(golden: dict, crash: bool, window: bool) -> None
 
 
 @pytest.mark.parametrize("warm", [False, True])
-def test_packing_runs_match_golden(golden: dict, warm: bool) -> None:  # noqa: FBT001
-    from stl.leap_kernel import solve_packing_runs  # noqa: PLC0415
+def test_packing_runs_match_golden(golden: dict, warm: bool) -> None:
+    from stl.leap_kernel import solve_packing_runs
 
     name = f"runs_{'warm' if warm else 'cold'}"
     result = solve_packing_runs(

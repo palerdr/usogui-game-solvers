@@ -1,1 +1,1 @@
-Read README.md, then ~/Desktop/projects/STANDARD.md. Follow the standard.
+Read README.md first.

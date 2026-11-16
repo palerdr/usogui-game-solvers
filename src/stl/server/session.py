@@ -182,7 +182,7 @@ def validate_human_display_name(name: str) -> str:
     if normalized.casefold() == CANONICAL_HAL_NAME.casefold():
         message = f"{CANONICAL_HAL_NAME!r} is reserved for the opponent"
         raise ValueError(message)
-    if any(ord(character) < 32 or ord(character) == 127 for character in normalized):  # noqa: PLR2004 - fixed game or wire-format boundary
+    if any(ord(character) < 32 or ord(character) == 127 for character in normalized):
         message = "human display name must not contain control characters"
         raise ValueError(message)
     return normalized
@@ -379,7 +379,7 @@ class PlaySession:
         # second costs nothing and reveals nothing.
         if isinstance(second, bool) or not isinstance(second, int):
             message = f"Illegal action second={second!r}; seconds must be integers"
-            raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
+            raise ValueError(message)
         validate_action(
             second,
             actor=self.human.name,
@@ -393,7 +393,7 @@ class PlaySession:
             message = (
                 f"Illegal Hal action second={hal_second!r}; seconds must be integers"
             )
-            raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
+            raise ValueError(message)
         validate_action(
             hal_second,
             actor=self.hal.name,

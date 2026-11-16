@@ -246,9 +246,9 @@ def _point(action: int) -> np.ndarray:
 def _literal_action(raw: object, *, label: str) -> int:
     if isinstance(raw, (bool, np.bool_)):
         message = f"{label} must be an integer second in 1..60"
-        raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
+        raise ValueError(message)
     try:
-        resolved = int(integer_index(cast(SupportsIndex, raw)))  # noqa: TC006 - vulture tracks the index protocol
+        resolved = int(integer_index(cast(SupportsIndex, raw)))
     except TypeError as error:
         message = f"{label} must be an integer second in 1..60"
         raise ValueError(message) from error
@@ -304,7 +304,7 @@ class PerfectHalConfig:
         ):
             message = "conditional_prior_strength must be positive"
             raise ValueError(message)
-        if len(self.recency_retentions) != 3 or not all(  # noqa: PLR2004 - fixed game or wire-format boundary
+        if len(self.recency_retentions) != 3 or not all(
             0.0 < _finite(value, label="recency retention") < 1.0
             for value in self.recency_retentions
         ):
@@ -331,7 +331,7 @@ class PerfectHalConfig:
             message = "expert_weight_retention must lie in [0, 1]"
             raise ValueError(message)
         if not self.periodicities or any(
-            isinstance(period, bool) or not isinstance(period, int) or period < 2  # noqa: PLR2004 - fixed game or wire-format boundary
+            isinstance(period, bool) or not isinstance(period, int) or period < 2
             for period in self.periodicities
         ):
             message = "periodicities must be nonempty integers at least two"
@@ -617,7 +617,7 @@ class PerfectHalOpponentModel:
         if game_index < 0 or game_decision_index < 0:
             message = "game and decision indices must be nonnegative"
             raise ValueError(message)
-        if len(state_regime) != 4 or any(  # noqa: PLR2004 - fixed game or wire-format boundary
+        if len(state_regime) != 4 or any(
             isinstance(value, bool) or not isinstance(value, int) or value < 0
             for value in state_regime
         ):
@@ -747,7 +747,7 @@ def _validate_stage(stage: Stage) -> None:
             policy.shape != (ACTION_COUNT,)
             or not np.all(np.isfinite(policy))
             or np.any(policy < 0.0)
-            or abs(float(policy.sum()) - 1.0) > 1e-8  # noqa: PLR2004 - fixed game or wire-format boundary
+            or abs(float(policy.sum()) - 1.0) > 1e-8
         ):
             message = f"certified DTH {label} policy is malformed"
             raise ValueError(message)
@@ -1065,7 +1065,7 @@ class TranslatedHalConfig(PerfectHalConfig):
             raise ValueError(message)
         if not isinstance(self.translated, bool):
             message = "translated must be boolean"
-            raise ValueError(message)  # noqa: TRY004 - ValueError is part of the validation API
+            raise ValueError(message)
         if self.expert_weight_floor * len(self.expert_names) >= 1:
             message = "expert floor leaves no probability mass"
             raise ValueError(message)
@@ -1122,7 +1122,7 @@ class TranslatedHalOpponentModel(PerfectHalOpponentModel):
     def _expert_policies(
         self, state: _RoleState, context: PerfectHalContext
     ) -> np.ndarray:
-        base = self._base._expert_policies(state, context)  # noqa: SLF001 - collaborators within this module share model state
+        base = self._base._expert_policies(state, context)
         if not self.config.translated:
             return base
         policies = list(base)
@@ -1225,7 +1225,7 @@ class TranslatedHal:
         self._leap_pending = None
         self.leap_fallbacks = 0
 
-    def __getattr__(self, name: str) -> Any:  # noqa: ANN401 - forwards provider diagnostics
+    def __getattr__(self, name: str) -> Any:
         return getattr(self.inner, name)
 
     def policy(self, decision: CanonicalDecision) -> Mapping[int, float]:
@@ -1242,7 +1242,7 @@ class TranslatedHal:
         ):
             message = "invalid canonical leap decision"
             raise ValueError(message)
-        if self.inner._pending is not None:  # noqa: SLF001 - collaborators within this module share model state
+        if self.inner._pending is not None:
             message = "Hal has an unrevealed ordinary action"
             raise RuntimeError(message)
         stage = self.inner.table.stage(project_to_dth_state(decision))
@@ -1288,7 +1288,7 @@ class TranslatedHal:
             raise RuntimeError(message)
         self.inner.reset_game()
         self.inner.decisions.clear()
-        self.inner._seen_reveals.clear()  # noqa: SLF001 - collaborators within this module share model state
+        self.inner._seen_reveals.clear()
         self.leap_fallbacks = 0
 
     def reset_session(self) -> None:
@@ -1316,12 +1316,12 @@ class TranslatedHal:
 
     def dump_state(self) -> str:
         """Return the opponent evidence as a bounded JSON checkpoint."""
-        if self.inner._pending is not None or self._leap_pending is not None:  # noqa: SLF001 - collaborators within this module share model state
+        if self.inner._pending is not None or self._leap_pending is not None:
             message = "cannot checkpoint an unrevealed action"
             raise RuntimeError(message)
         model = self.opponent_model
         roles = {}
-        for role, state in model._roles.items():  # noqa: SLF001 - collaborators within this module share model state
+        for role, state in model._roles.items():
             fields = asdict(state)
             for key, value in fields.items():
                 if isinstance(value, np.ndarray):
@@ -1336,8 +1336,8 @@ class TranslatedHal:
             "schema": MEMORY_SCHEMA,
             "config": asdict(model.config),
             "roles": roles,
-            "offsets": {r: a.tolist() for r, a in model._offsets.items()},  # noqa: SLF001 - collaborators within this module share model state
-            "last_self": model._last_self,  # noqa: SLF001 - collaborators within this module share model state
+            "offsets": {r: a.tolist() for r, a in model._offsets.items()},
+            "last_self": model._last_self,
         }
         raw = json.dumps(data, separators=(",", ":"), allow_nan=False).encode()
         if len(raw) > MAX_MEMORY_BYTES:
@@ -1385,7 +1385,7 @@ class TranslatedHal:
                     raise ValueError(message)
                 return value
 
-            for role, state in model._roles.items():  # noqa: SLF001 - collaborators within this module share model state
+            for role, state in model._roles.items():
                 fields = data["roles"][role]
                 count = fields["observations"]
                 if type(count) is not int or not 0 <= count <= 10**12:
@@ -1409,7 +1409,7 @@ class TranslatedHal:
                         ),
                     )
                 recency = fields["recency_counts"]
-                if len(recency) != 3:  # noqa: PLR2004 - fixed game or wire-format boundary
+                if len(recency) != 3:
                     message = "invalid recency evidence"
                     raise ValueError(message)
                 state.recency_counts = (
@@ -1425,7 +1425,7 @@ class TranslatedHal:
                         ):
                             message = "invalid opponent context"
                             raise ValueError(message)
-                        if key == "state_counts" and any(i > 5 for i in k):  # noqa: PLR2004 - fixed game or wire-format boundary
+                        if key == "state_counts" and any(i > 5 for i in k):
                             message = "invalid state band"
                             raise ValueError(message)
                         if key == "phase_counts" and (
@@ -1440,8 +1440,8 @@ class TranslatedHal:
                     setattr(state, key, counts)
                 for key in ("previous_self_action", "previous_opponent_action"):
                     setattr(state, key, action(fields[key]))
-                model._offsets[role] = array(data["offsets"][role], (2, 2, 2, 119))  # noqa: SLF001 - collaborators within this module share model state
-            model._last_self = action(data["last_self"])  # noqa: SLF001 - collaborators within this module share model state
+                model._offsets[role] = array(data["offsets"][role], (2, 2, 2, 119))
+            model._last_self = action(data["last_self"])
         except (KeyError, TypeError, zlib.error, UnicodeError) as error:
             message = "invalid opponent checkpoint"
             raise ValueError(message) from error

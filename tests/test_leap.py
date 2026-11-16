@@ -39,7 +39,7 @@ def evaluate_states(
     key: tuple[str, int], pairs: np.ndarray, dth: np.ndarray
 ) -> np.ndarray:
     """Evaluate bounded test subtrees without sweeping a key."""
-    from stl.leap import WIN, child_key, is_window, profiles  # noqa: PLC0415
+    from stl.leap import WIN, child_key, is_window, profiles
 
     p = profiles()
 
@@ -64,7 +64,7 @@ def evaluate_states(
     return np.array([value(key, int(pc), int(pd)) for pc, pd in pairs])
 
 
-def lp(s: np.ndarray, f: float, window: bool) -> float:  # noqa: FBT001
+def lp(s: np.ndarray, f: float, window: bool) -> float:
     n = 60 + int(window)
     a = np.full((n, 60), f)
     for d in range(60):
@@ -88,15 +88,15 @@ def lp(s: np.ndarray, f: float, window: bool) -> float:  # noqa: FBT001
     q = np.maximum(-r.ineqlin.marginals, 0)
     q /= q.sum()
     lo, hi = (p @ a).min(), (a @ q).max()
-    assert hi - lo <= 1e-6  # noqa: PLR2004
+    assert hi - lo <= 1e-6
     return (lo + hi) / 2
 
 
 def test_clock_matches_engine() -> None:
-    from stl.game import Game, Player, Referee  # noqa: PLC0415
-    from stl.leap import child_clock, snap  # noqa: PLC0415
+    from stl.game import Game, Player, Referee
+    from stl.leap import child_clock, snap
 
-    rng = random.Random(381)  # noqa: S311
+    rng = random.Random(381)
     for clock in [720, 3420, 3479, 3480, 3539, 3540, 3599, 3600, 3601]:
         for half in (1, 2):
             for fail in (False, True):
@@ -115,13 +115,13 @@ def test_clock_matches_engine() -> None:
 
 
 def test_leap_window_is_closed_and_turn_duration_agrees() -> None:
-    from stl.game import (  # noqa: PLC0415
+    from stl.game import (
         LS_WINDOW_END,
         LS_WINDOW_START,
         TURN_DURATION_LEAP,
         TURN_DURATION_NORMAL,
     )
-    from stl.leap import is_leap_window, turn_duration  # noqa: PLC0415
+    from stl.leap import is_leap_window, turn_duration
 
     expected = {
         LS_WINDOW_START - 1: False,
@@ -139,31 +139,31 @@ def test_leap_window_is_closed_and_turn_duration_agrees() -> None:
 
 @pytest.mark.parametrize(("limit", "expected"), [(1500, 570612), (1800, 12971150)])
 def test_forward_counts(limit: int, expected: int) -> None:
-    from stl.leap import forward_reachability  # noqa: PLC0415
+    from stl.leap import forward_reachability
 
     assert sum(forward_reachability(limit=limit).counts.values()) == expected
 
 
 @pytest.mark.slow
 def test_forward_counts_full(tmp_path: Path) -> None:
-    from stl.leap import forward_reachability  # noqa: PLC0415
+    from stl.leap import forward_reachability
 
     r = forward_reachability(directory=tmp_path)
-    assert sum(r.counts.values()) == 9453333117  # noqa: PLR2004
+    assert sum(r.counts.values()) == 9453333117
     assert r.by_type == {"H1": 4180634990, "H2": 4188677815, "REV": 1084020312}
-    assert r.window_count == 470336555  # noqa: PLR2004
+    assert r.window_count == 470336555
 
 
 @pytest.mark.parametrize("window", [False, True])
-def test_oracle_vs_lp(window: bool) -> None:  # noqa: FBT001
+def test_oracle_vs_lp(window: bool) -> None:
 
     rng = np.random.default_rng(593)
     stages = [(rng.uniform(-1, 1, 60), rng.uniform(-1, 1)) for _ in range(30)]
     stages += [(np.linspace(0.8, -0.7, 60), -0.9), (np.ones(60) * 0.3, 0.2)]
     for s, f in stages:
         result = solve_stage(s, f, window)
-        assert result.gap <= 1e-6  # noqa: PLR2004
-        assert abs(result.value - lp(s, f, window)) <= 1e-8  # noqa: PLR2004
+        assert result.gap <= 1e-6
+        assert abs(result.value - lp(s, f, window)) <= 1e-8
 
 
 def synthetic(
@@ -185,10 +185,10 @@ def synthetic(
 
 def run_kernel(
     args: Sequence[np.ndarray],
-    window: bool = False,  # noqa: FBT001, FBT002
+    window: bool = False,
     tolerance: float = 1e-6,
 ) -> tuple[np.ndarray, np.ndarray, int]:
-    from stl.leap_kernel import sweep_batch  # noqa: PLC0415
+    from stl.leap_kernel import sweep_batch
 
     out = np.empty(len(args[0]))
     kind = np.empty(len(out), dtype=np.uint8)
@@ -211,7 +211,7 @@ def run_kernel(
 
 @pytest.mark.parametrize("n", [1, 15, 16, 17, 1000])
 @pytest.mark.parametrize("window", [False, True])
-def test_kernel_vs_oracle(n: int, window: bool) -> None:  # noqa: FBT001
+def test_kernel_vs_oracle(n: int, window: bool) -> None:
 
     args = synthetic(n)
     out, kind, failed = run_kernel(args, window)
@@ -223,7 +223,7 @@ def test_kernel_vs_oracle(n: int, window: bool) -> None:  # noqa: FBT001
             float(rev[pc[i]] * -ft[pd[i], fc[pc[i]]] + 1 - rev[pc[i]]),
             window,
         )
-        assert abs(out[i] - result.value) <= 1e-9  # noqa: PLR2004
+        assert abs(out[i] - result.value) <= 1e-9
         assert kind[i] == result.kind
 
 
@@ -257,8 +257,8 @@ def test_kernel_reports_failures() -> None:
     for _ in range(100):
         s = rng.uniform(-1, 1, 60)
         f = float(rng.uniform(-1, 1))
-        result = solve_stage(s, f, False, allow_lp=False)  # noqa: FBT003
-        if result.kind == 255:  # noqa: PLR2004
+        result = solve_stage(s, f, False, allow_lp=False)
+        if result.kind == 255:
             break
     else:
         pytest.fail("seed must exercise the LP rung")
@@ -273,12 +273,12 @@ def test_kernel_reports_failures() -> None:
     )
     out, kind, failed = run_kernel(args)
     assert failed == 1
-    assert kind[0] == 255  # noqa: PLR2004
+    assert kind[0] == 255
     assert np.isnan(out[0])
-    result = solve_stage(s, f, False)  # noqa: FBT003
-    assert result.kind == 3  # noqa: PLR2004
-    assert result.gap <= 1e-6  # noqa: PLR2004
-    assert abs(result.value - lp(s, f, False)) <= 1e-9  # noqa: FBT003, PLR2004
+    result = solve_stage(s, f, False)
+    assert result.kind == 3
+    assert result.gap <= 1e-6
+    assert abs(result.value - lp(s, f, False)) <= 1e-9
 
 
 @pytest.fixture
@@ -290,7 +290,7 @@ def dth() -> np.ndarray:
 
 @pytest.mark.slow
 def test_dth_full_parity(dth: np.ndarray) -> None:
-    from stl.leap import N, profiles  # noqa: PLC0415
+    from stl.leap import N, profiles
 
     p = profiles()
     start = time.perf_counter()
@@ -302,22 +302,22 @@ def test_dth_full_parity(dth: np.ndarray) -> None:
         assert failed == 0
         worst = max(worst, float(np.max(np.abs(out - dth[pc, pd]))))
     elapsed = time.perf_counter() - start
-    print(f"DTH: {N * N / elapsed:.0f} classes/s, max error {worst:.3g}", flush=True)  # noqa: T201
-    assert worst <= 1e-9  # noqa: PLR2004
+    print(f"DTH: {N * N / elapsed:.0f} classes/s, max error {worst:.3g}", flush=True)
+    assert worst <= 1e-9
 
 
 @pytest.mark.parametrize("key", [("H1", 59), ("H2", 56), ("H1", 56)])
 def test_exact_dth_keys(key: tuple[str, int], dth: np.ndarray) -> None:
-    from stl.leap import N  # noqa: PLC0415
+    from stl.leap import N
 
     rng = np.random.default_rng(826)
     pairs = rng.integers(0, N, (200, 2), dtype=np.int32)
     values = evaluate_states(key, pairs, dth)
-    assert np.max(np.abs(values - dth[pairs[:, 0], pairs[:, 1]])) <= 1e-9  # noqa: PLR2004
+    assert np.max(np.abs(values - dth[pairs[:, 0], pairs[:, 1]])) <= 1e-9
 
 
 def test_window_states_vs_lp(dth: np.ndarray) -> None:
-    from stl.leap import N, profiles  # noqa: PLC0415
+    from stl.leap import N, profiles
 
     p = profiles()
     rng = np.random.default_rng(296)
@@ -326,17 +326,17 @@ def test_window_states_vs_lp(dth: np.ndarray) -> None:
     for value, (pc, pd) in zip(out, pairs, strict=False):
         s = -dth[pd, p.succ[pc]]
         f = p.rev[pc] * -dth[pd, p.fail[pc]] + 1 - p.rev[pc]
-        assert abs(value - lp(s, float(f), True)) <= 1e-8  # noqa: FBT003, PLR2004
+        assert abs(value - lp(s, float(f), True)) <= 1e-8
 
 
 def test_subtree_vs_naive(dth: np.ndarray) -> None:
-    from stl.leap import N_ALIVE, WIN, child_clock, profiles  # noqa: PLC0415
+    from stl.leap import N_ALIVE, WIN, child_clock, profiles
 
     p = profiles()
 
     @lru_cache(None)
     def naive(half: int, clock: int, pc: int, pd: int) -> float:
-        if clock > 3600:  # noqa: PLR2004
+        if clock > 3600:
             return float(dth[pc, pd])
         next_clock = child_clock(half, clock, 0)
         s = np.array(
@@ -356,16 +356,16 @@ def test_subtree_vs_naive(dth: np.ndarray) -> None:
                     int(p.fail[pc]),
                 )
             )
-        return lp(s, f, half == 2 and 3540 <= clock <= 3600)  # noqa: PLR2004
+        return lp(s, f, half == 2 and 3540 <= clock <= 3600)
 
     pair = np.array([[N_ALIVE + 294, N_ALIVE + 294]], dtype=np.int32)
     expected = naive(1, 3180, *map(int, pair[0]))
-    assert naive.cache_info().currsize < 20000  # noqa: PLR2004
-    assert abs(evaluate_states(("H1", 53), pair, dth)[0] - expected) <= 1e-8  # noqa: PLR2004
+    assert naive.cache_info().currsize < 20000
+    assert abs(evaluate_states(("H1", 53), pair, dth)[0] - expected) <= 1e-8
 
 
 def test_store_pack_round_trip(tmp_path: Path) -> None:
-    from stl.leap import N, TableStore  # noqa: PLC0415
+    from stl.leap import N, TableStore
 
     store = TableStore(tmp_path)
     a = store.create(("REV", 3420))
@@ -375,15 +375,15 @@ def test_store_pack_round_trip(tmp_path: Path) -> None:
     store.pack(("REV", 3420))
     restored = store.load(("REV", 3420))
     assert restored.shape == (N, 184)
-    assert restored[3, 4] == 0.25  # noqa: PLR2004
-    assert restored[8, 9] == -0.4  # noqa: PLR2004
+    assert restored[3, 4] == 0.25
+    assert restored[8, 9] == -0.4
     assert np.isnan(restored[0, 0])
     assert np.all(restored[:, -1] == -1.0)
 
 
 def test_kernel_rounding_mode() -> None:
-    import ctypes  # noqa: PLC0415
-    import platform  # noqa: PLC0415
+    import ctypes
+    import platform
 
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         pytest.skip("this test uses Darwin ARM64 fenv constants")
@@ -398,7 +398,7 @@ def test_kernel_rounding_mode() -> None:
 
 
 def test_hot_horizon(tmp_path: Path) -> None:
-    from stl.leap import TableStore  # noqa: PLC0415
+    from stl.leap import TableStore
 
     store = TableStore(tmp_path)
     a = store.create(("REV", 3600))
@@ -408,20 +408,20 @@ def test_hot_horizon(tmp_path: Path) -> None:
     assert store.path(("REV", 3600)).exists()
     store.pack(("REV", 3600))
     assert not store.path(("REV", 3600)).exists()
-    assert store.load(("REV", 3600))[0, 0] == 0.75  # noqa: PLR2004
+    assert store.load(("REV", 3600))[0, 0] == 0.75
 
 
 def test_oracle_recurrence_overflow_uses_lp() -> None:
 
     s = np.full(60, -0.9)
     s[0] = 2e-6
-    failed = solve_stage(s, 0.0, False, allow_lp=False)  # noqa: FBT003
-    assert failed.kind == 255  # noqa: PLR2004
+    failed = solve_stage(s, 0.0, False, allow_lp=False)
+    assert failed.kind == 255
     assert np.isnan(failed.value)
-    result = solve_stage(s, 0.0, False)  # noqa: FBT003
-    assert result.kind == 3  # noqa: PLR2004
-    assert result.gap <= 1e-6  # noqa: PLR2004
-    assert abs(result.value - lp(s, 0.0, False)) <= 1e-9  # noqa: FBT003, PLR2004
+    result = solve_stage(s, 0.0, False)
+    assert result.kind == 3
+    assert result.gap <= 1e-6
+    assert abs(result.value - lp(s, 0.0, False)) <= 1e-9
     args = (
         np.zeros(1, np.int32),
         np.zeros(1, np.int32),
@@ -433,25 +433,25 @@ def test_oracle_recurrence_overflow_uses_lp() -> None:
     )
     out, kind, count = run_kernel(args)
     assert count == 1
-    assert kind[0] == 255  # noqa: PLR2004
+    assert kind[0] == 255
     assert np.isnan(out[0])
 
 
 def test_scheduler_sends_kernel_failures_to_highs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dth: np.ndarray
 ) -> None:
-    from stl import leap as build  # noqa: PLC0415
-    from stl.leap import N, solve_lp  # noqa: PLC0415
+    from stl import leap as build
+    from stl.leap import N, solve_lp
 
     calls = []
 
-    def fail_kernel(*args: Any) -> int:  # noqa: ANN401
+    def fail_kernel(*args: Any) -> int:
         out, kind = args[-2:]
         out[:] = np.nan
         kind[:] = 255
         return len(out)
 
-    def highs(*args: Any) -> StageResult:  # noqa: ANN401
+    def highs(*args: Any) -> StageResult:
         calls.append(args[2])
         return solve_lp(*args)
 
@@ -471,8 +471,8 @@ def test_scheduler_sends_kernel_failures_to_highs(
 
 
 @pytest.mark.parametrize("window", [False, True])
-def test_warm_highs_matches_scalar_lp(window: bool) -> None:  # noqa: FBT001
-    from stl.leap import WarmLP, solve_lp  # noqa: PLC0415
+def test_warm_highs_matches_scalar_lp(window: bool) -> None:
+    from stl.leap import WarmLP, solve_lp
 
     solver = WarmLP(window)
     rng = np.random.default_rng(7941)
@@ -481,20 +481,20 @@ def test_warm_highs_matches_scalar_lp(window: bool) -> None:  # noqa: FBT001
         f = rng.uniform(-1, 1)
         result = solver.solve(s, f)
         expected = solve_lp(s, f, window)
-        assert result.gap <= 1e-6  # noqa: PLR2004
-        assert abs(result.value - expected.value) < 1e-8  # noqa: PLR2004
+        assert result.gap <= 1e-6
+        assert abs(result.value - expected.value) < 1e-8
     with pytest.raises(ValueError, match="finite"):
         solver.solve(np.full(60, np.nan), 0.5)
 
 
 def test_fallback_cache_requires_same_children_and_roles() -> None:
-    from stl.leap import RevivalCache  # noqa: PLC0415
+    from stl.leap import RevivalCache
 
     cache = RevivalCache()
     pcs = np.array([0, 1], np.int32)
     pds = np.array([0, 0], np.int32)
     assert np.isnan(cache.get(("H1", 51), ("H1", 54), False, pcs, pds)).all()
-    cache.put(("H1", 51), ("H1", 54), False, pcs, pds, np.array([0.1, 0.2]))  # noqa: FBT003
+    cache.put(("H1", 51), ("H1", 54), False, pcs, pds, np.array([0.1, 0.2]))
     assert np.array_equal(
         cache.get(("H1", 51), ("H1", 54), False, pcs, pds), [0.1, 0.2]
     )
@@ -504,7 +504,7 @@ def test_fallback_cache_requires_same_children_and_roles() -> None:
 
 
 def test_parallel_fallback_matches_oracle(tmp_path: Path) -> None:
-    from stl.leap import FallbackPool, N, profiles, solve_lp  # noqa: PLC0415
+    from stl.leap import FallbackPool, N, profiles, solve_lp
 
     rng = np.random.default_rng(452)
     p = profiles()
@@ -521,22 +521,22 @@ def test_parallel_fallback_matches_oracle(tmp_path: Path) -> None:
             tmp_path / "fail.npy",
             pcs,
             pds,
-            False,  # noqa: FBT003
-            False,  # noqa: FBT003
+            False,
+            False,
         )
     expected = [
         solve_lp(
             -succ[pd, p.succ[pc]],
             p.rev[pc] * -fail[pd, p.fail[pc]] + 1 - p.rev[pc],
-            False,  # noqa: FBT003
+            False,
         ).value
         for pc, pd in zip(pcs, pds, strict=False)
     ]
-    assert np.max(np.abs(cast("np.ndarray", result) - expected)) < 1e-8  # noqa: PLR2004
+    assert np.max(np.abs(cast("np.ndarray", result) - expected)) < 1e-8
 
 
 def test_fallback_reuses_only_certified_identical_stages(tmp_path: Path) -> None:
-    from stl.leap import Fallback, N  # noqa: PLC0415
+    from stl.leap import Fallback, N
 
     for name in ("succ", "fail"):
         table = np.lib.format.open_memmap(
@@ -556,7 +556,7 @@ def test_fallback_reuses_only_certified_identical_stages(tmp_path: Path) -> None
             fail,
             pcs,
             pds,
-            False,  # noqa: FBT003
+            False,
         )
         assert solved == 1
         assert cached == 0
@@ -567,7 +567,7 @@ def test_fallback_reuses_only_certified_identical_stages(tmp_path: Path) -> None
             fail,
             pcs,
             pds,
-            False,  # noqa: FBT003
+            False,
         )
         assert solved == 0
         assert cached == 1
@@ -577,8 +577,8 @@ def test_fallback_reuses_only_certified_identical_stages(tmp_path: Path) -> None
 def test_scheduler_routes_failed_classes_to_parallel_highs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap as b  # noqa: PLC0415
-    from stl.leap import Fallback  # noqa: PLC0415
+    from stl import leap as b
+    from stl.leap import Fallback
 
     rng = np.random.default_rng(87)
     child = np.lib.format.open_memmap(
@@ -591,10 +591,10 @@ def test_scheduler_routes_failed_classes_to_parallel_highs(
         tmp_path / "output.npy", mode="w+", shape=(1, 1), dtype=float
     )
     store = b.TableStore(tmp_path / "tables")
-    monkeypatch.setattr(store, "create", lambda key: output)  # noqa: ARG005
-    monkeypatch.setattr(store, "load", lambda key: child)  # noqa: ARG005
+    monkeypatch.setattr(store, "create", lambda key: output)
+    monkeypatch.setattr(store, "load", lambda key: child)
 
-    def reject(*args: Any) -> int:  # noqa: ANN401
+    def reject(*args: Any) -> int:
         args[-2][:] = np.nan
         args[-1][:] = 255
         return len(args[0])
@@ -616,15 +616,15 @@ def test_scheduler_routes_failed_classes_to_parallel_highs(
     expected = b.solve_lp(
         -child[0, p.succ[0]],
         p.rev[0] * -child[0, p.fail[0]] + 1 - p.rev[0],
-        False,  # noqa: FBT003
+        False,
     )
-    assert abs(output[0, 0] - expected.value) < 1e-8  # noqa: PLR2004
+    assert abs(output[0, 0] - expected.value) < 1e-8
     assert record["failures"] == record["lp_solves"] == 1
     assert record["cached_failures"] == 0
 
 
 def test_lp_retries_unknown_simplex_status_with_ipm() -> None:
-    from stl.leap import solve_lp  # noqa: PLC0415
+    from stl.leap import solve_lp
 
     # We retain the REV[2933] matrix that triggered a HiGHS Unknown status.
     s = np.array(
@@ -691,20 +691,20 @@ def test_lp_retries_unknown_simplex_status_with_ipm() -> None:
             0.6968458766397327,
         ]
     )
-    result = solve_lp(s, 0.5693978099931765, False)  # noqa: FBT003
-    assert result.gap <= 1e-8  # noqa: PLR2004
-    assert abs(result.value - 0.5693978096030541) < 1e-8  # noqa: PLR2004
+    result = solve_lp(s, 0.5693978099931765, False)
+    assert result.gap <= 1e-8
+    assert abs(result.value - 0.5693978096030541) < 1e-8
 
 
 def test_audit_retries_unknown_status_with_ipm(monkeypatch: pytest.MonkeyPatch) -> None:
-    from types import SimpleNamespace  # noqa: PLC0415
+    from types import SimpleNamespace
 
-    from stl import leap as audit  # noqa: PLC0415
+    from stl import leap as audit
 
     original = audit.linprog
     methods = []
 
-    def first_unknown(*args: Any, **kwargs: Any) -> OptimizeResult | SimpleNamespace:  # noqa: ANN401
+    def first_unknown(*args: Any, **kwargs: Any) -> OptimizeResult | SimpleNamespace:
         methods.append(kwargs["method"])
         if len(methods) == 1:
             return SimpleNamespace(success=False, message="Unknown")
@@ -713,12 +713,12 @@ def test_audit_retries_unknown_status_with_ipm(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(audit, "linprog", first_unknown)
     result = audit.certify_matrix(np.array([[1.0, -1.0], [-1.0, 1.0]]))
     assert methods == ["highs", "highs-ipm"]
-    assert result["gap"] < 1e-8  # noqa: PLR2004
-    assert abs(result["value"]) < 1e-8  # noqa: PLR2004
+    assert result["gap"] < 1e-8
+    assert abs(result["value"]) < 1e-8
 
 
 def test_lp_and_audit_retry_centered_matrix() -> None:
-    from stl.leap import certify_matrix, solve_lp, stage_matrix  # noqa: PLC0415
+    from stl.leap import certify_matrix, solve_lp, stage_matrix
 
     # We retain the H2[46] matrix that defeated both unshifted HiGHS methods.
     s = np.array(
@@ -786,16 +786,16 @@ def test_lp_and_audit_retry_centered_matrix() -> None:
         ]
     )
     f = 0.6619631342243604
-    result = solve_lp(s, f, False)  # noqa: FBT003
-    audited = certify_matrix(stage_matrix(s, f, False))  # noqa: FBT003
-    assert result.gap <= 1e-8  # noqa: PLR2004
-    assert audited["gap"] <= 1e-8  # noqa: PLR2004
-    assert abs(result.value - (-0.657410993831167)) < 1e-8  # noqa: PLR2004
-    assert abs(result.value - audited["value"]) < 1e-8  # noqa: PLR2004
+    result = solve_lp(s, f, False)
+    audited = certify_matrix(stage_matrix(s, f, False))
+    assert result.gap <= 1e-8
+    assert audited["gap"] <= 1e-8
+    assert abs(result.value - (-0.657410993831167)) < 1e-8
+    assert abs(result.value - audited["value"]) < 1e-8
 
 
 def test_lp_retries_first_success_offset_and_returns_support() -> None:
-    from stl.leap import certify_matrix, solve_lp, stage_matrix  # noqa: PLC0415
+    from stl.leap import certify_matrix, solve_lp, stage_matrix
 
     s = np.array(
         [
@@ -862,17 +862,17 @@ def test_lp_retries_first_success_offset_and_returns_support() -> None:
         ]
     )
     f = 0.9999999999999999
-    result = solve_lp(s, f, False, support=True)  # noqa: FBT003
-    audit = certify_matrix(stage_matrix(s, f, False))  # noqa: FBT003
-    assert result.gap <= 1e-8  # noqa: PLR2004
-    assert audit["gap"] <= 1e-8  # noqa: PLR2004
-    assert abs(result.value - 0.31127112833305104) < 1e-9  # noqa: PLR2004
+    result = solve_lp(s, f, False, support=True)
+    audit = certify_matrix(stage_matrix(s, f, False))
+    assert result.gap <= 1e-8
+    assert audit["gap"] <= 1e-8
+    assert abs(result.value - 0.31127112833305104) < 1e-9
     assert result.support is not None
     assert all(0 < x < (1 << 60) for x in result.support)
 
 
 def test_parallel_pool_returns_seed_supports(tmp_path: Path) -> None:
-    from stl.leap import FallbackPool, N, profiles, solve_lp  # noqa: PLC0415
+    from stl.leap import FallbackPool, N, profiles, solve_lp
 
     p = profiles()
     rng = np.random.default_rng(907)
@@ -887,8 +887,8 @@ def test_parallel_pool_returns_seed_supports(tmp_path: Path) -> None:
             tmp_path / "a.npy",
             pc,
             pd,
-            False,  # noqa: FBT003
-            False,  # noqa: FBT003
+            False,
+            False,
             support=True,
         )
     assert supports is not None
@@ -900,20 +900,20 @@ def test_parallel_pool_returns_seed_supports(tmp_path: Path) -> None:
         solve_lp(
             -a[d, p.succ[c]],
             p.rev[c] * -a[d, p.fail[c]] + 1 - p.rev[c],
-            False,  # noqa: FBT003
+            False,
         ).value
         for c, d in zip(pc, pd, strict=False)
     ]
-    assert np.max(np.abs(cast("np.ndarray", values) - expected)) < 1e-8  # noqa: PLR2004
+    assert np.max(np.abs(cast("np.ndarray", values) - expected)) < 1e-8
 
 
 def test_support_refresh_batches_use_available_workers(tmp_path: Path) -> None:
-    from stl.leap import FallbackPool  # noqa: PLC0415
+    from stl.leap import FallbackPool
 
     jobs = []
 
     class Executor:
-        def map(self, function: Callable, submitted: list) -> list:  # noqa: ARG002
+        def map(self, function: Callable, submitted: list) -> list:
             jobs.extend(submitted)
             return [
                 (np.zeros(len(job[2])), np.ones((len(job[2]), 2), np.uint64))
@@ -928,11 +928,11 @@ def test_support_refresh_batches_use_available_workers(tmp_path: Path) -> None:
         tmp_path / "fail.npy",
         ids,
         ids,
-        False,  # noqa: FBT003
-        False,  # noqa: FBT003
+        False,
+        False,
         support=True,
     )
-    assert len(jobs) == 4  # noqa: PLR2004
+    assert len(jobs) == 4
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -943,7 +943,7 @@ def test_support_refresh_batches_use_available_workers(tmp_path: Path) -> None:
 def test_full_mode_crosses_calibration_floor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap as b  # noqa: PLC0415
+    from stl import leap as b
 
     path = DTH_PATH
     if not path.exists():
@@ -953,8 +953,8 @@ def test_full_mode_crosses_calibration_floor(
     output = np.lib.format.open_memmap(
         tmp_path / "one.npy", mode="w+", shape=(1, 1), dtype=float
     )
-    monkeypatch.setattr(store, "create", lambda key: output)  # noqa: ARG005
-    monkeypatch.setattr(store, "load", lambda key: dth)  # noqa: ARG005
+    monkeypatch.setattr(store, "create", lambda key: output)
+    monkeypatch.setattr(store, "load", lambda key: dth)
     bits = np.zeros((b.N, (b.N + 7) // 8), np.uint8)
     bits[0, 0] = 1
     with pytest.raises(ValueError, match="3420"):
@@ -962,14 +962,14 @@ def test_full_mode_crosses_calibration_floor(
     result = b.sweep_key(("H1", 56), bits, store, dth, min_clock=720, full=True)
     assert result["states"] == 1
     assert result["failures"] == 0
-    assert abs(output[0, 0] - dth[0, 0]) < 1e-9  # noqa: PLR2004
+    assert abs(output[0, 0] - dth[0, 0]) < 1e-9
     with pytest.raises(ValueError, match="720"):
         b.sweep_key(("H1", 11), bits, store, dth, min_clock=660, full=True)
 
 
 @pytest.fixture
 def small_packed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple:
-    from stl import leap  # noqa: PLC0415
+    from stl import leap
 
     a = b = leap
     monkeypatch.setattr(leap, "N", 400)
@@ -977,7 +977,7 @@ def small_packed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple:
     store = b.TableStore(tmp_path / "tables")
     table = store.create(key)
     rng = np.random.default_rng(384)
-    mask = rng.random((400, 183)) < 0.17  # noqa: PLR2004
+    mask = rng.random((400, 183)) < 0.17
     data = rng.uniform(-1, 1, (400, 183))
     table[:, :183][mask] = data[mask]
     table.flush()
@@ -993,10 +993,10 @@ def test_packed_reader_rank_and_select(small_packed: tuple) -> None:
     assert np.array_equal(reader.get(key, rows, cols), data[mask])
     assert np.array_equal(reader.get(key, [0, 399], [183, 183]), [-1.0, -1.0])
     sampled_rows, sampled_cols = reader.sample(key, 200, np.random.default_rng(52))
-    assert len(sampled_rows) == 200  # noqa: PLR2004
+    assert len(sampled_rows) == 200
     assert mask[sampled_rows, sampled_cols].all()
     assert (
-        len(set(zip(sampled_rows.tolist(), sampled_cols.tolist(), strict=False))) == 200  # noqa: PLR2004
+        len(set(zip(sampled_rows.tolist(), sampled_cols.tolist(), strict=False))) == 200
     )
     assert np.array_equal(
         reader.get(key, sampled_rows, sampled_cols), data[sampled_rows, sampled_cols]
@@ -1031,17 +1031,17 @@ def test_packed_audit_checks_membership_and_values(small_packed: tuple) -> None:
 
 
 def test_explicit_lp_certifies_both_policies() -> None:
-    from stl.leap import certify_matrix  # noqa: PLC0415
+    from stl.leap import certify_matrix
 
     result = certify_matrix(np.array([[1.0, -1.0], [-1.0, 1.0]]))
-    assert abs(result["value"]) < 1e-12  # noqa: PLR2004
-    assert result["gap"] <= 1e-6  # noqa: PLR2004
+    assert abs(result["value"]) < 1e-12
+    assert result["gap"] <= 1e-6
     assert np.allclose(result["drop"], [0.5, 0.5])
     assert np.allclose(result["check"], [0.5, 0.5])
 
 
 def test_audit_uses_root_roles_and_reset_columns() -> None:
-    from stl.leap import stage_inputs  # noqa: PLC0415
+    from stl.leap import stage_inputs
 
     calls = []
 
@@ -1056,7 +1056,7 @@ def test_audit_uses_root_roles_and_reset_columns() -> None:
         cast("PackedReader", Reader()), ("H1", 12), 0, 0, cast("np.ndarray", None)
     )
     assert np.array_equal(s, np.full(60, -0.25))
-    assert abs(f - (-0.25 * 0.95 + 0.05)) < 1e-15  # noqa: PLR2004
+    assert abs(f - (-0.25 * 0.95 + 0.05)) < 1e-15
     assert calls[0][0] == ("H2", 12)
     assert np.array_equal(calls[0][2], np.arange(1, 61))
     assert calls[1][0] == ("REV", 1020)
@@ -1067,8 +1067,8 @@ def test_audit_uses_root_roles_and_reset_columns() -> None:
 def test_full_sweep_groups_compressed_failure_tables(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap as b  # noqa: PLC0415
-    from stl.leap import profiles  # noqa: PLC0415
+    from stl import leap as b
+    from stl.leap import profiles
 
     path = DTH_PATH
     if not path.exists():
@@ -1083,20 +1083,20 @@ def test_full_sweep_groups_compressed_failure_tables(
     output = np.lib.format.open_memmap(
         tmp_path / "out.npy", mode="w+", shape=(2, 1), dtype=float
     )
-    monkeypatch.setattr(store, "create", lambda key: output)  # noqa: ARG005
+    monkeypatch.setattr(store, "create", lambda key: output)
     children = {("H2", 12): dth, ("REV", 1020): first, ("REV", 1021): second}
     monkeypatch.setattr(store, "load", lambda key: children[key])
     bits = np.zeros((b.N, (b.N + 7) // 8), np.uint8)
     bits[:2, 0] = 1
     result = b.sweep_key(("H1", 12), bits, store, dth, min_clock=720, full=True)
-    assert result["states"] == 2  # noqa: PLR2004
+    assert result["states"] == 2
     for pc, fail_value in [(0, 0.1), (1, 0.7)]:
         expected = solve_stage(
             -dth[0, p.succ[pc]],
             p.rev[pc] * -fail_value + 1 - p.rev[pc],
-            False,  # noqa: FBT003
+            False,
         )
-        assert abs(output[pc, 0] - expected.value) < 1e-9  # noqa: PLR2004
+        assert abs(output[pc, 0] - expected.value) < 1e-9
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1114,7 +1114,7 @@ def fake_artifact(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, Path, dict]:
     """A completed report and a small DTH double for reader unit tests."""
-    from stl import leap  # noqa: PLC0415
+    from stl import leap
 
     dth = tmp_path / "V.npy"
     np.save(dth, np.arange(6, dtype=np.float64).reshape(2, 3))
@@ -1137,7 +1137,7 @@ def fake_artifact(
 def test_open_leap_requires_a_complete_checked_result(
     fake_artifact: tuple[Path, Path, dict], tmp_path: Path
 ) -> None:
-    from stl.leap import open_leap  # noqa: PLC0415
+    from stl.leap import open_leap
 
     artifact, dth, report = fake_artifact
     open_leap(artifact, dth=dth)
@@ -1157,8 +1157,8 @@ def test_open_leap_requires_a_complete_checked_result(
 def test_open_leap_validates_the_dth_table(
     fake_artifact: tuple[Path, Path, dict], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap  # noqa: PLC0415
-    from stl.dth import Table  # noqa: PLC0415
+    from stl import leap
+    from stl.dth import Table
 
     artifact, dth, _ = fake_artifact
     monkeypatch.setattr(leap, "Table", Table)
@@ -1167,7 +1167,7 @@ def test_open_leap_validates_the_dth_table(
 
 
 def test_full_build_rejects_existing_output(tmp_path: Path) -> None:
-    from stl.leap import run_full  # noqa: PLC0415
+    from stl.leap import run_full
 
     saved = tmp_path / "saved.npy"
     saved.write_bytes(b"existing result")
@@ -1180,7 +1180,7 @@ def test_full_build_rejects_existing_output(tmp_path: Path) -> None:
 def test_cold_pack_keeps_the_dependency_horizon(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from stl import leap  # noqa: PLC0415
+    from stl import leap
 
     monkeypatch.setattr(leap, "N", 8)
     store = leap.TableStore(tmp_path)
@@ -1192,14 +1192,14 @@ def test_cold_pack_keeps_the_dependency_horizon(
     store.pack_after(3599)
     assert store.path(("REV", 3599)).exists()
     assert not store.path(("REV", 3600)).exists()
-    assert store.load(("REV", 3600))[0, 0] == 0.3  # noqa: PLR2004
+    assert store.load(("REV", 3600))[0, 0] == 0.3
     store.pack_after(0)
     assert not store.path(("REV", 3599)).exists()
     assert not store.path(("REV", 3600)).exists()
 
 
 def test_default_paths_come_from_the_repository() -> None:
-    from stl import leap  # noqa: PLC0415
+    from stl import leap
 
     root = Path(leap.__file__).resolve().parents[2]
     assert root / "artifacts" / "leap" == leap.DEFAULT_ARTIFACT
@@ -1212,7 +1212,7 @@ def test_default_paths_come_from_the_repository() -> None:
 def test_profile_and_column_lookups_reject_missing_profiles(
     fake_artifact: tuple[Path, Path, dict],
 ) -> None:
-    from stl.leap import WIN, open_leap, profiles  # noqa: PLC0415
+    from stl.leap import WIN, open_leap, profiles
 
     artifact, dth, _ = fake_artifact
     table = open_leap(artifact, dth=dth)
@@ -1234,16 +1234,16 @@ def test_stage_enforces_the_1e6_residual_and_gap_gates(
 
     A stored 0.0 makes the 1e-6 residual exact.
     """
-    from stl.leap import open_leap  # noqa: PLC0415
+    from stl.leap import open_leap
 
     artifact, dth, _ = fake_artifact
     table = open_leap(artifact, dth=dth)
-    monkeypatch.setattr(table, "value", lambda key, checker, dropper: 0.0)  # noqa: ARG005
-    monkeypatch.setattr("stl.leap.stage_inputs", lambda *args: (None, None))  # noqa: ARG005
-    monkeypatch.setattr("stl.leap.explicit_matrix", lambda *args: None)  # noqa: ARG005
+    monkeypatch.setattr(table, "value", lambda key, checker, dropper: 0.0)
+    monkeypatch.setattr("stl.leap.stage_inputs", lambda *args: (None, None))
+    monkeypatch.setattr("stl.leap.explicit_matrix", lambda *args: None)
 
     def certify(certificate: dict) -> None:
-        monkeypatch.setattr("stl.leap.certify_matrix", lambda matrix: dict(certificate))  # noqa: ARG005
+        monkeypatch.setattr("stl.leap.certify_matrix", lambda matrix: dict(certificate))
 
     certify({"value": 2e-6, "gap": 0.0})
     with pytest.raises(ValueError, match="Bellman residual"):
@@ -1259,7 +1259,7 @@ def test_stage_enforces_the_1e6_residual_and_gap_gates(
         "gap": 1e-6,
     }
 
-    def lp_failure(matrix: np.ndarray) -> None:  # noqa: ARG001
+    def lp_failure(matrix: np.ndarray) -> None:
         msg = "opening/audit LP failed the 1e-6 gate"
         raise RuntimeError(msg)
 
@@ -1274,7 +1274,7 @@ def test_stage_enforces_the_1e6_residual_and_gap_gates(
 @needs_artifact
 def test_reader_reproduces_the_h1_strategy_records() -> None:
     """Reproduce the 16 archived Figure 3 records, minutes 44-59, via the reader."""
-    from stl.leap import (  # noqa: PLC0415
+    from stl.leap import (
         PackedReader,
         certify_matrix,
         explicit_matrix,
@@ -1293,23 +1293,23 @@ def test_reader_reproduces_the_h1_strategy_records() -> None:
         record = table.stage(key, checker, dropper)
         stored = float(packed.get(key, checker, dropper))
         certificate = certify_matrix(
-            explicit_matrix(*stage_inputs(packed, key, checker, dropper, dth), False)  # noqa: FBT003
+            explicit_matrix(*stage_inputs(packed, key, checker, dropper, dth), False)
         )
         assert record == {
             "stored_value": stored,
             "bellman_residual": abs(stored - certificate["value"]),
             **certificate,
         }
-        assert record["bellman_residual"] <= 1e-6  # noqa: PLR2004
-        assert record["gap"] <= 1e-6  # noqa: PLR2004
-        assert len(record["drop"]) == len(record["check"]) == 60  # noqa: PLR2004
-        assert abs(sum(record["drop"]) - 1) < 1e-9  # noqa: PLR2004
-        assert abs(sum(record["check"]) - 1) < 1e-9  # noqa: PLR2004
+        assert record["bellman_residual"] <= 1e-6
+        assert record["gap"] <= 1e-6
+        assert len(record["drop"]) == len(record["check"]) == 60
+        assert abs(sum(record["drop"]) - 1) < 1e-9
+        assert abs(sum(record["check"]) - 1) < 1e-9
 
 
 @needs_artifact
 def test_reader_maps_revival_columns_and_certifies_window_stages() -> None:
-    from stl.leap import PackedReader, is_window, open_leap, profiles  # noqa: PLC0415
+    from stl.leap import PackedReader, is_window, open_leap, profiles
 
     table = open_leap(ARTIFACT, dth=DTH_PATH)
     packed = PackedReader(ARTIFACT / "tables")
@@ -1322,5 +1322,5 @@ def test_reader_maps_revival_columns_and_certifies_window_stages() -> None:
         )
         record = table.stage(key, int(checker), dropper)
         assert len(record["drop"]) == 60 + int(is_window(key))
-        assert record["bellman_residual"] <= 1e-6  # noqa: PLR2004
-        assert record["gap"] <= 1e-6  # noqa: PLR2004
+        assert record["bellman_residual"] <= 1e-6
+        assert record["gap"] <= 1e-6

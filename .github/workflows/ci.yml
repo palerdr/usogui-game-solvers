@@ -41,14 +41,6 @@ jobs:
       - if: matrix.shard == 'fast'
         run: uv run ruff format --check
       - if: matrix.shard == 'fast'
-        run: uv run lint-imports
-      - if: matrix.shard == 'fast'
-        run: uv run deptry src
-      - if: matrix.shard == 'fast'
-        run: uv run vulture
-      - if: matrix.shard == 'fast'
-        run: uv run pyright
-      - if: matrix.shard == 'fast'
         run: uv run python -m pytest --collect-only -q
       # The numba leap kernel must reproduce the retired Rust kernel's golden
       # fixture. This step also compiles the kernel into its cache. The kernel

@@ -336,7 +336,7 @@ class PlayerNameRequest(BaseModel):
         marks = 0
         for category in categories:
             marks = marks + 1 if category[0] == "M" else 0
-            if marks > 2:  # noqa: PLR2004 - fixed game or wire-format boundary
+            if marks > 2:
                 message = "a leaderboard name has too many combining marks"
                 raise ValueError(message)
         if is_offensive(name):
@@ -500,7 +500,7 @@ def _new_session(
         player1=hal,
         player2=human,
         referee=Referee(),
-        rng=random.Random(game_seed),  # noqa: S311 - seeded game simulation, not a security token
+        rng=random.Random(game_seed),
     )
     game.game_clock = config.start_clock
     if reset_provider:
@@ -575,12 +575,12 @@ def create_app(
 
     def _session() -> PlaySession:
         session = state["session"]
-        assert isinstance(session, PlaySession)  # noqa: S101 - internal state invariant
+        assert isinstance(session, PlaySession)
         return session
 
     def _game_index() -> int:
         index = state["game_index"]
-        assert isinstance(index, int)  # noqa: S101 - internal state invariant
+        assert isinstance(index, int)
         return index
 
     def _require(sequence: int, session: PlaySession) -> None:
@@ -611,7 +611,7 @@ def create_app(
             return
         record = session.finish()
         games = transcript["games"]
-        assert isinstance(games, list)  # noqa: S101 - internal state invariant
+        assert isinstance(games, list)
         games.append(record)
         if session.stopped:
             tally["stopped"] += 1

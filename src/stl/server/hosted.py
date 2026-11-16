@@ -136,7 +136,7 @@ async def _ledger_write(write: Callable[[], Awaitable[None]]) -> None:
     """
     try:
         await write()
-    except Exception:  # noqa: BLE001 - ledger failure must not hide a committed reveal
+    except Exception:
         _log.exception("game ledger write failed")
 
 
@@ -325,7 +325,7 @@ def create_hosted_app(
                     raw = json.dumps(record, separators=(",", ":"))
                     if not await store.compare_set(key, None, raw):
                         message = "session creation collision"
-                        raise RuntimeError(message)  # noqa: TRY301 - map storage failures to one HTTP response
+                        raise RuntimeError(message)
                     new_cookie = True
             # The page makes one session read, so one load mints one player.
             # Two tabs opened together can mint two; the browser keeps the last.
@@ -371,7 +371,7 @@ def create_hosted_app(
                     replay = await client.post(event["path"], json=event["body"])
                     if replay.status_code != HTTP_OK:
                         message = "stored session could not be replayed"
-                        raise RuntimeError(message)  # noqa: TRY301 - map storage failures to one HTTP response
+                        raise RuntimeError(message)
                 response = await client.request(
                     request.method, route_path, json=command if mutation else None
                 )
@@ -424,7 +424,7 @@ def create_hosted_app(
                     response = await client.get("/api/session")
                 if response.status_code != HTTP_OK:
                     message = "fresh game could not be opened"
-                    raise RuntimeError(message)  # noqa: TRY301 - map storage failures to one HTTP response
+                    raise RuntimeError(message)
                 inner = fresh
             elif mutation and response.status_code == HTTP_OK:
                 record["events"].append({"path": route_path, "body": command})
@@ -495,7 +495,7 @@ def create_hosted_app(
                     samesite="strict",
                     path="/",
                 )
-            return result  # noqa: TRY300 - return the committed response inside the storage guard
+            return result
         except (httpx.HTTPError, RuntimeError, ValueError, KeyError):
             return JSONResponse(
                 {"detail": "Game storage is unavailable. Please retry."},
@@ -726,16 +726,16 @@ def create_production_app(artifact: Path, version: str) -> FastAPI:
             sequence_start=sequence_start,
         )
 
-    url = os.environ.get("KV_REST_API_URL") or os.environ.get(  # noqa: TID251 - the hosted configuration reader
+    url = os.environ.get("KV_REST_API_URL") or os.environ.get(
         "UPSTASH_REDIS_REST_URL", ""
     )
-    token = os.environ.get("KV_REST_API_TOKEN") or os.environ.get(  # noqa: TID251 - the hosted configuration reader
+    token = os.environ.get("KV_REST_API_TOKEN") or os.environ.get(
         "UPSTASH_REDIS_REST_TOKEN", ""
     )
     # The ledger is optional: without its two settings the game plays as
     # before, records nothing, and serves no leaderboard.
-    ledger_url = os.environ.get("SUPABASE_URL", "")  # noqa: TID251 - the hosted configuration reader
-    ledger_key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get(  # noqa: TID251 - the hosted configuration reader
+    ledger_url = os.environ.get("SUPABASE_URL", "")
+    ledger_key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get(
         "SUPABASE_SERVICE_ROLE_KEY", ""
     )
     ledger = None

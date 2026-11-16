@@ -25,7 +25,7 @@ def test_each_command_has_help(
 def test_serve_accepts_only_the_two_hal_kinds() -> None:
     with pytest.raises(SystemExit) as stop:
         main(["serve", "--hal", "perfect"])
-    assert stop.value.code == 2  # noqa: PLR2004
+    assert stop.value.code == 2
 
 
 def test_help_lists_the_commands_and_imports_no_solver() -> None:
@@ -40,7 +40,7 @@ def test_help_lists_the_commands_and_imports_no_solver() -> None:
         "        pass\n"
         "print(json.dumps({'help': out.getvalue(), 'modules': sorted(sys.modules)}))\n"
     )
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, "-I", "-c", code], capture_output=True, text=True, check=False
     )
     assert result.returncode == 0, result.stderr

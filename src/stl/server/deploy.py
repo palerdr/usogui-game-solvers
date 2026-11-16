@@ -74,13 +74,11 @@ def prepare(artifact: Path, bundle: Path = BUNDLE) -> str:
     """Write the prebuilt bundle to ``bundle`` and return the hosted code version."""
     table = Table.open(artifact, rechecks=RECHECK_SAMPLES)
     opening = table.stage((0, 0, 0, 0))
-    print(  # noqa: T201 - CLI progress output
-        f"Certified table: opening value={opening.value}, gap={opening.gap}"
-    )
+    print(f"Certified table: opening value={opening.value}, gap={opening.gap}")
     if bundle.exists():
         shutil.rmtree(bundle)
     bundle.mkdir(parents=True)
-    subprocess.run(["npm", "--prefix", str(WEB), "run", "build"], check=True)  # noqa: S603, S607 - fixed deployment command, no shell; use the installed npm/npx command
+    subprocess.run(["npm", "--prefix", str(WEB), "run", "build"], check=True)
     shutil.copytree(WEB / "dist", bundle / "public")
     runtime = bundle / "runtime"
     copy_sources(ROOT, runtime)
@@ -113,7 +111,7 @@ def prepare(artifact: Path, bundle: Path = BUNDLE) -> str:
     if VERCEL_LINK.exists():
         (bundle / ".vercel").mkdir()
         shutil.copy2(VERCEL_LINK, bundle / ".vercel" / "project.json")
-    print(f"Prepared {bundle} at version {version}.")  # noqa: T201 - CLI progress output
+    print(f"Prepared {bundle} at version {version}.")
     return version
 
 
@@ -162,13 +160,13 @@ def ship(bundle: Path = BUNDLE) -> str:
     The prebuilt archive upload is required: a direct upload of the 2.3 GB
     table exceeds the upload request limit.
     """
-    subprocess.run(  # noqa: S603 - fixed deployment command, no shell
-        ["npx", "vercel", "build", "--cwd", str(bundle), "--yes"],  # noqa: S607 - installed CLI
+    subprocess.run(
+        ["npx", "vercel", "build", "--cwd", str(bundle), "--yes"],
         check=True,
     )
-    print(f"Added {add_bytecode(bundle)} bytecode files to the built function.")  # noqa: T201 - CLI progress output
-    deployed = subprocess.run(  # noqa: S603 - fixed deployment command, no shell
-        [  # noqa: S607 - use the installed npm/npx command
+    print(f"Added {add_bytecode(bundle)} bytecode files to the built function.")
+    deployed = subprocess.run(
+        [
             "npx",
             "vercel",
             "deploy",

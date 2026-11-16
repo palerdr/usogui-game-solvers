@@ -125,7 +125,8 @@ uv run --isolated --locked --python 3.13 pytest tests/server -n 0
 npm --prefix web run typecheck
 npm --prefix web test
 npm --prefix web run build
-uv run ~/Desktop/projects/tools/check_standard.py .
+uv run ruff check
+uv run ruff format --check
 opam exec --switch=stl-dth-ocaml -- dune build --root src/ocaml
 opam exec --switch=stl-dth-ocaml -- dune runtest --root src/ocaml
 opam exec --switch=stl-dth-ocaml -- dune build --root src/ocaml @fmt

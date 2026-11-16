@@ -33,7 +33,7 @@ class TestCheckSuccess:
     def test_check_after_drop(self, game: Game) -> None:
         rec = game.play_half_round(drop_time=20, check_time=40)
         assert rec.result == HalfRoundResult.CHECK_SUCCESS
-        assert rec.st_gained == 21  # noqa: PLR2004
+        assert rec.st_gained == 21
 
     def test_check_same_second_as_drop_succeeds_with_one_st(self, game: Game) -> None:
         """D drops and C checks in second 30; inclusive ST is one."""
@@ -45,22 +45,22 @@ class TestCheckSuccess:
         """One second after the drop produces two inclusive seconds of ST."""
         rec = game.play_half_round(drop_time=30, check_time=31)
         assert rec.result == HalfRoundResult.CHECK_SUCCESS
-        assert rec.st_gained == 2  # noqa: PLR2004
+        assert rec.st_gained == 2
 
     def test_st_accumulates_across_halves(self, game: Game) -> None:
         """ST from successful checks stacks in the checker's cylinder."""
         # Half 1: Baku checks, gains 21 inclusive ST
         game.play_half_round(drop_time=10, check_time=30)
-        assert game.player2.cylinder == 21  # Baku is checker in half 1  # noqa: PLR2004
+        assert game.player2.cylinder == 21  # Baku is checker in half 1
 
         # Half 2: Hal checks, gains 16 inclusive ST
         game.play_half_round(drop_time=20, check_time=35)
-        assert game.player1.cylinder == 16  # Hal is checker in half 2  # noqa: PLR2004
+        assert game.player1.cylinder == 16  # Hal is checker in half 2
 
     def test_max_st_drop_at_1_check_at_60(self, game: Game) -> None:
         """Worst case: D drops at 1, C checks at 60. ST = 60."""
         rec = game.play_half_round(drop_time=1, check_time=60)
-        assert rec.st_gained == 60  # noqa: PLR2004
+        assert rec.st_gained == 60
 
 
 class TestCheckFailure:
@@ -87,56 +87,56 @@ class TestCheckFailure:
         """Failed check: +60s penalty, then entire cylinder injected."""
         rec = game.play_half_round(drop_time=50, check_time=10)
         # Checker had 0 cylinder, +60 penalty = 60s death
-        assert rec.death_duration == 60  # noqa: PLR2004
+        assert rec.death_duration == 60
 
     def test_failed_check_stacks_with_existing_cylinder(self, game: Game) -> None:
         """If checker already has ST in cylinder, penalty stacks."""
         # Half 1: Baku gains 31 inclusive ST (success)
         game.play_half_round(drop_time=10, check_time=40)
-        assert game.player2.cylinder == 31  # noqa: PLR2004
+        assert game.player2.cylinder == 31
 
         # Half 2: Hal checks successfully, no death
         game.play_half_round(drop_time=10, check_time=20)
 
         # Round 2, Half 1: Baku fails check. cylinder = 31 + 60 = 91
         rec = game.play_half_round(drop_time=50, check_time=10)
-        assert rec.death_duration == 91  # noqa: PLR2004
+        assert rec.death_duration == 91
 
 
 class TestInputValidation:
     def test_drop_time_zero_rejected(self, game: Game) -> None:
-        import pytest  # noqa: PLC0415
+        import pytest
 
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):
             game.play_half_round(drop_time=0, check_time=30)
 
     def test_drop_time_over_60_rejected_normal(self, game: Game) -> None:
-        import pytest  # noqa: PLC0415
+        import pytest
 
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):
             game.play_half_round(drop_time=61, check_time=30)
 
     def test_check_time_zero_rejected(self, game: Game) -> None:
-        import pytest  # noqa: PLC0415
+        import pytest
 
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):
             game.play_half_round(drop_time=30, check_time=0)
 
     def test_check_time_over_60_rejected(self, game: Game) -> None:
-        import pytest  # noqa: PLC0415
+        import pytest
 
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):
             game.play_half_round(drop_time=30, check_time=61)
 
     def test_drop_at_60_is_valid(self, game: Game) -> None:
         """D can drop at the last second."""
         rec = game.play_half_round(drop_time=60, check_time=30)
-        assert rec.drop_time == 60  # noqa: PLR2004
+        assert rec.drop_time == 60
 
     def test_check_at_60_is_valid(self, game: Game) -> None:
         """C can check at the last second (safe strategy)."""
         rec = game.play_half_round(drop_time=1, check_time=60)
-        assert rec.check_time == 60  # noqa: PLR2004
+        assert rec.check_time == 60
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -199,44 +199,44 @@ class TestSnapToNextMinute:
     def test_snap_mid_minute(self) -> None:
         g = make_game(1753)  # 8:29:13
         g.snap_clock_to_next_minute()
-        assert g.game_clock == 1800  # 8:30:00  # noqa: PLR2004
+        assert g.game_clock == 1800  # 8:30:00
 
     def test_snap_on_boundary_advances(self) -> None:
         """On a minute boundary, snap STILL advances to the next one."""
         g = make_game(1800)  # 8:30:00
         g.snap_clock_to_next_minute()
-        assert g.game_clock == 1860  # 8:31:00  # noqa: PLR2004
+        assert g.game_clock == 1860  # 8:31:00
 
     def test_snap_near_leap_second(self) -> None:
         """Snap from 8:59:xx should go to 9:00:00 (gc=3601), not 3600."""
         g = make_game(3550)  # 8:59:10
         g.snap_clock_to_next_minute()
-        assert g.game_clock == 3601  # 9:00:00  # noqa: PLR2004
+        assert g.game_clock == 3601  # 9:00:00
 
     def test_snap_at_3540(self) -> None:
         """8:59:00 snaps to 9:00:00."""
         g = make_game(3540)
         g.snap_clock_to_next_minute()
-        assert g.game_clock == 3601  # noqa: PLR2004
+        assert g.game_clock == 3601
 
     def test_snap_at_leap_second(self) -> None:
         g = make_game(3600)
         g.snap_clock_to_next_minute()
-        assert g.game_clock == 3601  # noqa: PLR2004
+        assert g.game_clock == 3601
 
     def test_snap_post_leap(self) -> None:
         """Post-leap snaps align with wall-clock minutes."""
         g = make_game(3810)  # post-leap
         g.snap_clock_to_next_minute()
         # 9:04:00 = gc 3841
-        assert g.game_clock == 3841  # noqa: PLR2004
+        assert g.game_clock == 3841
         assert "9:04:00" in g.format_game_clock()
 
     def test_snap_post_leap_on_boundary(self) -> None:
         """Post-leap, on a wall-clock minute boundary, advances to next."""
         g = make_game(3841)  # 9:04:00
         g.snap_clock_to_next_minute()
-        assert g.game_clock == 3901  # 9:05:00  # noqa: PLR2004
+        assert g.game_clock == 3901  # 9:05:00
         assert "9:05:00" in g.format_game_clock()
 
 
@@ -274,7 +274,7 @@ class TestLeapSecondGameplay:
             "check_fail_died",
             rec.result,
         )  # just check it doesn't crash
-        assert rec.turn_duration == 61  # noqa: PLR2004
+        assert rec.turn_duration == 61
 
     def test_safe_strategy_fails_during_leap(self) -> None:
         """The whole point: checking at 60 fails if D drops at 61."""
@@ -282,7 +282,7 @@ class TestLeapSecondGameplay:
         g.current_half = 2
         rec = g.play_half_round(drop_time=61, check_time=60)
         # check_time (60) < drop_time (61) -> failure
-        from stl.game import HalfRoundResult  # noqa: PLC0415
+        from stl.game import HalfRoundResult
 
         assert rec.result in (
             HalfRoundResult.CHECK_FAIL_SURVIVED,
@@ -293,7 +293,7 @@ class TestLeapSecondGameplay:
         """Drop at 60, check at 60 during leap succeeds with inclusive ST=1."""
         g = make_game(LS_WINDOW_START)
         rec = g.play_half_round(drop_time=60, check_time=60)
-        from stl.game import HalfRoundResult  # noqa: PLC0415
+        from stl.game import HalfRoundResult
 
         assert rec.result == HalfRoundResult.CHECK_SUCCESS
         assert rec.st_gained == 1
@@ -301,9 +301,9 @@ class TestLeapSecondGameplay:
     def test_checker_cannot_check_at_61_during_leap(self) -> None:
         """Checkers remain capped at 60 during a leap turn."""
         g = make_game(LS_WINDOW_START)
-        import pytest  # noqa: PLC0415
+        import pytest
 
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):
             g.play_half_round(drop_time=60, check_time=61)
 
 
@@ -318,7 +318,7 @@ class TestClockAdvancement:
         g.play_half_round(drop_time=10, check_time=20)
 
         # Should have snapped to 1800 + 180 -> snap -> 2040 (4 min later)
-        assert g.game_clock == 2040  # noqa: PLR2004
+        assert g.game_clock == 2040
 
     def test_death_round_longer_gap(self) -> None:
         """A round with a 60s death adds death_duration + death overhead to elapsed."""
@@ -332,7 +332,7 @@ class TestClockAdvancement:
         # 60 (h1 turn) + 60 (death) + 120 (death overhead) + 60 (overhead) +
         # 60 (h2 turn) = 360
         # 1800 + 360 = 2160. snap -> 2220 (7 min gap)
-        assert g.game_clock == 2220  # noqa: PLR2004
+        assert g.game_clock == 2220
 
     def test_no_snap_between_halves(self) -> None:
         """Clock does NOT snap between halves -- only after the full round."""
@@ -343,8 +343,8 @@ class TestClockAdvancement:
 
         # Should be: 1800 + 60 (turn) + 60 (overhead) = 1920
         # NOT snapped to a minute boundary
-        assert g.game_clock == 1920  # noqa: PLR2004
-        assert g.current_half == 2  # still mid-round  # noqa: PLR2004
+        assert g.game_clock == 1920
+        assert g.current_half == 2  # still mid-round
 
 
 class TestMangaTimeline:
@@ -430,15 +430,15 @@ class TestLeapWindowClosedBoundary:
 
     def test_turn_starting_exactly_at_3600_is_leap_turn(self) -> None:
         g = make_game(3600.0)
-        assert g.get_turn_duration() == 61  # noqa: PLR2004
+        assert g.get_turn_duration() == 61
 
     def test_turn_starting_at_3601_is_normal(self) -> None:
         g = make_game(3601.0)
-        assert g.get_turn_duration() == 60  # noqa: PLR2004
+        assert g.get_turn_duration() == 60
 
     def test_turn_starting_at_3539_is_normal(self) -> None:
         g = make_game(3539.0)
-        assert g.get_turn_duration() == 60  # noqa: PLR2004
+        assert g.get_turn_duration() == 60
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -573,7 +573,7 @@ class TestCylinderOverflow:
             HalfRoundResult.CYLINDER_OVERFLOW_SURVIVED,
             HalfRoundResult.CYLINDER_OVERFLOW_DIED,
         )
-        assert rec.death_duration == 300  # noqa: PLR2004
+        assert rec.death_duration == 300
 
     def test_cylinder_at_exactly_300_triggers(self) -> None:
         """Cylinder reaching exactly 300 triggers injection."""
@@ -682,7 +682,7 @@ CANONICAL_LINE = [
         "Hal",
         60,
         30,
-        True,  # noqa: FBT003
+        True,
         0,
         60,
         0,
@@ -699,7 +699,7 @@ CANONICAL_LINE = [
         "Baku",
         60,
         5,
-        True,  # noqa: FBT003
+        True,
         0,
         84,
         0,
@@ -724,7 +724,7 @@ CANONICAL_LINE = [
         "Hal",
         60,
         1,
-        True,  # noqa: FBT003
+        True,
         0,
         93,
         85,
@@ -749,7 +749,7 @@ CANONICAL_LINE = [
         "Baku",
         60,
         1,
-        True,  # noqa: FBT003
+        True,
         0,
         154,
         0,
@@ -765,7 +765,7 @@ CANONICAL_LINE = [
         "Baku",
         61,
         60,
-        True,  # noqa: FBT003
+        True,
         0,
         60,
         0,
@@ -841,11 +841,11 @@ def test_canonical_line_replay() -> None:
         assert not game.game_over, f"{row.label}: game should continue"
 
     # Whole-line sanity: 5 deaths total, both players alive, 9 rounds played.
-    assert hal.deaths == 3  # noqa: PLR2004
-    assert baku.deaths == 2  # noqa: PLR2004
+    assert hal.deaths == 3
+    assert baku.deaths == 2
     assert hal.alive
     assert baku.alive
-    assert len(game.history) == 18  # noqa: PLR2004
+    assert len(game.history) == 18
 
 
 def test_leap_turn_action_space() -> None:
@@ -855,18 +855,18 @@ def test_leap_turn_action_space() -> None:
 
     # The leap window [3540, 3600] is a CLOSED interval and R9H2 starts exactly on it.
     assert game.game_clock == pytest.approx(3540.0)
-    assert game.get_turn_duration() == 61  # noqa: PLR2004
+    assert game.get_turn_duration() == 61
 
     # Actor-aware legality: only Baku-as-dropper sees the 61st second.
-    assert legal_max_second("Baku", "dropper", 61) == 61  # noqa: PLR2004
-    assert legal_max_second("Hal", "checker", 61) == 60  # noqa: PLR2004
-    assert legal_max_second("Hal", "dropper", 61) == 60  # noqa: PLR2004
-    assert legal_max_second("Baku", "checker", 61) == 60  # noqa: PLR2004
-    assert legal_max_second("Alice", "dropper", 61) == 60  # noqa: PLR2004
+    assert legal_max_second("Baku", "dropper", 61) == 61
+    assert legal_max_second("Hal", "checker", 61) == 60
+    assert legal_max_second("Hal", "dropper", 61) == 60
+    assert legal_max_second("Baku", "checker", 61) == 60
+    assert legal_max_second("Alice", "dropper", 61) == 60
 
     # The engine accepts Baku's drop at 61; Hal's check at 60 < 61 fails.
     record = game.resolve_half_round(61, 60, survived_outcome=True)
-    assert record.turn_duration == 61  # noqa: PLR2004
+    assert record.turn_duration == 61
     assert record.result == HalfRoundResult.CHECK_FAIL_SURVIVED
     assert record.death_duration == pytest.approx(60.0)
 
@@ -879,7 +879,7 @@ def test_engine_rejects_coercible_noninteger_actions_without_mutation(
     with pytest.raises(ValueError, match="integer"):
         game.resolve_half_round(action, 1)  # pyright: ignore[reportArgumentType] - invalid-input contract
     assert game.history == []
-    assert game.game_clock == 720.0  # noqa: PLR2004
+    assert game.game_clock == 720.0
 
 
 def test_engine_normalizes_integral_scalar_actions() -> None:

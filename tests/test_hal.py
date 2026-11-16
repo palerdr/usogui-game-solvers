@@ -56,7 +56,7 @@ from tests.conftest import (
 
 def test_config_fixes_pure_dth_and_hard_response_defaults() -> None:
     config = PerfectHalConfig()
-    assert config.action_count == 60  # noqa: PLR2004
+    assert config.action_count == 60
     assert config.response_temperature == 0.0
     assert config.expert_names[:5] == (
         "uniform",
@@ -89,10 +89,10 @@ def test_online_model_learns_a_deterministic_role_without_cross_role_leakage() -
 
     learned = _forecast(model, "checker", decision_index=8)
     untouched = _forecast(model, "dropper", decision_index=8)
-    assert learned.policy[6] > 0.90  # noqa: PLR2004
-    assert learned.confidence > 0.70  # noqa: PLR2004
+    assert learned.policy[6] > 0.90
+    assert learned.confidence > 0.70
     assert untouched.policy == pytest.approx(initial_dropper.policy)
-    assert model.observations("checker") == 8  # noqa: PLR2004
+    assert model.observations("checker") == 8
     assert model.observations("dropper") == 0
 
 
@@ -120,7 +120,7 @@ def test_self_response_expert_uses_only_the_previous_revealed_self_action() -> N
     previous_self = 10
     for index in range(20):
         prediction = _forecast(model, "dropper", decision_index=index)
-        current_self = 20 if previous_self == 10 else 10  # noqa: PLR2004
+        current_self = 20 if previous_self == 10 else 10
         model.observe(
             prediction,
             opponent_action=previous_self,
@@ -131,8 +131,8 @@ def test_self_response_expert_uses_only_the_previous_revealed_self_action() -> N
     prediction = _forecast(model, "dropper", decision_index=20)
     response_index = prediction.expert_names.index("self_response")
     expected_action = previous_self
-    assert prediction.expert_policies[response_index, expected_action - 1] > 0.95  # noqa: PLR2004
-    assert prediction.policy[expected_action - 1] > 0.70  # noqa: PLR2004
+    assert prediction.expert_policies[response_index, expected_action - 1] > 0.95
+    assert prediction.policy[expected_action - 1] > 0.70
 
 
 def test_forecast_tokens_are_single_use_and_causally_ordered() -> None:
@@ -168,7 +168,7 @@ def test_provider_places_all_mass_on_the_forecast_best_response() -> None:
     second = provider.policy(_decision(role="dropper"))
     assert second == {7: pytest.approx(1.0)}
     assert provider.last_decision is not None
-    assert provider.last_decision.opponent_policy[6] > 0.5  # noqa: PLR2004
+    assert provider.last_decision.opponent_policy[6] > 0.5
     assert provider.last_decision.expected_exploit_gain > 0.0
     assert provider.last_decision.best_response_actions == (7,)
     assert table.states == [(12, 60, 24, 120), (12, 60, 24, 120)]
@@ -245,8 +245,8 @@ def test_offsets_transfer_to_an_unseen_hal_action(role: str) -> None:
         last = own
     forecast = _forecast(model, role)
     index = forecast.expert_names.index("offset_last_copy_global")
-    assert forecast.expert_policies[index, 52] > 0.95  # noqa: PLR2004
-    assert forecast.policy[52] > 0.8  # noqa: PLR2004
+    assert forecast.expert_policies[index, 52] > 0.95
+    assert forecast.policy[52] > 0.8
     assert model.observations("checker" if role == "dropper" else "dropper") == 0
 
 
@@ -257,14 +257,14 @@ def test_offsets_use_the_last_reveal_across_roles_and_track_a_switch() -> None:
     for index in range(90):
         role = "dropper" if index % 2 else "checker"
         forecast = _forecast(model, role)
-        action = last + (3 if index < 40 else -3)  # noqa: PLR2004
+        action = last + (3 if index < 40 else -3)
         own = int(rng.integers(5, 55))
         model.observe(forecast, opponent_action=action, self_action=own)
         last = own
     forecast = _forecast(model, "checker")
     recent = forecast.expert_names.index("offset_last_copy_recent")
-    assert forecast.expert_policies[recent, last - 4] > 0.95  # noqa: PLR2004
-    assert forecast.policy[last - 4] > 0.8  # noqa: PLR2004
+    assert forecast.expert_policies[recent, last - 4] > 0.95
+    assert forecast.policy[last - 4] > 0.8
 
 
 def test_no_offset_ablation_matches_old_bit_for_bit() -> None:
@@ -306,7 +306,7 @@ def test_offset_projection_clips_and_preserves_probability_mass() -> None:
         )
     forecast = _forecast(model, "dropper")
     index = forecast.expert_names.index("offset_last_copy_global")
-    assert forecast.expert_policies[index, 59] > 0.95  # noqa: PLR2004
+    assert forecast.expert_policies[index, 59] > 0.95
     np.testing.assert_allclose(forecast.expert_policies.sum(axis=1), 1)
 
 
@@ -382,8 +382,8 @@ def test_checkpoint_preserves_forecasts_without_sharing_mutable_evidence() -> No
     restored.opponent_model.observe(
         _forecast(restored.opponent_model, "dropper"), opponent_action=12, self_action=3
     )
-    assert first.opponent_model.total_observations == 100  # noqa: PLR2004
-    assert restored.opponent_model.total_observations == 101  # noqa: PLR2004
+    assert first.opponent_model.total_observations == 100
+    assert restored.opponent_model.total_observations == 101
     assert first.dump_state() == snapshot
 
 
@@ -408,7 +408,7 @@ def test_checkpoint_rejects_corruption_without_replacing_the_model(damage: str) 
     if damage == "compressed":
         encoded = encoded[:12]
     original = first.opponent_model
-    with pytest.raises(ValueError):  # noqa: PT011
+    with pytest.raises(ValueError):
         first.restore_state(encoded)
     assert first.opponent_model is original
 
@@ -425,10 +425,10 @@ def test_leap_fallback_keeps_evidence_and_clears_sequence_references() -> None:
     )
     p.observe(reveal)
     assert p.opponent_model.total_observations == 1
-    assert p.opponent_model._last_self is None  # noqa: SLF001
+    assert p.opponent_model._last_self is None
     p.policy(_decision())
     p.observe(_reveal(half_round_index=2))
-    assert p.opponent_model.total_observations == 2  # noqa: PLR2004
+    assert p.opponent_model.total_observations == 2
 
 
 # The golden trace of translated Hal.
@@ -453,9 +453,9 @@ def _matrix() -> np.ndarray:
 
 def _baku(n: int, role: str, hal_last: int, baku_last: int) -> int:
     """Copy, then cycle, then repeat with drift, so each expert family gets a phase."""
-    if n < 150:  # noqa: PLR2004
+    if n < 150:
         second = hal_last + 2 if role == "checker" else 61 - hal_last
-    elif n < 300:  # noqa: PLR2004
+    elif n < 300:
         second = (12, 25, 37, 48, 55)[n % 5] if role == "checker" else 20 + (7 * n) % 30
     else:
         second = baku_last + (5 if n % 4 == 0 else 0)
@@ -565,10 +565,10 @@ def dump(trace: dict) -> str:
 @pytest.mark.parametrize(
     "checkpoint", [False, True], ids=["one-provider", "memory-per-game"]
 )
-def test_translated_hal_reproduces_the_golden_trace(checkpoint: bool) -> None:  # noqa: FBT001
+def test_translated_hal_reproduces_the_golden_trace(checkpoint: bool) -> None:
     trace = play(checkpoint=checkpoint)
     golden = json.loads(TRACE.read_text())
-    leaps = [row for row in trace["rows"] if row[4] == 61]  # noqa: PLR2004
+    leaps = [row for row in trace["rows"] if row[4] == 61]
     assert len(trace["rows"]) == GAMES * HALF_ROUNDS
     assert len(leaps) == 2 * len(LEAP_GAMES)
     assert sum(trace["observations"].values()) == len(trace["rows"]) - len(leaps)

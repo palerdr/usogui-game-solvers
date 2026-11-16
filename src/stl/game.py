@@ -236,7 +236,7 @@ class Referee:
             returns a bool. The Game object orchestrates the state transitions.
         """
         if rng is None:
-            rng = random.Random()  # noqa: S311 - seeded game simulation, not a security token
+            rng = random.Random()
 
         prob = self.compute_survival_probability(player, death_duration)
         roll = rng.random()
@@ -363,10 +363,10 @@ class Game:
             snapped = ((gc // 60) + 1) * 60
             # If snap lands on 3600 (the leap second itself, 8:59:60),
             # push to 3601 (9:00:00) — 3600 is not a minute boundary.
-            if snapped == 3600:  # noqa: PLR2004 - fixed game or wire-format boundary
+            if snapped == 3600:
                 snapped = 3601
             self.game_clock = snapped
-        elif gc <= 3600:  # noqa: PLR2004 - fixed game or wire-format boundary
+        elif gc <= 3600:
             # At the leap second: next wall-clock minute is 9:00:00
             self.game_clock = 3601
         else:
@@ -441,7 +441,7 @@ class Game:
         self,
         drop_time: int,
         check_time: int,
-        survived_outcome: bool | None = None,  # noqa: FBT001 - preserve the referee call interface
+        survived_outcome: bool | None = None,
     ) -> HalfRoundRecord:
         """Apply a half-round, optionally with an externally-supplied survival outcome.
         This is the single source of truth for half-round resolution. Both

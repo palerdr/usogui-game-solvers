@@ -27,15 +27,15 @@ def table() -> m.ProfileTable:
 
 
 def test_census(table: m.ProfileTable) -> None:
-    assert table.alive.sum() == 16711  # noqa: PLR2004
-    assert table.st.size == N == 17011  # noqa: PLR2004
+    assert table.alive.sum() == 16711
+    assert table.st.size == N == 17011
     assert table.alive_id.shape == (300, 301)
     assert table.rev.dtype == np.float64
     assert table.success_children.shape == (N, 60)
     per_ttd = {
         t: int((table.ttd[:ALIVE] == t).sum()) for t in [0, *list(range(60, 301))]
     }
-    assert per_ttd[0] == 240  # noqa: PLR2004
+    assert per_ttd[0] == 240
     for t in range(60, 241):
         assert per_ttd[t] == 241 - t
     for t in range(241, 301):
@@ -47,25 +47,25 @@ def test_census(table: m.ProfileTable) -> None:
 
 def test_spot_ids(table: m.ProfileTable) -> None:
     assert table.alive_id[0, 0] == 0
-    assert table.alive_id[239, 0] == 239  # noqa: PLR2004
-    assert table.alive_id[0, 60] == 240  # noqa: PLR2004
-    assert table.alive_id[180, 60] == 420  # noqa: PLR2004
+    assert table.alive_id[239, 0] == 239
+    assert table.alive_id[0, 60] == 240
+    assert table.alive_id[180, 60] == 420
     assert m.profile(0, 0, table) == 0
-    assert m.profile(240, 0, table) == 16951  # noqa: PLR2004
-    assert m.profile(299, 0, table) == 17010  # noqa: PLR2004
-    assert m.profile(240, 300, table) == 16951  # dead: TTD discarded  # noqa: PLR2004
+    assert m.profile(240, 0, table) == 16951
+    assert m.profile(299, 0, table) == 17010
+    assert m.profile(240, 300, table) == 16951  # dead: TTD discarded
     with pytest.raises(IndexError):
         m.profile(5, 30, table)  # alive TTD in 1..59 is off-domain
 
 
 def test_phi_and_buckets(table: m.ProfileTable) -> None:
     assert table.phi[table.alive].min() == 0
-    assert table.phi[table.alive].max() == 240  # noqa: PLR2004
-    assert table.phi[~table.alive].min() == 301  # noqa: PLR2004
-    assert table.phi[~table.alive].max() == 600  # noqa: PLR2004
+    assert table.phi[table.alive].max() == 240
+    assert table.phi[~table.alive].min() == 301
+    assert table.phi[~table.alive].max() == 600
     assert np.array_equal(table.phi[~table.alive], table.st[~table.alive] + 301)
     sizes = np.array([len(b) for b in table.bucket])
-    assert sizes.size == 601  # noqa: PLR2004
+    assert sizes.size == 601
     assert sizes.sum() == N
     assert (sizes[241:301] == 0).all()
     assert (sizes[301:] == 1).all()
@@ -85,7 +85,7 @@ def test_succ_runs(table: m.ProfileTable) -> None:
     # every row: [consecutive alive ids][consecutive dead ids][WIN...]
     kind = np.where(succ < ALIVE, 0, np.where(succ < N, 1, 2))
     assert (np.diff(kind, axis=1) >= 0).all()
-    same = (kind[:, 1:] == kind[:, :-1]) & (kind[:, 1:] != 2)  # noqa: PLR2004
+    same = (kind[:, 1:] == kind[:, :-1]) & (kind[:, 1:] != 2)
     assert (np.diff(succ, axis=1)[same] == 1).all()
     assert (kind[~table.alive] >= 1).all()  # dead profiles never have alive children
     # a child is the parent grown by lag, with the same TTD when alive
@@ -98,12 +98,12 @@ def test_succ_runs(table: m.ProfileTable) -> None:
         == np.broadcast_to(table.ttd[:, None], succ.shape)[alive_child]
     ).all()
     # WIN exactly when grown >= 300
-    assert np.array_equal(succ == m.WIN, (table.st[:, None] + lag) >= 300)  # noqa: PLR2004
+    assert np.array_equal(succ == m.WIN, (table.st[:, None] + lag) >= 300)
 
 
 def test_fail_and_rev(table: m.ProfileTable) -> None:
     p = m.profile(0, 0, table)
-    assert table.fail_child[p] == 240  # noqa: PLR2004
+    assert table.fail_child[p] == 240
     assert table.rev[p] == pytest.approx(0.95)
     p = m.profile(180, 60, table)
     assert (
@@ -113,7 +113,7 @@ def test_fail_and_rev(table: m.ProfileTable) -> None:
     assert (table.fail_child[~table.alive] == m.WIN).all()
     assert (table.rev[~table.alive] == 0.0).all()
     assert (table.rev[table.alive] > 0.0).all()
-    assert (table.rev[table.alive] <= 0.95).all()  # noqa: PLR2004
+    assert (table.rev[table.alive] <= 0.95).all()
     # alive fail-children are revived at ST 0 with TTD = t + s + 60
     fc = table.fail_child[table.alive]
     alive_fc = fc < ALIVE
@@ -134,13 +134,13 @@ def test_potential_strictly_increases(table: m.ProfileTable) -> None:
 def test_layer_census(table: m.ProfileTable) -> None:
     sizes = np.array([len(b) for b in table.bucket], dtype=np.int64)
     count = np.convolve(sizes, sizes)  # count[P] = sum_a sizes[a] * sizes[P - a]
-    assert count.size == 1201  # noqa: PLR2004
-    assert count.sum() == 289_374_121  # noqa: PLR2004
-    assert count[:601].sum() == 283_297_201  # noqa: PLR2004
-    assert count[601:841].sum() == 6_015_600  # noqa: PLR2004
-    assert count[841:].sum() == 61_320  # noqa: PLR2004
-    assert count.argmax() == 374  # noqa: PLR2004
-    assert count[374] == 1_678_715  # noqa: PLR2004
+    assert count.size == 1201
+    assert count.sum() == 289_374_121
+    assert count[:601].sum() == 283_297_201
+    assert count[601:841].sum() == 6_015_600
+    assert count[841:].sum() == 61_320
+    assert count.argmax() == 374
+    assert count[374] == 1_678_715
 
 
 def test_encode(table: m.ProfileTable) -> None:
@@ -182,7 +182,7 @@ def test_m_dot_matches_full_matrix() -> None:
         q = rng.uniform(0, 1, 60)
         q /= q.sum()
         assert np.allclose(
-            m._M_dot(s, f, q),  # noqa: SLF001
+            m._M_dot(s, f, q),
             m.full_matrix(s, f) @ q,
             atol=1e-12,
             rtol=0,
@@ -305,7 +305,7 @@ class _Values:
     ],
 )
 def test_table_rejects_malformed_states(table: m.ProfileTable, state: tuple) -> None:
-    with pytest.raises(ValueError):  # noqa: PT011
+    with pytest.raises(ValueError):
         m.Table(cast("np.ndarray", _Values()), table).value(state)
 
 
@@ -313,7 +313,7 @@ def test_table_rejects_an_alive_ttd_below_60(table: m.ProfileTable) -> None:
     with pytest.raises(LookupError, match="off-domain"):
         m.Table(cast("np.ndarray", _Values()), table).value((5, 30, 0, 0))
     assert (
-        m.Table(cast("np.ndarray", _Values(0.5)), table).value((250, 30, 0, 0)) == 0.5  # noqa: PLR2004
+        m.Table(cast("np.ndarray", _Values(0.5)), table).value((250, 30, 0, 0)) == 0.5
     )  # a dead TTD collapses to its sentinel
 
 
@@ -321,7 +321,7 @@ def test_stage_is_the_certified_full_matrix(
     table: m.ProfileTable, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     s, f = np.sort(np.random.default_rng(9).uniform(-1, 1, 60)), 0.3
-    monkeypatch.setattr(m, "class_values", lambda pc, pd, values, table: (s, f))  # noqa: ARG005
+    monkeypatch.setattr(m, "class_values", lambda pc, pd, values, table: (s, f))
     expected = m.solve_class(s, f)
     assert expected.value is not None
     stage = m.Table(cast("np.ndarray", _Values(expected.value)), table).stage(
@@ -344,12 +344,12 @@ def test_stage_fails_closed_when_the_saddle_gap_is_too_large(
     monkeypatch.setattr(
         m,
         "class_values",
-        lambda pc, pd, values, table: (np.linspace(-1, 1, 60), 0.0),  # noqa: ARG005
+        lambda pc, pd, values, table: (np.linspace(-1, 1, 60), 0.0),
     )
     monkeypatch.setattr(
         m,
         "solve_class",
-        lambda s, f: m.SolveResult(  # noqa: ARG005
+        lambda s, f: m.SolveResult(
             0.0, 0.0, m.PURE, drop=np.eye(60)[0], check=np.eye(60)[0]
         ),
     )
@@ -363,7 +363,7 @@ def test_stage_fails_closed_when_the_stored_value_leaves_its_certificate(
     monkeypatch.setattr(
         m,
         "class_values",
-        lambda pc, pd, values, table: (np.full(60, 0.25), 0.25),  # noqa: ARG005
+        lambda pc, pd, values, table: (np.full(60, 0.25), 0.25),
     )
     with pytest.raises(RuntimeError, match="outside its certificate"):
         m.Table(cast("np.ndarray", _Values(0.5)), table).stage((0, 0, 0, 0))

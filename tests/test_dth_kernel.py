@@ -86,7 +86,7 @@ def test_kernel_matches_oracle_on_one_layer(table: m.ProfileTable) -> None:
     before = values[pcs, pds].copy()
     scratch = np.empty((nb.get_num_threads(), 3, m.LAGS))
     need_lp = np.empty(pcs.size, dtype=np.bool_)
-    kernel._solve_layer_kernel(  # noqa: SLF001
+    kernel._solve_layer_kernel(
         pcs,
         pds,
         values,
@@ -115,9 +115,9 @@ def test_kernel_matches_oracle_on_one_layer(table: m.ProfileTable) -> None:
             continue
         expected = m.solve_class(s, f)
         assert abs(values[pc, pd] - expected.value) <= m.MAX_SADDLE_GAP + 1e-12
-    assert lp_disagreements <= 3  # noqa: PLR2004
+    assert lp_disagreements <= 3
     values[pcs, pds] = before
-    print(  # noqa: T201
+    print(
         "\nkernel routing on 3000 synthetic classes (pure, support, lp): "
         f"{routed[0]} {routed[1]} {need_lp.sum()}"
     )
@@ -140,7 +140,7 @@ def structured_batch(
 def ladder(s: np.ndarray, f: float) -> tuple[float, int]:
     r = np.empty(60)
     q = np.empty(60)
-    return kernel._ladder(np.ascontiguousarray(s, dtype=np.float64), float(f), r, q)  # noqa: SLF001
+    return kernel._ladder(np.ascontiguousarray(s, dtype=np.float64), float(f), r, q)
 
 
 def test_ladder_matches_scalar_rungs() -> None:
@@ -165,7 +165,7 @@ def test_ladder_matches_scalar_rungs() -> None:
                 assert not r1.certified
                 if r2 is not None and r2.certified:
                     edge_cases += 1
-    assert edge_cases <= 3  # noqa: PLR2004
+    assert edge_cases <= 3
 
 
 def test_ladder_matches_solve_class() -> None:
@@ -186,12 +186,12 @@ def test_ladder_matches_solve_class() -> None:
         if kind != m.LP:
             assert abs(value - expected.value) <= m.MAX_SADDLE_GAP + 1e-12
     assert kinds[0] == m.PURE
-    assert ladder(success[0], failed[0])[0] == 0.5  # noqa: PLR2004
+    assert ladder(success[0], failed[0])[0] == 0.5
     assert kinds[1] == m.PURE
     assert ladder(success[1], failed[1])[0] == 1.0
     assert kinds[2] == m.PURE
     assert ladder(success[2], failed[2])[0] == -1.0
-    print(  # noqa: T201
+    print(
         "\nladder routing on the structured batch (pure, support, lp): "
         f"{np.bincount(kinds, minlength=3)}"
     )

@@ -14,37 +14,50 @@ from pathlib import Path
 
 def dth(output: Path | None) -> None:
     """Build the certified DTH table, check the six anchors, and write V.npy."""
-    from stl import dth_kernel  # noqa: PLC0415 - load only the selected CLI runtime
-    from stl.dth import DEFAULT_PATH, build_table, verify_anchors  # noqa: PLC0415 - load only the selected CLI runtime
+    from stl import dth_kernel  # load only the selected CLI runtime
+    from stl.dth import (  # load only the selected CLI runtime
+        DEFAULT_PATH,
+        build_table,
+        verify_anchors,
+    )
 
     table = build_table()
     values, kinds, counts = dth_kernel.build(table)
     dth_kernel.finalize(values, kinds, table)
     for state, expected, got, ok in verify_anchors(values, table):
-        print(  # noqa: T201 - CLI progress output
+        print(
             f"anchor {state}: expected {expected:.16f} got {got:.16f} "
             f"{'ok' if ok else 'MISMATCH'}"
         )
-    print(f"pure={counts[0]} support={counts[1]} lp={counts[2]} total={counts.sum()}")  # noqa: T201 - CLI progress output
+    print(f"pure={counts[0]} support={counts[1]} lp={counts[2]} total={counts.sum()}")
     dth_kernel.write(values, output or DEFAULT_PATH)
 
 
 def leap(dth_path: Path | None, output: Path | None) -> None:
     """Build the full certified leap sweep in an empty output directory."""
-    from stl.dth import DEFAULT_PATH  # noqa: PLC0415 - load only the selected CLI runtime
-    from stl.leap import DEFAULT_ARTIFACT, run_full  # noqa: PLC0415 - load only the selected CLI runtime
+    from stl.dth import DEFAULT_PATH  # load only the selected CLI runtime
+    from stl.leap import (  # load only the selected CLI runtime
+        DEFAULT_ARTIFACT,
+        run_full,
+    )
 
     run_full(dth_path or DEFAULT_PATH, output or DEFAULT_ARTIFACT)
 
 
 def serve(hal: str, host: str, port: int, seed: int | None) -> None:
     """Serve the built browser client and play against Hal on this machine."""
-    import uvicorn  # noqa: PLC0415 - load only the selected CLI runtime
+    import uvicorn  # load only the selected CLI runtime
 
-    from stl.dth import DEFAULT_PATH, Table  # noqa: PLC0415 - load only the selected CLI runtime
-    from stl.hal import make_hal  # noqa: PLC0415 - load only the selected CLI runtime
-    from stl.server.app import SeriesConfig, SessionConfig, create_app  # noqa: PLC0415 - load only the selected CLI runtime
-    from stl.server.session import PolicyDrivenAgent  # noqa: PLC0415 - load only the selected CLI runtime
+    from stl.dth import DEFAULT_PATH, Table  # load only the selected CLI runtime
+    from stl.hal import make_hal  # load only the selected CLI runtime
+    from stl.server.app import (  # load only the selected CLI runtime
+        SeriesConfig,
+        SessionConfig,
+        create_app,
+    )
+    from stl.server.session import (
+        PolicyDrivenAgent,  # load only the selected CLI runtime
+    )
 
     if not DEFAULT_PATH.is_file():
         message = (
@@ -58,14 +71,14 @@ def serve(hal: str, host: str, port: int, seed: int | None) -> None:
         config=SessionConfig(seed=seed),
         series=SeriesConfig(hal_agent=hal),
     )
-    print(f"Surpassing The Leader: http://{host}:{port}")  # noqa: T201 - CLI progress output
+    print(f"Surpassing The Leader: http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 
 def deploy(artifact: Path | None) -> None:
     """Build the Vercel bundle, add 3.13 bytecode, and ship a preview."""
-    from stl.dth import DEFAULT_PATH  # noqa: PLC0415 - load only the selected CLI runtime
-    from stl.server import deploy as pipeline  # noqa: PLC0415 - load only the selected CLI runtime
+    from stl.dth import DEFAULT_PATH  # load only the selected CLI runtime
+    from stl.server import deploy as pipeline  # load only the selected CLI runtime
 
     if sys.version_info[:2] != pipeline.RUNTIME:
         message = (
@@ -75,8 +88,8 @@ def deploy(artifact: Path | None) -> None:
         raise SystemExit(message)
     version = pipeline.prepare(artifact or DEFAULT_PATH)
     url = pipeline.ship()
-    print(f"Preview {url} serves version {version}.")  # noqa: T201 - CLI progress output
-    print(  # noqa: T201 - CLI progress output
+    print(f"Preview {url} serves version {version}.")
+    print(
         "Run the preview smoke checks, then follow README.md's "
         "staged-production procedure and repeat the checks before promotion."
     )

@@ -166,7 +166,7 @@ def test_display_label_never_replaces_bakus_rule_identity() -> None:
 
     assert session.human.name == "Baku"
     assert session.human_display_name == "Alice <the challenger>"
-    assert session.legal_actions()[-1] == 61  # noqa: PLR2004
+    assert session.legal_actions()[-1] == 61
 
     session.game.current_half = 1
     session.max_half_rounds = 1
@@ -200,14 +200,14 @@ def test_only_a_human_dropper_may_use_the_leap_second() -> None:
     """Legality is the engine's call; the session must not widen it."""
 
     session = _session(start_clock=LS_WINDOW_START)
-    assert session.turn_duration() == 61  # noqa: PLR2004
+    assert session.turn_duration() == 61
     for half in (1, 2):
         session.game.current_half = half
         legal = session.legal_actions()
         if session.human_role() == "dropper":
-            assert legal[-1] == 61  # noqa: PLR2004
+            assert legal[-1] == 61
         else:
-            assert legal[-1] == 60  # noqa: PLR2004
+            assert legal[-1] == 60
 
 
 def test_policy_normalization_discards_illegal_zero_mass_entries() -> None:
@@ -220,7 +220,7 @@ def test_policy_normalization_discards_illegal_zero_mass_entries() -> None:
 
 @dataclass
 class _Provider:
-    def policy(self, decision: CanonicalDecision) -> dict[int, float]:  # noqa: ARG002
+    def policy(self, decision: CanonicalDecision) -> dict[int, float]:
         return {0: 100.0, 1: 1.0, 60: 5.0}
 
 
@@ -228,7 +228,7 @@ def test_algorithm_agnostic_agent_samples_only_a_legal_engine_action() -> None:
     game = Game(Player("Hal"), Player("Baku"), Referee())
     agent = PolicyDrivenAgent(_Provider(), player_name="Hal", seed=4)
     action = agent.choose_action(game, "dropper", game.get_turn_duration())
-    assert 1 <= action <= 60  # noqa: PLR2004
+    assert 1 <= action <= 60
     assert action != 0
 
 
@@ -241,5 +241,5 @@ def test_decision_uses_engine_role_relative_state() -> None:
     game.first_dropper = game.player1
     decision = decision_from_game(game, role="dropper", turn_duration=60)
     assert decision.actor_name == "Hal"
-    assert decision.dropper_cylinder_seconds == 20  # noqa: PLR2004
-    assert decision.checker_cylinder_seconds == 40  # noqa: PLR2004
+    assert decision.dropper_cylinder_seconds == 20
+    assert decision.checker_cylinder_seconds == 40
