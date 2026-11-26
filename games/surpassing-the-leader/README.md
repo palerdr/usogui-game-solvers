@@ -16,6 +16,7 @@ Toshio Sako; revival probabilities are explicit modeling choices.
 | `src/stl/__main__.py` | The four commands: `dth`, `leap`, `serve`, `deploy` |
 | `web/` | Browser UI, tests, and the ten committed character frames |
 | `src/ocaml/`, `src/cpp/` | Independent reference solvers; OCaml also keeps the CS 3110 terminal game |
+| [`src/bend/`](src/bend/README.md) | Bend solver for the complete pure-DTH table |
 | `src/c/` | Retired C recurrence source, retained as native work; no live caller |
 | `src/lean/` | Mathematical proofs and `CLAIMS.md`; source citations refer to `938fb25` |
 | `tests/` | Tests mirror the Python modules; golden data pins numerical and Hal behavior |
